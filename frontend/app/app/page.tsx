@@ -26,8 +26,8 @@ export default function AppMain() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
-  const [statusText, setStatusText] = useState("Listo para subir tu video.");
-  const [streamNote, setStreamNote] = useState("Todavia no se inicio ningun job.");
+  const [statusText, setStatusText] = useState("Listo para analizar");
+  const [streamNote, setStreamNote] = useState("Subi un video para comenzar el analisis.");
 
   const waitForStreamedResult = async (job: AnalysisJobEnvelope) =>
     new Promise<AnalysisResponse>((resolve, reject) => {
@@ -54,10 +54,20 @@ export default function AppMain() {
         resolve((await resultResponse.json()) as AnalysisResponse);
       };
 
+      const stageLabels: Record<string, string> = {
+        "job.created": "Iniciando analisis...",
+        "upload.validated": "Video recibido",
+        "transcription.completed": "Audio transcrito",
+        "creative_context.completed": "Evaluando contenido",
+        "persona.batch.completed": "Simulando audiencia",
+        "demographics.completed": "Procesando segmentos",
+        "analysis.completed": "Analisis completado",
+      };
+
       const handleStreamEvent = (rawEvent: MessageEvent<string>) => {
         const event = JSON.parse(rawEvent.data) as AnalysisStreamEvent;
         setProgressPercent(event.progress_percent ?? 0);
-        setStatusText(event.stage?.replace(/\./g, " ") || "Procesando analisis");
+        setStatusText(stageLabels[event.stage ?? ""] || "Procesando...");
 
         if (event.type === "persona.batch.completed") {
           const batchIndex =
@@ -68,8 +78,8 @@ export default function AppMain() {
               : null;
           setStreamNote(
             batchIndex
-              ? `Lote de personas ${batchIndex}/5 completado y emitido.`
-              : "Se completo un lote de personas.",
+              ? `Simulando grupo ${batchIndex} de 5...`
+              : "Simulando audiencia...",
           );
         }
 
@@ -102,7 +112,7 @@ export default function AppMain() {
       source.addEventListener("job.failed", handleStreamEvent as EventListener);
       source.onerror = () => {
         if (!settled) {
-          setStreamNote("Esperando que el stream del backend se reconecte...");
+          setStreamNote("Reconectando...");
         }
       };
     });
@@ -117,8 +127,8 @@ export default function AppMain() {
 
     setLoading(true);
     setProgressPercent(3);
-    setStatusText("Preparando ticket de subida...");
-    setStreamNote("El navegador subira el archivo directamente a Supabase.");
+    setStatusText("Preparando...");
+    setStreamNote("Iniciando proceso de analisis.");
 
     try {
       if (!supabase) {
@@ -148,7 +158,7 @@ export default function AppMain() {
 
       const uploadTicket = (await uploadInitResponse.json()) as UploadInitResponse;
       setProgressPercent(10);
-      setStatusText("Subiendo video directamente a Supabase...");
+      setStatusText("Subiendo video...");
 
       const { error: uploadError } = await supabase.storage
         .from(uploadTicket.bucket)
@@ -162,8 +172,8 @@ export default function AppMain() {
       }
 
       setProgressPercent(18);
-      setStatusText("Creando job de analisis en el backend...");
-      setStreamNote("El backend va a transcribir, puntuar, simular 100 personas y emitir el progreso.");
+      setStatusText("Iniciando analisis...");
+      setStreamNote("Procesando tu video.");
 
       const jobResponse = await fetch(createJobUrl, {
         method: "POST",
@@ -180,8 +190,8 @@ export default function AppMain() {
 
       const job = (await jobResponse.json()) as AnalysisJobEnvelope;
       setProgressPercent(job.progress_percent);
-      setStatusText(job.stage);
-      setStreamNote("Escuchando los lotes de personas en vivo...");
+      setStatusText("Analizando contenido...");
+      setStreamNote("Esto puede tomar unos segundos.");
 
       const finalAnalysis = await waitForStreamedResult(job);
       storeAnalysisResult(router, finalAnalysis);
@@ -199,34 +209,35 @@ export default function AppMain() {
         <div className="grid w-full gap-8 lg:grid-cols-[0.85fr_1.15fr]">
           <section className="space-y-6">
             <span className="inline-flex rounded-full border border-cyan-200 bg-white/80 px-4 py-2 text-sm font-semibold text-cyan-950">
-              AXIOM//LENS ingreso
+              NextHit
             </span>
             <h1 className="font-display text-4xl font-bold tracking-tight md:text-5xl">
-              Subi el video, segui el analisis en vivo y aterriza en un informe completo.
+              Predeci el rendimiento de tu video antes de publicar.
             </h1>
             <p className="max-w-xl text-lg text-slate-600">
-              El navegador sube directo a Supabase, el backend usa Groq Whisper para transcripcion con timestamps, simula 100 personas en lotes y emite progreso hasta que el informe final esta listo.
+              Subi tu video y obtene un analisis completo con prediccion de retencion, segmentacion de audiencia y recomendaciones accionables.
             </p>
             <div className="grid gap-4">
               {[
-                "La subida directa a storage evita los limites de body de Vercel.",
-                "Los lotes de personas se emiten a medida que terminan en vez de esperar 100 requests separadas.",
-                "El payload final sigue siendo compatible con /resultado y ahora trae transcript y audiencia mas ricos.",
+                { icon: "🎯", text: "Simulacion de 100 personas con diferentes perfiles" },
+                { icon: "📊", text: "Curva de retencion proyectada segundo a segundo" },
+                { icon: "💡", text: "Recomendaciones concretas para mejorar tu contenido" },
               ].map((item) => (
                 <div
-                  key={item}
-                  className="rounded-2xl border border-white/70 bg-white/70 p-4 shadow-sm"
+                  key={item.text}
+                  className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-sm"
                 >
-                  <p className="text-slate-700">{item}</p>
+                  <span className="text-2xl">{item.icon}</span>
+                  <p className="text-slate-700">{item.text}</p>
                 </div>
               ))}
             </div>
           </section>
 
           <section className="card-surface rounded-[2rem] border border-white/70 p-8 shadow-soft">
-            <h2 className="font-display text-3xl font-bold text-ink">Subi el creativo</h2>
+            <h2 className="font-display text-3xl font-bold text-ink">Analiza tu video</h2>
             <p className="mt-2 text-slate-500">
-              Agrega el video y lo vamos a transcribir, simular contra la audiencia y convertir en informe.
+              Subi tu video y recibiras un informe detallado con metricas de rendimiento y recomendaciones.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-6">
@@ -263,7 +274,7 @@ export default function AppMain() {
                 disabled={loading}
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-ink px-6 py-4 text-lg font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? "Ejecutando el pipeline..." : "Analizar video"}
+                {loading ? "Analizando..." : "Analizar video"}
               </button>
             </form>
           </section>

@@ -1979,6 +1979,8 @@ function RawPersonasStep({
   );
 }
 
+const DIAGNOSES_PER_PAGE = 6;
+
 function SegmentDropoffStep({
   segments,
   diagnoses,
@@ -1986,6 +1988,11 @@ function SegmentDropoffStep({
   segments: PersonaSegment[];
   diagnoses: SegmentDiagnosis[];
 }) {
+  const [currentPage, setCurrentPage] = useState(0);
+  const totalPages = Math.ceil(diagnoses.length / DIAGNOSES_PER_PAGE);
+  const startIndex = currentPage * DIAGNOSES_PER_PAGE;
+  const visibleDiagnoses = diagnoses.slice(startIndex, startIndex + DIAGNOSES_PER_PAGE);
+
   const best = segments[0];
   const second = segments[1];
   const worst = segments[segments.length - 1];
@@ -2085,16 +2092,50 @@ function SegmentDropoffStep({
       </div>
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
-        <div className="flex items-center gap-3">
-          <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-            Diagnostico detallado por segmento
-          </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                Diagnostico detallado por segmento
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Mostrando {startIndex + 1}-{Math.min(startIndex + DIAGNOSES_PER_PAGE, diagnoses.length)} de {diagnoses.length}
+              </p>
+            </div>
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                disabled={currentPage === 0}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-700 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <span className="min-w-[80px] text-center text-sm font-semibold text-slate-700">
+                {currentPage + 1} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={currentPage >= totalPages - 1}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-700 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          {diagnoses.map((item, index) => (
+          {visibleDiagnoses.map((item, index) => (
             <article key={item.label} className="rounded-[1.5rem] border border-slate-200/80 bg-white/85 px-5 py-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -2114,13 +2155,29 @@ function SegmentDropoffStep({
                   </div>
                 </div>
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
-                  {index + 1}
+                  {startIndex + index + 1}
                 </span>
               </div>
               <p className="mt-4 text-sm leading-7 text-slate-600">{item.why}</p>
             </article>
           ))}
         </div>
+        {totalPages > 1 && (
+          <div className="mt-6 flex justify-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setCurrentPage(i)}
+                className={`h-2 rounded-full transition-all ${
+                  i === currentPage
+                    ? "w-6 bg-slate-900"
+                    : "w-2 bg-slate-300 hover:bg-slate-400"
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </section>
     </section>
   );
