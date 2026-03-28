@@ -8,6 +8,7 @@ from typing import Any
 from config import PUBLIC_BACKEND_URL
 from constants import STATUS_STEPS
 from repository import repository
+from system_prompts import set_db_prompts
 from services.audience import aggregate_target_audience, build_segment_diagnoses
 from services.change_plan import build_change_plan
 from services.creative_analysis import analyze_creative_context
@@ -147,6 +148,10 @@ def build_final_analysis_payload(
 
 async def process_job(job_id: str, video_id: str, preferred_platform: str | None) -> None:
     """Process an analysis job."""
+    # Load prompts from database at start of job
+    db_prompts = await repository.get_system_prompts()
+    set_db_prompts(db_prompts)
+
     job = await repository.get_job(job_id)
     video = await repository.get_video(video_id)
     if not job or not video:

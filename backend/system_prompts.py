@@ -1,7 +1,21 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Iterable
+from dataclasses import dataclass, replace
+from typing import Any, Iterable
+
+# Cache for database prompts
+_db_prompts_cache: dict[str, str | None] = {}
+
+
+def set_db_prompts(prompts: dict[str, str | None]) -> None:
+    """Set the database prompts cache."""
+    global _db_prompts_cache
+    _db_prompts_cache = prompts
+
+
+def get_db_prompt(key: str) -> str | None:
+    """Get a prompt from the database cache."""
+    return _db_prompts_cache.get(key)
 
 
 @dataclass(frozen=True)
@@ -136,3 +150,63 @@ PROMPT_SPECS = {
     STRATEGIC_OUTPUTS_SPEC.name: STRATEGIC_OUTPUTS_SPEC,
     VIDEO_SUMMARY_SPEC.name: VIDEO_SUMMARY_SPEC,
 }
+
+# Mapping from database column names to spec names
+DB_PROMPT_MAPPING = {
+    "user_persona_batch_prompt": "persona_batch",
+    "score_prompt": "creative_analysis",
+    "summary_video_prompt": "video_summary",
+    "strategic_output_prompt": "strategic_outputs",
+}
+
+
+def get_creative_analysis_spec() -> JsonPromptSpec:
+    """Get creative analysis spec with optional database override."""
+    db_prompt = get_db_prompt("score_prompt")
+    if db_prompt:
+        return replace(CREATIVE_ANALYSIS_SPEC, system_prompt=db_prompt)
+    return CREATIVE_ANALYSIS_SPEC
+
+
+def get_strategic_outputs_spec() -> JsonPromptSpec:
+    """Get strategic outputs spec with optional database override."""
+    db_prompt = get_db_prompt("strategic_output_prompt")
+    if db_prompt:
+        return replace(STRATEGIC_OUTPUTS_SPEC, system_prompt=db_prompt)
+    return STRATEGIC_OUTPUTS_SPEC
+
+
+def get_video_summary_spec() -> TextPromptSpec:
+    """Get video summary spec with optional database override."""
+    db_prompt = get_db_prompt("summary_video_prompt")
+    if db_prompt:
+        return replace(VIDEO_SUMMARY_SPEC, system_prompt=db_prompt)
+    return VIDEO_SUMMARY_SPEC
+
+
+def build_persona_batch_spec_with_override(reason_codes: Iterable[str]) -> JsonPromptSpec:
+    """Build persona batch spec with optional database override."""
+    taxonomy = ", ".join(reason_codes)
+    db_prompt = get_db_prompt("user_persona_batch_prompt")
+
+    if db_prompt:
+        # Append the taxonomy to the database prompt
+        system_prompt = f"{db_prompt} La taxonomia de reason_codes es: {taxonomy}."
+    else:
+        system_prompt = (
+            "Eres un simulador de audiencia para videos cortos de marketing. "
+            "Piensa como cada persona individualmente, no como un promedio. "
+            "Para cada persona, devuelve el segundo exacto en el que abandona, el reason_code mas probable dentro de esta taxonomia exacta: "
+            f"{taxonomy}. "
+            "Tambien devuelve why_they_left y summary_of_interacion en espanol. "
+            "dropoff_second debe quedar siempre dentro de la duracion real del video. "
+            "No inventes campos fuera del schema y mantente consistente con el perfil de cada persona."
+        )
+
+    return JsonPromptSpec(
+        name="persona_batch",
+        default_model="llama-3.1-8b-instant",
+        model_env_var="GROQ_PERSONA_BATCH_MODEL",
+        schema_name="persona_batch",
+        system_prompt=system_prompt,
+    )

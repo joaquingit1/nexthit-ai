@@ -20,7 +20,7 @@ from constants import (
 )
 from schemas import persona_batch_schema
 from services.groq_client import call_groq_chat_json
-from system_prompts import build_persona_batch_spec
+from system_prompts import build_persona_batch_spec_with_override
 from utils import clamp, round_value
 
 
@@ -153,7 +153,7 @@ async def analyze_persona_batch(
     """Analyze a batch of personas using Groq LLM."""
     fallback_results = [{**persona, **default_persona_reason(persona, creative_context, duration_seconds)} for persona in batch]
     try:
-        spec = build_persona_batch_spec(LEAVE_REASON_LABELS.keys())
+        spec = build_persona_batch_spec_with_override(LEAVE_REASON_LABELS.keys())
         response = await call_groq_chat_json(
             messages=[
                 {

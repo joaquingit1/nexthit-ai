@@ -7,7 +7,7 @@ from typing import Any
 from config import resolve_prompt_model
 from schemas import creative_analysis_schema
 from services.groq_client import call_groq_chat_json
-from system_prompts import CREATIVE_ANALYSIS_SPEC
+from system_prompts import get_creative_analysis_spec
 from utils import clamp, round_value
 
 
@@ -87,7 +87,7 @@ async def analyze_creative_context(
     """Analyze creative context using Groq LLM."""
     fallback = default_creative_analysis(video_id, transcript, duration_seconds, preferred_platform)
     try:
-        spec = CREATIVE_ANALYSIS_SPEC
+        spec = get_creative_analysis_spec()
         response = await call_groq_chat_json(
             messages=[
                 {

@@ -242,6 +242,65 @@ class Repository:
         except Exception:
             pass
 
+    async def get_system_prompts(self) -> dict[str, str | None]:
+        """Get system prompts from database."""
+        defaults = {
+            "user_persona_batch_prompt": None,
+            "score_prompt": None,
+            "summary_video_prompt": None,
+            "strategic_output_prompt": None,
+        }
+        if not self.client:
+            return defaults
+
+        def _select():
+            return (
+                self.client.table("system_prompts")
+                .select("*")
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+
+        try:
+            result = await self._run(_select)
+            if result.data:
+                row = result.data[0]
+                return {
+                    "user_persona_batch_prompt": row.get("user_persona_batch_prompt"),
+                    "score_prompt": row.get("score_prompt"),
+                    "summary_video_prompt": row.get("summary_video_prompt"),
+                    "strategic_output_prompt": row.get("strategic_output_prompt"),
+                }
+        except Exception:
+            pass
+        return defaults
+
+    async def log_generation(
+        self,
+        table: str,
+        job_id: str | None,
+        response: str,
+        tokens_used: int,
+    ) -> None:
+        """Log a generation to the appropriate tracking table."""
+        if not self.client:
+            return
+
+        row = {
+            "job_id": job_id,
+            "response": response[:10000] if response else None,  # Truncate if too long
+            "tokens_used": tokens_used,
+        }
+
+        def _insert():
+            return self.client.table(table).insert(row).execute()
+
+        try:
+            await self._run(_insert)
+        except Exception:
+            pass  # Don't fail the main flow if logging fails
+
 
 # Singleton instance
 repository = Repository()
