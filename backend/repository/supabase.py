@@ -4,7 +4,9 @@ import asyncio
 from collections import defaultdict
 from typing import Any
 
+import httpx
 from supabase import Client, create_client
+from storage3.exceptions import StorageApiError
 
 from config import SUPABASE_BUCKET, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL
 from utils import utc_now_iso
@@ -229,6 +231,41 @@ class Repository:
         result = await self._run(_select)
         return result.data or []
 
+    @staticmethod
+    def _is_retryable_storage_download_error(exc: Exception) -> bool:
+        if isinstance(exc, (httpx.TimeoutException, httpx.TransportError, httpx.NetworkError)):
+            return True
+        if isinstance(exc, StorageApiError):
+            message = str(exc).lower()
+            return any(
+                marker in message
+                for marker in (
+                    "not_found",
+                    "object not found",
+                    "server disconnected",
+                    "timed out",
+                    "timeout",
+                    "connection reset",
+                    "connection aborted",
+                    "429",
+                    "502",
+                    "503",
+                    "504",
+                )
+            )
+        message = str(exc).lower()
+        return any(
+            marker in message
+            for marker in (
+                "server disconnected",
+                "timed out",
+                "timeout",
+                "connection reset",
+                "connection aborted",
+                "remoteprotocolerror",
+            )
+        )
+
     async def download_video(self, object_path: str) -> bytes:
         if not self.client:
             raise RuntimeError("Supabase storage is required for the real upload flow.")
@@ -236,10 +273,22 @@ class Repository:
         def _download():
             return self.client.storage.from_(SUPABASE_BUCKET).download(object_path)
 
-        blob = await self._run(_download)
-        if isinstance(blob, bytes):
-            return blob
-        return bytes(blob)
+        last_error: Exception | None = None
+        for attempt in range(6):
+            try:
+                blob = await self._run(_download)
+                if isinstance(blob, bytes):
+                    return blob
+                return bytes(blob)
+            except Exception as exc:
+                last_error = exc
+                if attempt == 5 or not self._is_retryable_storage_download_error(exc):
+                    raise
+                await asyncio.sleep(min(0.75 * (2**attempt), 6))
+
+        if last_error:
+            raise last_error
+        raise RuntimeError("No se pudo descargar el video desde Supabase Storage.")
 
     async def delete_video_object(self, object_path: str) -> None:
         if not self.client or not object_path:
