@@ -87,14 +87,7 @@ def persona_batch_schema() -> dict[str, Any]:
                         "persona_id",
                         "dropoff_second",
                         "reason_code",
-                        "why_they_left",
-                        "summary_of_interacion",
-                        "liked_moment",
-                        "disliked_moment",
-                        "evidence_start_second",
-                        "evidence_end_second",
                         "evidence_excerpt",
-                        "decision_stage",
                     ],
                     "properties": {
                         "persona_id": {"type": "string"},
@@ -111,6 +104,35 @@ def persona_batch_schema() -> dict[str, Any]:
                             "type": "string",
                             "enum": ["hook", "desarrollo", "prueba", "cta", "cierre"],
                         },
+                    },
+                },
+            }
+        },
+    }
+
+
+def persona_batch_compact_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["personas"],
+        "properties": {
+            "personas": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": [
+                        "persona_id",
+                        "dropoff_second",
+                        "reason_code",
+                        "evidence_excerpt",
+                    ],
+                    "properties": {
+                        "persona_id": {"type": "string"},
+                        "dropoff_second": {"type": "number"},
+                        "reason_code": {"type": "string"},
+                        "evidence_excerpt": {"type": "string"},
                     },
                 },
             }

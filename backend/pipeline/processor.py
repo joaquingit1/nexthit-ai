@@ -19,7 +19,7 @@ from services.retention import (
     build_viewers_from_personas,
     find_major_drop_second,
 )
-from services.strategy import synthesize_final_copy, synthesize_strategic_outputs
+from services.strategy import synthesize_final_copy, synthesize_strategic_outputs, synthesize_video_summary
 from services.transcription import transcribe_video_with_whisper
 from utils import file_type_label, format_bytes, format_duration, format_timestamp, round_value, utc_now_iso
 
@@ -193,6 +193,7 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
         creative_context = await analyze_creative_context(video_id, transcript, duration_seconds, preferred_platform)
         await repository.update_job(job_id, {"stage": "creative_context.completed", "progress_percent": 45})
         await repository.add_event(job_id=job_id, video_id=video_id, event_type="creative_context.completed", status="processing", stage="creative_context.completed", progress_percent=45, payload={"score_summary": creative_context})
+        video_summary = await synthesize_video_summary(creative_context, None, transcript, duration_seconds)
 
         personas: list[dict[str, Any]] = []
         for batch_index in range(5):
@@ -221,7 +222,14 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
         average_line = build_average_line(build_viewers_from_personas(personas, duration_seconds), duration_seconds)
         segment_diagnoses = build_segment_diagnoses(personas)
         change_plan = build_change_plan(transcript, average_line, personas, duration_seconds)
-        final_copy = await synthesize_final_copy(creative_context, target_audience, personas, transcript, duration_seconds)
+        final_copy = await synthesize_final_copy(
+            creative_context,
+            target_audience,
+            personas,
+            transcript,
+            duration_seconds,
+            precomputed_summary=video_summary,
+        )
         strategic_outputs = await synthesize_strategic_outputs(
             creative_context=creative_context,
             target_audience=target_audience,

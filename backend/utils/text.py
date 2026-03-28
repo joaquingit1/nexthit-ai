@@ -27,6 +27,9 @@ def summary_has_placeholder_text(text: str) -> bool:
         "uploaded clip",
         "el mensaje se desarrolla asi",
         "the message unfolds as follows",
+        "es un video corto de",
+        "hook, desarrollo y cierre",
+        "intenta instalar una promesa de valor",
     ]
     if any(marker in normalized for marker in markers):
         return True

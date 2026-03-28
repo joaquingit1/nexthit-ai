@@ -20,11 +20,10 @@ from constants import (
     PERSONA_NAME_SEEDS,
     PERSONA_OCCUPATIONS,
 )
-from schemas import persona_batch_schema
+from schemas import persona_batch_compact_schema
 from services.groq_client import call_groq_chat_json
 from services.transcript_signals import (
     derive_transcript_signals,
-    find_nearest_segment,
     pick_primary_moment,
     stage_from_second,
 )
@@ -69,6 +68,105 @@ def build_persona_library() -> list[dict[str, Any]]:
 PERSONA_LIBRARY = build_persona_library()
 
 
+def persona_seed(persona: dict[str, Any]) -> int:
+    return sum(ord(char) for char in str(persona.get("persona_id", "")) + str(persona.get("name", "")))
+
+
+def pick_segment_for_persona(
+    candidates: list[dict[str, Any]],
+    persona: dict[str, Any],
+    anchor_second: float,
+) -> dict[str, Any] | None:
+    if not candidates:
+        return None
+    ordered = sorted(
+        candidates,
+        key=lambda item: (
+            abs(float(item.get("start", 0)) - anchor_second),
+            float(item.get("start", 0)),
+        ),
+    )
+    window = ordered[: min(3, len(ordered))]
+    if not window:
+        return None
+    return window[persona_seed(persona) % len(window)]
+
+
+def build_compact_persona_prompt_payload(
+    *,
+    batch: list[dict[str, Any]],
+    creative_context: dict[str, Any],
+    transcript: dict[str, Any],
+    transcript_signals: dict[str, Any],
+    duration_seconds: int,
+) -> dict[str, Any]:
+    compact_personas = []
+    for persona in batch:
+        compact_personas.append(
+            {
+                "persona_id": persona["persona_id"],
+                "name": persona["name"],
+                "archetype": persona["archetype"],
+                "demographic": persona.get("demographic_profile_label") or persona.get("demographic_cluster"),
+                "age_range": persona["age_range"],
+                "country": persona["country"],
+                "income_bracket": persona["income_bracket"],
+                "social_status": persona["social_status"],
+                "interest": (persona.get("interests") or [""])[0],
+                "hobby": (persona.get("hobbies") or [""])[0],
+                "motivation": (persona.get("motivations") or [""])[0],
+                "frustration": (persona.get("frustrations") or [""])[0],
+            }
+        )
+
+    beats = []
+    for segment in transcript_signals.get("segments", [])[:6]:
+        beats.append(
+            {
+                "start": round_value(float(segment.get("start", 0)), 1),
+                "end": round_value(float(segment.get("end", segment.get("start", 0))), 1),
+                "stage": segment.get("stage"),
+                "tags": segment.get("tags", [])[:3],
+                "excerpt": str(segment.get("excerpt", "")),
+            }
+        )
+
+    return {
+        "duration_seconds": duration_seconds,
+        "transcript_text": str(transcript.get("text", ""))[:700],
+        "beats": beats,
+        "signal_summary": {
+            "first_speech_time": round_value(float(transcript_signals.get("first_speech_time", 0) or 0), 1),
+            "hook_second": round_value(float(pick_primary_moment(transcript_signals, "hook_moments")["start"]), 1)
+            if pick_primary_moment(transcript_signals, "hook_moments")
+            else None,
+            "benefit_second": round_value(float(pick_primary_moment(transcript_signals, "benefit_moments")["start"]), 1)
+            if pick_primary_moment(transcript_signals, "benefit_moments")
+            else None,
+            "proof_second": round_value(float(pick_primary_moment(transcript_signals, "proof_moments")["start"]), 1)
+            if pick_primary_moment(transcript_signals, "proof_moments")
+            else None,
+            "cta_second": round_value(float(pick_primary_moment(transcript_signals, "cta_moments")["start"]), 1)
+            if pick_primary_moment(transcript_signals, "cta_moments")
+            else None,
+        },
+        "reason_taxonomy": LEAVE_REASON_LABELS,
+        "creative_context": {
+            "hook_score": creative_context["hook_score"],
+            "clarity_score": creative_context["clarity_score"],
+            "pacing_score": creative_context["pacing_score"],
+            "audio_score": creative_context["audio_score"],
+            "visual_score": creative_context["visual_score"],
+            "novelty_score": creative_context["novelty_score"],
+            "cta_score": creative_context["cta_score"],
+            "best_platform": creative_context["best_platform"],
+            "primary_angle": creative_context["primary_angle"],
+            "timeline_insights": creative_context["timeline_insights"][:4],
+        },
+        "personas": compact_personas,
+    }
+
+
 def infer_reason_code(
     persona: dict[str, Any],
     creative_context: dict[str, Any],
@@ -83,37 +181,90 @@ def infer_reason_code(
     proof_moment = pick_primary_moment(transcript_signals, "proof_moments")
     cta_moment = pick_primary_moment(transcript_signals, "cta_moments")
     overload_moment = pick_primary_moment(transcript_signals, "overload_moments")
+    hook_anchor = float(hook_moment["start"]) if hook_moment else 1.4
+    benefit_anchor = float(benefit_moment["start"]) if benefit_moment else duration_seconds * 0.3
+    proof_anchor = float(proof_moment["start"]) if proof_moment else duration_seconds * 0.42
+    cta_anchor = float(cta_moment["start"]) if cta_moment else duration_seconds * 0.82
+    overload_anchor = float(overload_moment["start"]) if overload_moment else duration_seconds * 0.58
 
     if first_speech > 0.5:
         return "silent_intro", min(first_speech + 0.4, duration_seconds)
-    if creative_context["hook_score"] < 62 or (hook_moment and float(hook_moment["start"]) > 1.8):
-        return "intro_too_slow", min((float(hook_moment["start"]) if hook_moment else 1.6) + 0.6, duration_seconds)
+
+    if archetype == "Scroller veloz":
+        if creative_context["hook_score"] < 66 or hook_anchor > 1.5:
+            return "intro_too_slow", min(hook_anchor + 0.4, duration_seconds)
+        if creative_context["novelty_score"] < 68:
+            return "low_novelty", min(hook_anchor + 0.7, duration_seconds)
+    if archetype == "Cazador de tendencias":
+        if creative_context["novelty_score"] < 70:
+            return "low_novelty", min(hook_anchor + 0.7, duration_seconds)
+        if creative_context["hook_score"] < 64:
+            return "weak_visual_hook", min(hook_anchor + 0.5, duration_seconds)
+    if archetype == "Entretenido casual":
+        if creative_context["hook_score"] < 63:
+            return "intro_too_slow", min(hook_anchor + 0.6, duration_seconds)
+        if creative_context["pacing_score"] < 65:
+            return "low_energy", min(duration_seconds * 0.34, duration_seconds)
+    if archetype == "Comprador esceptico":
+        if not proof_moment or creative_context["clarity_score"] < 72:
+            return "claim_lacks_proof", min(proof_anchor + 0.6, duration_seconds)
+        if cta_moment and cta_anchor > duration_seconds * 0.7:
+            return "cta_too_late", min(cta_anchor + 0.2, duration_seconds)
+    if archetype == "Comprador problema-solucion":
+        if not benefit_moment or creative_context["clarity_score"] < 70:
+            return "unclear_value", min(benefit_anchor + 0.7, duration_seconds)
+        if not proof_moment:
+            return "claim_lacks_proof", min(proof_anchor + 0.5, duration_seconds)
+    if archetype == "Buscador de valor":
+        if overload_moment and creative_context["audio_score"] < 67:
+            return "cognitive_overload", min(overload_anchor + 0.4, duration_seconds)
+        if not benefit_moment or creative_context["clarity_score"] < 70:
+            return "unclear_value", min(benefit_anchor + 0.5, duration_seconds)
+    if archetype == "Creador o marketer":
+        if creative_context["visual_score"] < 70:
+            return "weak_visual_hook", min(hook_anchor + 0.5, duration_seconds)
+        if overload_moment:
+            return "cognitive_overload", min(overload_anchor + 0.4, duration_seconds)
+    if archetype == "Comprador impulsivo":
+        if cta_moment and cta_anchor > duration_seconds * 0.68:
+            return "cta_too_late", min(cta_anchor + 0.2, duration_seconds)
+        if creative_context["hook_score"] < 64:
+            return "intro_too_slow", min(hook_anchor + 0.5, duration_seconds)
+    if archetype == "Viewer guiado por historia":
+        if creative_context["pacing_score"] < 68:
+            return "weak_story_payoff", min(duration_seconds * 0.7, duration_seconds)
+        if creative_context["pacing_score"] < 64:
+            return "low_energy", min(duration_seconds * 0.45, duration_seconds)
+    if archetype == "Entusiasta de nicho":
+        if not benefit_moment:
+            return "irrelevant_for_audience", min(duration_seconds * 0.42, duration_seconds)
+        if creative_context["clarity_score"] < 66:
+            return "unclear_value", min(benefit_anchor + 0.8, duration_seconds)
+
+    if creative_context["hook_score"] < 60 or hook_anchor > 1.9:
+        return "intro_too_slow", min(hook_anchor + 0.5, duration_seconds)
     if archetype in {"Cazador de tendencias", "Entretenido casual"} and creative_context["novelty_score"] < 64:
-        anchor = float(benefit_moment["start"]) if benefit_moment else duration_seconds * 0.25
-        return "low_novelty", min(anchor + 0.6, duration_seconds)
+        return "low_novelty", min(benefit_anchor + 0.6, duration_seconds)
     if archetype in {"Comprador esceptico", "Comprador problema-solucion"} and (
         not proof_moment or creative_context["clarity_score"] < 70
     ):
-        anchor = float(proof_moment["start"]) if proof_moment else duration_seconds * 0.34
-        return "claim_lacks_proof", min(anchor + 0.8, duration_seconds)
+        return "claim_lacks_proof", min(proof_anchor + 0.8, duration_seconds)
     if archetype in {"Buscador de valor", "Comprador problema-solucion"} and (
         not benefit_moment or creative_context["clarity_score"] < 68
     ):
-        anchor = float(benefit_moment["start"]) if benefit_moment else duration_seconds * 0.28
-        return "unclear_value", min(anchor + 0.7, duration_seconds)
+        return "unclear_value", min(benefit_anchor + 0.7, duration_seconds)
     if archetype == "Creador o marketer" and creative_context["visual_score"] < 68:
-        anchor = float(hook_moment["start"]) if hook_moment else 1.6
-        return "weak_visual_hook", min(anchor + 0.8, duration_seconds)
-    if archetype == "Comprador impulsivo" and cta_moment and float(cta_moment["start"]) > duration_seconds * 0.72:
-        return "cta_too_late", min(float(cta_moment["start"]) + 0.2, duration_seconds)
+        return "weak_visual_hook", min(hook_anchor + 0.8, duration_seconds)
+    if archetype == "Comprador impulsivo" and cta_moment and cta_anchor > duration_seconds * 0.72:
+        return "cta_too_late", min(cta_anchor + 0.2, duration_seconds)
     if archetype == "Entusiasta de nicho":
         return "irrelevant_for_audience", min(duration_seconds * 0.42, duration_seconds)
     if archetype == "Viewer guiado por historia" and creative_context["pacing_score"] < 66:
         return "weak_story_payoff", min(duration_seconds * 0.74, duration_seconds)
     if overload_moment and creative_context["audio_score"] < 64:
-        return "too_much_talking", min(float(overload_moment["start"]) + 0.6, duration_seconds)
+        return "too_much_talking", min(overload_anchor + 0.6, duration_seconds)
     if overload_moment and archetype in {"Buscador de valor", "Creador o marketer", "Comprador esceptico"}:
-        return "cognitive_overload", min(float(overload_moment["start"]) + 0.5, duration_seconds)
+        return "cognitive_overload", min(overload_anchor + 0.5, duration_seconds)
     if creative_context["pacing_score"] < 63:
         return "low_energy", min(duration_seconds * 0.46, duration_seconds)
     return "unclear_value", min(duration_seconds * 0.38, duration_seconds)
@@ -141,13 +292,19 @@ def build_persona_evidence(
         "cta_too_late": "cta",
         "weak_story_payoff": None,
     }
-    disliked_segment = find_nearest_segment(transcript_signals, anchor_second, preferred_tag=tag_map.get(reason_code))
-    liked_segment = (
-        pick_primary_moment(transcript_signals, "benefit_moments")
-        or pick_primary_moment(transcript_signals, "proof_moments")
-        or pick_primary_moment(transcript_signals, "hook_moments")
-        or disliked_segment
+    segments = transcript_signals.get("segments", [])
+    preferred_tag = tag_map.get(reason_code)
+    preferred_candidates = [
+        segment for segment in segments if not preferred_tag or preferred_tag in segment.get("tags", [])
+    ]
+    disliked_segment = pick_segment_for_persona(preferred_candidates or segments, persona, anchor_second)
+    liked_candidates = (
+        transcript_signals.get("benefit_moments", [])
+        or transcript_signals.get("proof_moments", [])
+        or transcript_signals.get("hook_moments", [])
+        or segments
     )
+    liked_segment = pick_segment_for_persona(liked_candidates, persona, max(anchor_second * 0.6, 0.3))
     evidence_segment = disliked_segment or liked_segment
     evidence_start = round_value(float(evidence_segment["start"]), 1) if evidence_segment else round_value(anchor_second, 1)
     evidence_end = round_value(float(evidence_segment["end"]), 1) if evidence_segment else round_value(min(duration_seconds, anchor_second + 0.8), 1)
@@ -155,14 +312,14 @@ def build_persona_evidence(
     decision_stage = str(evidence_segment.get("stage")) if evidence_segment else stage_from_second(anchor_second, duration_seconds)
 
     liked_text = (
-        f"Le atrae cuando aparece {liked_segment.get('excerpt', '').lower()}"
+        f"Se queda atento cuando aparece el tramo \"{liked_segment.get('excerpt', '')}\""
         if liked_segment and liked_segment.get("excerpt")
-        else "Le interesa cuando el video por fin aterriza una idea concreta."
+        else "Se queda atento cuando el video finalmente aterriza una idea concreta."
     )
     disliked_text = (
-        f"Se enfría cuando el video entra en {evidence_excerpt.lower()}"
+        f"Empieza a perder interes cuando el video entra en \"{evidence_excerpt}\""
         if evidence_excerpt
-        else "Se enfría cuando el video deja de avanzar con claridad."
+        else "Empieza a perder interes cuando el video deja de avanzar con claridad."
     )
     return {
         "liked_moment": liked_text,
@@ -223,12 +380,13 @@ def default_persona_reason(
     reason_label = LEAVE_REASON_LABELS.get(reason_code, "Motivo no clasificado")
     evidence = build_persona_evidence(persona, reason_code, dropoff_second, transcript_signals, duration_seconds)
     why_they_left = (
-        f"{persona['name']} abandona por {reason_label.lower()} cerca de {dropoff_second}s, cuando evalúa el tramo "
-        f"'{evidence['evidence_excerpt']}' y siente que el video no resuelve su expectativa a tiempo."
+        f"{persona['name']} abandona por {reason_label.lower()} cerca de {dropoff_second}s. "
+        f"El quiebre aparece cuando evalúa \"{evidence['evidence_excerpt']}\" y siente que el video no termina "
+        f"de resolver lo que esperaba ver."
     )
     summary_of_interacion = (
-        f"{persona['name']} primero conecta con {evidence['liked_moment'].lower()}, pero termina saliendo en la fase "
-        f"{evidence['decision_stage']} por {reason_label.lower()}."
+        f"{persona['name']} primero conecta con el tramo que le resulta más prometedor, pero termina saliendo en la fase "
+        f"{evidence['decision_stage']} por {reason_label.lower()} al no encontrar suficiente avance."
     )
     return {
         "dropoff_second": dropoff_second,
@@ -287,17 +445,20 @@ def batch_needs_retry(personas: list[dict[str, Any]]) -> bool:
     if not personas:
         return False
     reason_counts = Counter(item.get("reason_code", "unclear_value") for item in personas)
+    evidence_counts = Counter(str(item.get("evidence_excerpt", "")).strip().lower() for item in personas if item.get("evidence_excerpt"))
     dominant_reason_count = reason_counts.most_common(1)[0][1]
+    dominant_evidence_count = evidence_counts.most_common(1)[0][1] if evidence_counts else 0
     distinct_reasons = len(reason_counts)
     distinct_dropoffs = len({round(float(item.get("dropoff_second", 0)), 1) for item in personas})
     evidence_ok = sum(1 for item in personas if len(str(item.get("evidence_excerpt", "")).split()) >= 3)
     dropoff_std = pstdev([float(item.get("dropoff_second", 0)) for item in personas]) if len(personas) > 1 else 0.0
     return (
-        dominant_reason_count >= max(14, int(len(personas) * 0.7))
-        or distinct_reasons < 4
-        or distinct_dropoffs < 6
-        or evidence_ok < max(14, int(len(personas) * 0.7))
-        or dropoff_std < 1.1
+        dominant_reason_count >= max(12, int(len(personas) * 0.55))
+        or dominant_evidence_count >= max(10, int(len(personas) * 0.5))
+        or distinct_reasons < 5
+        or distinct_dropoffs < 8
+        or evidence_ok < max(16, int(len(personas) * 0.8))
+        or dropoff_std < 1.4
     )
 
 
@@ -312,24 +473,20 @@ async def request_persona_batch_from_model(
 ) -> dict[str, Any] | None:
     spec = build_persona_batch_spec(LEAVE_REASON_LABELS.keys())
     user_payload = {
-        "duration_seconds": duration_seconds,
-        "transcript": transcript,
-        "transcript_signals": transcript_signals,
-        "reason_taxonomy": LEAVE_REASON_LABELS,
-        "creative_context": {
-            "hook_score": creative_context["hook_score"],
-            "clarity_score": creative_context["clarity_score"],
-            "pacing_score": creative_context["pacing_score"],
-            "cta_score": creative_context["cta_score"],
-            "best_platform": creative_context["best_platform"],
-            "primary_angle": creative_context["primary_angle"],
-            "timeline_insights": creative_context["timeline_insights"],
-        },
-        "personas": batch,
+        **build_compact_persona_prompt_payload(
+            batch=batch,
+            creative_context=creative_context,
+            transcript=transcript,
+            transcript_signals=transcript_signals,
+            duration_seconds=duration_seconds,
+        ),
         "quality_requirements": [
             "Usa evidence_excerpt y timestamps reales.",
             "No concentres casi todas las personas en el mismo reason_code si el transcript no lo justifica.",
             "Haz que why_they_left y summary_of_interacion se sientan especificos del video y de la persona.",
+            "Distribuye la atencion entre distintos momentos del video cuando el material tenga mas de un beat relevante.",
+            "No repitas el mismo evidence_excerpt para la mayoria del batch.",
+            "Si necesitas ahorrar tokens, prioriza persona_id, dropoff_second, reason_code y evidence_excerpt; el backend completara el resto.",
         ],
     }
     if retry_note:
@@ -341,8 +498,11 @@ async def request_persona_batch_from_model(
             {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
         ],
         schema_name=spec.schema_name,
-        schema=persona_batch_schema(),
+        schema=persona_batch_compact_schema(),
         model=resolve_prompt_model(spec.default_model, spec.model_env_var),
+        strict=True,
+        temperature=spec.temperature,
+        timeout_seconds=spec.timeout_seconds,
     )
 
 
@@ -397,7 +557,8 @@ async def analyze_persona_batch(
                 "del transcript para cada persona."
             )
             if attempt == 1:
-                return normalized
+                return fallback_results if batch_needs_retry(normalized) and not batch_needs_retry(fallback_results) else normalized
         return normalized or fallback_results
-    except Exception:
+    except Exception as exc:
+        print(f"Persona batch analysis failed: {exc}")
         return fallback_results

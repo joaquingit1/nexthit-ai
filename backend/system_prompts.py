@@ -93,19 +93,24 @@ STRATEGIC_OUTPUTS_SPEC = JsonPromptSpec(
 )
 
 
-VIDEO_SUMMARY_SPEC = JsonPromptSpec(
+VIDEO_SUMMARY_SPEC = TextPromptSpec(
     name="video_summary",
     default_model="llama-3.1-8b-instant",
     model_env_var="GROQ_VIDEO_SUMMARY_MODEL",
-    schema_name="video_summary_structured",
     system_prompt=(
         "Eres un master marketing strategist especializado en short-form video, paid social y analisis creativo. "
         "Responde solo en espanol. "
-        "Debes devolver un JSON estricto con cuatro campos: de_que_trata, como_funciona_para_marketing, fortalezas y debilidades. "
-        "No copies literalmente el transcript salvo una micro-cita de un maximo de seis palabras si fuera indispensable. "
-        "No uses formulas vacias como 'el mensaje se desarrolla asi', no enumeres frases del transcript y no hables del sistema. "
-        "Quiero una sintesis ejecutiva real: explica de que trata el video, como presenta la promesa, donde gana o pierde atencion y por que eso importa para marketing. "
-        "fortalezas y debilidades deben ser arrays con puntos concretos, no abstracciones genericas."
+        "Tu salida final debe ser texto plano, no JSON, y debe tener exactamente esta estructura: "
+        "1) un bloque inicial de 3 a 5 frases que resuma que ocurre en el video de principio a fin, "
+        "en lenguaje concreto y verificable; "
+        "2) una linea que empiece con 'Fortalezas:' y enumere 2 o 3 fortalezas separadas por '; '; "
+        "3) una linea que empiece con 'Debilidades:' y enumere 2 o 3 debilidades separadas por '; '. "
+        "No copies literalmente el transcript salvo una micro-cita de un maximo de cuatro palabras si fuera indispensable. "
+        "No uses formulas vacias como 'el mensaje se desarrolla asi', 'es un video corto de', "
+        "'hook, desarrollo y cierre', ni enumeres frases del transcript como si eso fuera un resumen. "
+        "Debes explicar que pasa en el video: como abre, que muestra o dice en la parte media, como cierra, "
+        "que promesa de valor intenta instalar y que parte concreta hace perder atencion. "
+        "Si el material es confuso o caotico, dilo de forma clara y profesional en vez de repetirlo."
     ),
 )
 
@@ -114,7 +119,7 @@ def build_persona_batch_spec(reason_codes: Iterable[str]) -> JsonPromptSpec:
     taxonomy = ", ".join(reason_codes)
     return JsonPromptSpec(
         name="persona_batch",
-        default_model="llama-3.1-8b-instant",
+        default_model="openai/gpt-oss-20b",
         model_env_var="GROQ_PERSONA_BATCH_MODEL",
         schema_name="persona_batch",
         system_prompt=(
@@ -122,9 +127,11 @@ def build_persona_batch_spec(reason_codes: Iterable[str]) -> JsonPromptSpec:
             "Piensa como cada persona individualmente, no como un promedio. "
             "Para cada persona, devuelve el segundo exacto en el que abandona, el reason_code mas probable dentro de esta taxonomia exacta: "
             f"{taxonomy}. "
-            "Tambien devuelve why_they_left, summary_of_interacion, liked_moment, disliked_moment, evidence_start_second, evidence_end_second, evidence_excerpt y decision_stage en espanol. "
+            "Devuelve siempre, como minimo, persona_id, dropoff_second, reason_code y evidence_excerpt. "
+            "Si te alcanza el espacio, tambien puedes devolver why_they_left, summary_of_interacion, liked_moment, disliked_moment, evidence_start_second, evidence_end_second y decision_stage en espanol. "
             "Cada persona debe dejar evidencia de haber evaluado una parte concreta del video: menciona un momento, una idea o una frase breve del transcript y conectala con su decision. "
             "No repitas formulas genericas como 'intro demasiado lenta' sin explicar que parte del video dispara esa conclusion. "
+            "No hagas que la mayoria del batch abandone por exactamente la misma razon o cite exactamente el mismo tramo salvo que el material realmente no ofrezca otra lectura razonable. "
             "dropoff_second debe quedar siempre dentro de la duracion real del video. "
             "decision_stage debe ser uno de: hook, desarrollo, prueba, cta, cierre. "
             "No inventes campos fuera del schema y mantente consistente con el perfil de cada persona."

@@ -40,6 +40,7 @@ HOOK_PATTERNS = [
     "antes de",
     "no hagas",
     "if you",
+    "what",
     "esto",
     "esta",
     "this",
@@ -47,33 +48,56 @@ HOOK_PATTERNS = [
 
 BENEFIT_PATTERNS = [
     "ahorra",
+    "save",
+    "saves",
     "gana",
+    "gain",
     "mejora",
+    "improve",
+    "improves",
     "crece",
+    "grow",
     "resultado",
+    "result",
     "beneficio",
+    "benefit",
     "soluciona",
+    "solve",
     "resuelve",
+    "fix",
     "mas rapido",
     "más rápido",
+    "faster",
     "fácil",
     "facil",
     "mejor",
+    "better",
 ]
 
 PROOF_PATTERNS = [
     "prueba",
+    "proof",
     "demostr",
+    "demo",
     "mira como",
     "asi se ve",
     "así se ve",
+    "look at",
+    "here is",
+    "this is how",
     "resultado",
+    "result",
     "caso real",
     "ejemplo",
+    "example",
     "antes y despues",
     "antes y después",
+    "before and after",
     "review",
     "testimonio",
+    "show",
+    "shows",
+    "works",
 ]
 
 
@@ -181,4 +205,3 @@ def find_nearest_segment(
 def pick_primary_moment(transcript_signals: dict[str, Any], key: str) -> dict[str, Any] | None:
     moments = transcript_signals.get(key, [])
     return moments[0] if moments else None
-

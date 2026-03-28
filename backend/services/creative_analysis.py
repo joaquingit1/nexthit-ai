@@ -111,11 +111,14 @@ async def analyze_creative_context(
             schema_name=spec.schema_name,
             schema=creative_analysis_schema(),
             model=resolve_prompt_model(spec.default_model, spec.model_env_var),
+            temperature=spec.temperature,
+            timeout_seconds=spec.timeout_seconds,
         )
         if not response:
             return fallback
         merged = {**fallback, **response}
         merged["timeline_insights"] = response.get("timeline_insights") or fallback["timeline_insights"]
         return merged
-    except Exception:
+    except Exception as exc:
+        print(f"Creative analysis failed: {exc}")
         return fallback
