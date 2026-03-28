@@ -7,5 +7,6 @@ frontend/.next/
 *.tsbuildinfo
 .claude/
 tmp/
+supabase/.temp/
 .env
 .env*
