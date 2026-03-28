@@ -58,6 +58,12 @@ export type PersonaResult = {
   reason_label?: string;
   why_they_left: string;
   summary_of_interacion: string;
+  liked_moment?: string;
+  disliked_moment?: string;
+  evidence_start_second?: number;
+  evidence_end_second?: number;
+  evidence_excerpt?: string;
+  decision_stage?: "hook" | "desarrollo" | "prueba" | "cta" | "cierre";
 };
 
 export type AudienceDistributionItem = {
@@ -89,6 +95,12 @@ export type PersonaSegment = {
   dominantReasonCode: string;
   dominantReasonLabel: string;
   samplePersonas: string[];
+  sampleEvidence?: {
+    name: string;
+    dropoffSecond: number;
+    reasonLabel?: string;
+    evidenceExcerpt?: string;
+  }[];
 };
 
 export type SegmentDiagnosis = {
@@ -97,6 +109,12 @@ export type SegmentDiagnosis = {
   reasonCode: string;
   reasonLabel: string;
   why: string;
+  examples?: {
+    name: string;
+    dropoffSecond: number;
+    reasonLabel?: string;
+    evidenceExcerpt?: string;
+  }[];
 };
 
 export type ChangeAction = {
@@ -761,10 +779,10 @@ function buildMockPersonas(viewers: ViewerSimulation[], durationSeconds: number)
       social_status: socialStatus,
       interests,
       hobbies,
-      life_story: `${viewer.segment} spends a lot of time comparing ideas quickly and decides fast whether a video deserves more attention.`,
-      platform_habits: `Mostly watches ${index % 2 === 0 ? "Instagram Reels" : "TikTok"} in short bursts during the day.`,
-      motivations: ["learn something useful fast", "find creative inspiration", "avoid wasting time"],
-      frustrations: ["slow intros", "unclear value", "generic pacing"],
+      life_story: `${viewer.segment} compara ideas a velocidad de scroll y decide rapido si un video merece mas atencion.`,
+      platform_habits: `Consume ${index % 2 === 0 ? "Instagram Reels" : "TikTok"} en pausas cortas del dia.`,
+      motivations: ["aprender algo util rapido", "encontrar inspiracion creativa", "evitar perder tiempo"],
+      frustrations: ["intros lentas", "valor poco claro", "ritmo generico"],
       segment_label: viewer.segment,
       color: viewer.color,
       batch_index: Math.floor(index / 20),
@@ -1139,7 +1157,7 @@ export function createAnalysisPayload(input: CreateAnalysisInput): AnalysisRespo
         overallScore,
         overallLabel,
         narrative: summaryNarrative,
-        videoSummary: `${summaryNarrative} The video works best when its proof arrives early, the hook gets tighter, and the strongest audience cluster is used as the first paid testing segment.`,
+        videoSummary: `${summaryNarrative} El video funciona mejor cuando la prueba aparece antes, el hook se vuelve mas preciso y el primer segmento pago se construye sobre la audiencia sintetica que mas retiene.`,
         pillars: [
           {
             label: "Potencial de retencion",

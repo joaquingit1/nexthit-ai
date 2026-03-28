@@ -77,6 +77,15 @@ def build_persona_segments(personas: list[dict[str, Any]]) -> list[dict[str, Any
                 "dominantReasonCode": dominant_reason_code,
                 "dominantReasonLabel": LEAVE_REASON_LABELS.get(dominant_reason_code, dominant_reason_code),
                 "samplePersonas": [item["name"] for item in items[:2]],
+                "sampleEvidence": [
+                    {
+                        "name": item["name"],
+                        "dropoffSecond": item["dropoff_second"],
+                        "reasonLabel": item.get("reason_label"),
+                        "evidenceExcerpt": item.get("evidence_excerpt"),
+                    }
+                    for item in items[:2]
+                ],
             }
         )
     segments.sort(key=lambda item: (-item["averageRetention"], item["medianDropoffSecond"]))
@@ -98,6 +107,15 @@ def build_segment_diagnoses(personas: list[dict[str, Any]]) -> list[dict[str, An
                 "reasonCode": dominant_reason_code,
                 "reasonLabel": segment["dominantReasonLabel"],
                 "why": Counter(persona["why_they_left"] for persona in matching).most_common(1)[0][0],
+                "examples": [
+                    {
+                        "name": item["name"],
+                        "dropoffSecond": item["dropoff_second"],
+                        "reasonLabel": item.get("reason_label"),
+                        "evidenceExcerpt": item.get("evidence_excerpt"),
+                    }
+                    for item in sorted(matching, key=lambda persona: persona["retention_percent"], reverse=True)[:2]
+                ],
             }
         )
     diagnoses.sort(key=lambda item: item["dropoffSecond"])
@@ -119,6 +137,9 @@ def build_top_leave_reasons(personas: list[dict[str, Any]]) -> list[dict[str, An
                 "count": len(items),
                 "averageDropoffSecond": round_value(sum(float(item["dropoff_second"]) for item in items) / max(len(items), 1), 1),
                 "example": Counter(item["why_they_left"] for item in items).most_common(1)[0][0],
+                "evidenceExcerpt": Counter(str(item.get("evidence_excerpt", "")) for item in items if item.get("evidence_excerpt")).most_common(1)[0][0]
+                if any(item.get("evidence_excerpt") for item in items)
+                else "",
             }
         )
     rows.sort(key=lambda item: (-item["count"], item["averageDropoffSecond"]))

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import random
+from collections import Counter
+from statistics import pstdev
 from typing import Any
 
 from config import resolve_prompt_model
@@ -20,6 +22,12 @@ from constants import (
 )
 from schemas import persona_batch_schema
 from services.groq_client import call_groq_chat_json
+from services.transcript_signals import (
+    derive_transcript_signals,
+    find_nearest_segment,
+    pick_primary_moment,
+    stage_from_second,
+)
 from system_prompts import build_persona_batch_spec
 from utils import clamp, round_value
 
@@ -58,90 +66,284 @@ def build_persona_library() -> list[dict[str, Any]]:
     return personas
 
 
-# Pre-built persona library
 PERSONA_LIBRARY = build_persona_library()
+
+
+def infer_reason_code(
+    persona: dict[str, Any],
+    creative_context: dict[str, Any],
+    transcript_signals: dict[str, Any],
+    duration_seconds: int,
+) -> tuple[str, float]:
+    """Infer a reason code and rough drop-off anchor from creative and transcript signals."""
+    archetype = str(persona.get("archetype", ""))
+    first_speech = float(transcript_signals.get("first_speech_time", 0) or 0)
+    hook_moment = pick_primary_moment(transcript_signals, "hook_moments")
+    benefit_moment = pick_primary_moment(transcript_signals, "benefit_moments")
+    proof_moment = pick_primary_moment(transcript_signals, "proof_moments")
+    cta_moment = pick_primary_moment(transcript_signals, "cta_moments")
+    overload_moment = pick_primary_moment(transcript_signals, "overload_moments")
+
+    if first_speech > 0.5:
+        return "silent_intro", min(first_speech + 0.4, duration_seconds)
+    if creative_context["hook_score"] < 62 or (hook_moment and float(hook_moment["start"]) > 1.8):
+        return "intro_too_slow", min((float(hook_moment["start"]) if hook_moment else 1.6) + 0.6, duration_seconds)
+    if archetype in {"Cazador de tendencias", "Entretenido casual"} and creative_context["novelty_score"] < 64:
+        anchor = float(benefit_moment["start"]) if benefit_moment else duration_seconds * 0.25
+        return "low_novelty", min(anchor + 0.6, duration_seconds)
+    if archetype in {"Comprador esceptico", "Comprador problema-solucion"} and (
+        not proof_moment or creative_context["clarity_score"] < 70
+    ):
+        anchor = float(proof_moment["start"]) if proof_moment else duration_seconds * 0.34
+        return "claim_lacks_proof", min(anchor + 0.8, duration_seconds)
+    if archetype in {"Buscador de valor", "Comprador problema-solucion"} and (
+        not benefit_moment or creative_context["clarity_score"] < 68
+    ):
+        anchor = float(benefit_moment["start"]) if benefit_moment else duration_seconds * 0.28
+        return "unclear_value", min(anchor + 0.7, duration_seconds)
+    if archetype == "Creador o marketer" and creative_context["visual_score"] < 68:
+        anchor = float(hook_moment["start"]) if hook_moment else 1.6
+        return "weak_visual_hook", min(anchor + 0.8, duration_seconds)
+    if archetype == "Comprador impulsivo" and cta_moment and float(cta_moment["start"]) > duration_seconds * 0.72:
+        return "cta_too_late", min(float(cta_moment["start"]) + 0.2, duration_seconds)
+    if archetype == "Entusiasta de nicho":
+        return "irrelevant_for_audience", min(duration_seconds * 0.42, duration_seconds)
+    if archetype == "Viewer guiado por historia" and creative_context["pacing_score"] < 66:
+        return "weak_story_payoff", min(duration_seconds * 0.74, duration_seconds)
+    if overload_moment and creative_context["audio_score"] < 64:
+        return "too_much_talking", min(float(overload_moment["start"]) + 0.6, duration_seconds)
+    if overload_moment and archetype in {"Buscador de valor", "Creador o marketer", "Comprador esceptico"}:
+        return "cognitive_overload", min(float(overload_moment["start"]) + 0.5, duration_seconds)
+    if creative_context["pacing_score"] < 63:
+        return "low_energy", min(duration_seconds * 0.46, duration_seconds)
+    return "unclear_value", min(duration_seconds * 0.38, duration_seconds)
+
+
+def build_persona_evidence(
+    persona: dict[str, Any],
+    reason_code: str,
+    anchor_second: float,
+    transcript_signals: dict[str, Any],
+    duration_seconds: int,
+) -> dict[str, Any]:
+    """Build evidence-backed explanation fields for a persona."""
+    tag_map = {
+        "silent_intro": "hook",
+        "intro_too_slow": "hook",
+        "unclear_value": "benefit",
+        "claim_lacks_proof": "proof",
+        "weak_visual_hook": "hook",
+        "low_energy": None,
+        "too_much_talking": "overload",
+        "cognitive_overload": "overload",
+        "low_novelty": "hook",
+        "irrelevant_for_audience": "benefit",
+        "cta_too_late": "cta",
+        "weak_story_payoff": None,
+    }
+    disliked_segment = find_nearest_segment(transcript_signals, anchor_second, preferred_tag=tag_map.get(reason_code))
+    liked_segment = (
+        pick_primary_moment(transcript_signals, "benefit_moments")
+        or pick_primary_moment(transcript_signals, "proof_moments")
+        or pick_primary_moment(transcript_signals, "hook_moments")
+        or disliked_segment
+    )
+    evidence_segment = disliked_segment or liked_segment
+    evidence_start = round_value(float(evidence_segment["start"]), 1) if evidence_segment else round_value(anchor_second, 1)
+    evidence_end = round_value(float(evidence_segment["end"]), 1) if evidence_segment else round_value(min(duration_seconds, anchor_second + 0.8), 1)
+    evidence_excerpt = str(evidence_segment.get("excerpt", "")) if evidence_segment else ""
+    decision_stage = str(evidence_segment.get("stage")) if evidence_segment else stage_from_second(anchor_second, duration_seconds)
+
+    liked_text = (
+        f"Le atrae cuando aparece {liked_segment.get('excerpt', '').lower()}"
+        if liked_segment and liked_segment.get("excerpt")
+        else "Le interesa cuando el video por fin aterriza una idea concreta."
+    )
+    disliked_text = (
+        f"Se enfría cuando el video entra en {evidence_excerpt.lower()}"
+        if evidence_excerpt
+        else "Se enfría cuando el video deja de avanzar con claridad."
+    )
+    return {
+        "liked_moment": liked_text,
+        "disliked_moment": disliked_text,
+        "evidence_start_second": evidence_start,
+        "evidence_end_second": max(evidence_end, evidence_start),
+        "evidence_excerpt": evidence_excerpt or "No hay evidencia verbal suficientemente clara en ese tramo.",
+        "decision_stage": decision_stage,
+    }
 
 
 def default_persona_reason(
     persona: dict[str, Any],
     creative_context: dict[str, Any],
+    transcript: dict[str, Any],
+    transcript_signals: dict[str, Any],
     duration_seconds: int,
 ) -> dict[str, Any]:
-    """Generate default persona drop-off reason based on archetype."""
-    rng = random.Random(f"{persona['persona_id']}::{creative_context['overall_score']}::{creative_context['hook_score']}")
-    first_hook = clamp(
-        creative_context["hook_score"] * 0.035 + creative_context["clarity_score"] * 0.028 + creative_context["pacing_score"] * 0.025,
-        0.8,
-        duration_seconds,
+    """Generate evidence-backed fallback for a persona."""
+    rng = random.Random(
+        f"{persona['persona_id']}::{creative_context['overall_score']}::{creative_context['hook_score']}::{duration_seconds}"
     )
-    archetype = persona.get("archetype", "")
-    reason_code = "intro_too_slow"
-    base = first_hook + rng.uniform(-0.7, 0.8)
-
-    if archetype == "Scroller veloz":
-        base -= 1.3
-        reason_code = "intro_too_slow"
-    elif archetype == "Cazador de tendencias":
-        base -= 0.7
+    reason_code, anchor = infer_reason_code(persona, creative_context, transcript_signals, duration_seconds)
+    proof_moment = pick_primary_moment(transcript_signals, "proof_moments")
+    cta_moment = pick_primary_moment(transcript_signals, "cta_moments")
+    overload_moment = pick_primary_moment(transcript_signals, "overload_moments")
+    if persona.get("age_range") == "18-24" and reason_code == "unclear_value":
         reason_code = "low_novelty"
-    elif archetype == "Buscador de valor":
-        base += 0.2
-        reason_code = "unclear_value"
-    elif archetype == "Comprador esceptico":
-        base += 0.3
+    if persona.get("social_status") == "Dueno de negocio" and reason_code in {"unclear_value", "low_novelty"} and cta_moment:
+        reason_code = "cta_too_late"
+        anchor = float(cta_moment["start"])
+    if persona.get("social_status") == "Profesional consolidado" and overload_moment and reason_code == "unclear_value":
+        reason_code = "cognitive_overload"
+        anchor = float(overload_moment["start"])
+    if persona.get("country") in {"Alemania", "Francia"} and proof_moment and reason_code == "unclear_value":
         reason_code = "claim_lacks_proof"
-    elif archetype == "Entusiasta de nicho":
-        base += 0.6
-        reason_code = "irrelevant_for_audience"
-    elif archetype == "Entretenido casual":
-        base -= 0.4
-        reason_code = "low_energy"
-    elif archetype == "Comprador problema-solucion":
-        base += 0.9
-        reason_code = "unclear_value"
-    elif archetype == "Creador o marketer":
-        base += 0.5
-        reason_code = "weak_visual_hook"
-    elif archetype == "Comprador impulsivo":
-        base -= 0.2
-        reason_code = "cta_too_late"
-    elif archetype == "Viewer guiado por historia":
-        base += 0.8
-        reason_code = "weak_story_payoff"
-
+        anchor = float(proof_moment["start"])
+    archetype_bias = {
+        "Scroller veloz": -1.1,
+        "Cazador de tendencias": -0.7,
+        "Buscador de valor": 0.4,
+        "Comprador esceptico": 0.7,
+        "Entusiasta de nicho": 0.5,
+        "Entretenido casual": -0.4,
+        "Comprador problema-solucion": 0.9,
+        "Creador o marketer": 0.3,
+        "Comprador impulsivo": -0.2,
+        "Viewer guiado por historia": 1.1,
+    }
+    base = anchor + archetype_bias.get(str(persona.get("archetype", "")), 0) + rng.uniform(-0.6, 0.7)
     if persona.get("age_range") == "18-24":
-        base -= 0.4
-    if persona.get("social_status") == "Dueno de negocio":
-        base += 0.5
-    if creative_context["cta_score"] < 60 and archetype in {"Comprador impulsivo", "Comprador problema-solucion"}:
-        reason_code = "cta_too_late"
-        base -= 0.2
-    if creative_context["clarity_score"] < 68 and archetype in {"Buscador de valor", "Comprador problema-solucion"}:
-        reason_code = "unclear_value"
         base -= 0.3
-    if creative_context["novelty_score"] < 62 and archetype in {"Cazador de tendencias", "Entretenido casual"}:
-        reason_code = "low_novelty"
-        base -= 0.4
-    if creative_context["audio_score"] < 60:
-        reason_code = "too_much_talking"
+    if persona.get("social_status") == "Dueno de negocio":
+        base += 0.4
 
     dropoff_second = round_value(clamp(base, 0.8, duration_seconds), 1)
     retention_percent = int(clamp(round_value((dropoff_second / max(duration_seconds, 1)) * 100), 0, 100))
     reason_label = LEAVE_REASON_LABELS.get(reason_code, "Motivo no clasificado")
-    left_because = f"{reason_label}. {persona['name']} siente que el video no resuelve su expectativa a tiempo."
-    interaction = (
-        f"{persona['name']} corta cerca de {dropoff_second}s porque identifica {reason_label.lower()}."
-        if retention_percent < 85
-        else f"{persona['name']} se queda hasta {dropoff_second}s; aun así detecta {reason_label.lower()} como el principal punto de fricción."
+    evidence = build_persona_evidence(persona, reason_code, dropoff_second, transcript_signals, duration_seconds)
+    why_they_left = (
+        f"{persona['name']} abandona por {reason_label.lower()} cerca de {dropoff_second}s, cuando evalúa el tramo "
+        f"'{evidence['evidence_excerpt']}' y siente que el video no resuelve su expectativa a tiempo."
+    )
+    summary_of_interacion = (
+        f"{persona['name']} primero conecta con {evidence['liked_moment'].lower()}, pero termina saliendo en la fase "
+        f"{evidence['decision_stage']} por {reason_label.lower()}."
     )
     return {
         "dropoff_second": dropoff_second,
         "retention_percent": retention_percent,
         "reason_code": reason_code,
         "reason_label": reason_label,
-        "why_they_left": left_because,
-        "summary_of_interacion": interaction,
+        "why_they_left": why_they_left,
+        "summary_of_interacion": summary_of_interacion,
+        **evidence,
     }
+
+
+def normalize_persona_result(
+    persona: dict[str, Any],
+    result: dict[str, Any],
+    base: dict[str, Any],
+    transcript_signals: dict[str, Any],
+    duration_seconds: int,
+) -> dict[str, Any]:
+    dropoff_second = round_value(clamp(float(result.get("dropoff_second", base["dropoff_second"])), 0.8, duration_seconds), 1)
+    reason_code = str(result.get("reason_code", base["reason_code"])).strip()
+    if reason_code not in LEAVE_REASON_LABELS:
+        reason_code = base["reason_code"]
+    evidence_start = round_value(clamp(float(result.get("evidence_start_second", base["evidence_start_second"])), 0, duration_seconds), 1)
+    evidence_end = round_value(clamp(float(result.get("evidence_end_second", base["evidence_end_second"])), evidence_start, duration_seconds), 1)
+    evidence_excerpt = str(result.get("evidence_excerpt", base["evidence_excerpt"])).strip() or base["evidence_excerpt"]
+    decision_stage = str(result.get("decision_stage", base["decision_stage"])).strip().lower()
+    if decision_stage not in {"hook", "desarrollo", "prueba", "cta", "cierre"}:
+        decision_stage = stage_from_second(evidence_start or dropoff_second, duration_seconds)
+
+    if len(evidence_excerpt.split()) < 3:
+        evidence_fallback = build_persona_evidence(persona, reason_code, dropoff_second, transcript_signals, duration_seconds)
+        evidence_start = evidence_fallback["evidence_start_second"]
+        evidence_end = evidence_fallback["evidence_end_second"]
+        evidence_excerpt = evidence_fallback["evidence_excerpt"]
+        decision_stage = evidence_fallback["decision_stage"]
+
+    return {
+        **persona,
+        "dropoff_second": dropoff_second,
+        "retention_percent": int(clamp(round_value((dropoff_second / max(duration_seconds, 1)) * 100), 0, 100)),
+        "reason_code": reason_code,
+        "reason_label": LEAVE_REASON_LABELS.get(reason_code, base["reason_label"]),
+        "why_they_left": str(result.get("why_they_left", base["why_they_left"])).strip() or base["why_they_left"],
+        "summary_of_interacion": str(result.get("summary_of_interacion", base["summary_of_interacion"])).strip() or base["summary_of_interacion"],
+        "liked_moment": str(result.get("liked_moment", base["liked_moment"])).strip() or base["liked_moment"],
+        "disliked_moment": str(result.get("disliked_moment", base["disliked_moment"])).strip() or base["disliked_moment"],
+        "evidence_start_second": evidence_start,
+        "evidence_end_second": evidence_end,
+        "evidence_excerpt": evidence_excerpt,
+        "decision_stage": decision_stage,
+    }
+
+
+def batch_needs_retry(personas: list[dict[str, Any]]) -> bool:
+    if not personas:
+        return False
+    reason_counts = Counter(item.get("reason_code", "unclear_value") for item in personas)
+    dominant_reason_count = reason_counts.most_common(1)[0][1]
+    distinct_reasons = len(reason_counts)
+    distinct_dropoffs = len({round(float(item.get("dropoff_second", 0)), 1) for item in personas})
+    evidence_ok = sum(1 for item in personas if len(str(item.get("evidence_excerpt", "")).split()) >= 3)
+    dropoff_std = pstdev([float(item.get("dropoff_second", 0)) for item in personas]) if len(personas) > 1 else 0.0
+    return (
+        dominant_reason_count >= max(14, int(len(personas) * 0.7))
+        or distinct_reasons < 4
+        or distinct_dropoffs < 6
+        or evidence_ok < max(14, int(len(personas) * 0.7))
+        or dropoff_std < 1.1
+    )
+
+
+async def request_persona_batch_from_model(
+    *,
+    batch: list[dict[str, Any]],
+    creative_context: dict[str, Any],
+    transcript: dict[str, Any],
+    transcript_signals: dict[str, Any],
+    duration_seconds: int,
+    retry_note: str | None = None,
+) -> dict[str, Any] | None:
+    spec = build_persona_batch_spec(LEAVE_REASON_LABELS.keys())
+    user_payload = {
+        "duration_seconds": duration_seconds,
+        "transcript": transcript,
+        "transcript_signals": transcript_signals,
+        "reason_taxonomy": LEAVE_REASON_LABELS,
+        "creative_context": {
+            "hook_score": creative_context["hook_score"],
+            "clarity_score": creative_context["clarity_score"],
+            "pacing_score": creative_context["pacing_score"],
+            "cta_score": creative_context["cta_score"],
+            "best_platform": creative_context["best_platform"],
+            "primary_angle": creative_context["primary_angle"],
+            "timeline_insights": creative_context["timeline_insights"],
+        },
+        "personas": batch,
+        "quality_requirements": [
+            "Usa evidence_excerpt y timestamps reales.",
+            "No concentres casi todas las personas en el mismo reason_code si el transcript no lo justifica.",
+            "Haz que why_they_left y summary_of_interacion se sientan especificos del video y de la persona.",
+        ],
+    }
+    if retry_note:
+        user_payload["retry_note"] = retry_note
+
+    return await call_groq_chat_json(
+        messages=[
+            {"role": "system", "content": spec.system_prompt},
+            {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
+        ],
+        schema_name=spec.schema_name,
+        schema=persona_batch_schema(),
+        model=resolve_prompt_model(spec.default_model, spec.model_env_var),
+    )
 
 
 async def analyze_persona_batch(
@@ -150,61 +352,52 @@ async def analyze_persona_batch(
     transcript: dict[str, Any],
     duration_seconds: int,
 ) -> list[dict[str, Any]]:
-    """Analyze a batch of personas using Groq LLM."""
-    fallback_results = [{**persona, **default_persona_reason(persona, creative_context, duration_seconds)} for persona in batch]
+    """Analyze a batch of personas using Groq LLM with evidence validation."""
+    transcript_signals = derive_transcript_signals(transcript, duration_seconds)
+    fallback_results = [
+        {**persona, **default_persona_reason(persona, creative_context, transcript, transcript_signals, duration_seconds)}
+        for persona in batch
+    ]
     try:
-        spec = build_persona_batch_spec(LEAVE_REASON_LABELS.keys())
-        response = await call_groq_chat_json(
-            messages=[
-                {
-                    "role": "system",
-                    "content": spec.system_prompt,
-                },
-                {
-                    "role": "user",
-                    "content": json.dumps(
-                        {
-                            "duration_seconds": duration_seconds,
-                            "transcript": transcript,
-                            "reason_taxonomy": LEAVE_REASON_LABELS,
-                            "creative_context": {
-                                "hook_score": creative_context["hook_score"],
-                                "clarity_score": creative_context["clarity_score"],
-                                "pacing_score": creative_context["pacing_score"],
-                                "cta_score": creative_context["cta_score"],
-                                "best_platform": creative_context["best_platform"],
-                                "primary_angle": creative_context["primary_angle"],
-                                "timeline_insights": creative_context["timeline_insights"],
-                            },
-                            "personas": batch,
-                        },
-                        ensure_ascii=False,
-                    ),
-                },
-            ],
-            schema_name=spec.schema_name,
-            schema=persona_batch_schema(),
-            model=resolve_prompt_model(spec.default_model, spec.model_env_var),
-        )
-        if not response or "personas" not in response:
-            return fallback_results
-        mapped = {item.get("persona_id"): item for item in response.get("personas", []) if isinstance(item, dict) and item.get("persona_id")}
-        normalized = []
-        for persona in batch:
-            base = default_persona_reason(persona, creative_context, duration_seconds)
-            result = mapped.get(persona["persona_id"], {})
-            dropoff_second = round_value(clamp(float(result.get("dropoff_second", base["dropoff_second"])), 0.8, duration_seconds), 1)
-            normalized.append(
-                {
-                    **persona,
-                    "dropoff_second": dropoff_second,
-                    "retention_percent": int(clamp(round_value((dropoff_second / max(duration_seconds, 1)) * 100), 0, 100)),
-                    "reason_code": str(result.get("reason_code", base["reason_code"])).strip(),
-                    "reason_label": LEAVE_REASON_LABELS.get(str(result.get("reason_code", base["reason_code"])).strip(), base["reason_label"]),
-                    "why_they_left": str(result.get("why_they_left", base["why_they_left"])).strip(),
-                    "summary_of_interacion": str(result.get("summary_of_interacion", base["summary_of_interacion"])).strip(),
-                }
+        normalized: list[dict[str, Any]] | None = None
+        retry_note: str | None = None
+        for attempt in range(2):
+            response = await request_persona_batch_from_model(
+                batch=batch,
+                creative_context=creative_context,
+                transcript=transcript,
+                transcript_signals=transcript_signals,
+                duration_seconds=duration_seconds,
+                retry_note=retry_note,
             )
-        return normalized
+            if not response or "personas" not in response:
+                continue
+            mapped = {
+                item.get("persona_id"): item
+                for item in response.get("personas", [])
+                if isinstance(item, dict) and item.get("persona_id")
+            }
+            normalized = []
+            for persona in batch:
+                base = default_persona_reason(persona, creative_context, transcript, transcript_signals, duration_seconds)
+                result = mapped.get(persona["persona_id"], {})
+                normalized.append(
+                    normalize_persona_result(
+                        persona,
+                        result,
+                        base,
+                        transcript_signals,
+                        duration_seconds,
+                    )
+                )
+            if not batch_needs_retry(normalized):
+                return normalized
+            retry_note = (
+                "La salida anterior colapso demasiado: diversifica reason_code, distribuye mejor dropoff_second y usa evidencia mas especifica "
+                "del transcript para cada persona."
+            )
+            if attempt == 1:
+                return normalized
+        return normalized or fallback_results
     except Exception:
         return fallback_results

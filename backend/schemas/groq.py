@@ -89,6 +89,12 @@ def persona_batch_schema() -> dict[str, Any]:
                         "reason_code",
                         "why_they_left",
                         "summary_of_interacion",
+                        "liked_moment",
+                        "disliked_moment",
+                        "evidence_start_second",
+                        "evidence_end_second",
+                        "evidence_excerpt",
+                        "decision_stage",
                     ],
                     "properties": {
                         "persona_id": {"type": "string"},
@@ -96,6 +102,15 @@ def persona_batch_schema() -> dict[str, Any]:
                         "reason_code": {"type": "string"},
                         "why_they_left": {"type": "string"},
                         "summary_of_interacion": {"type": "string"},
+                        "liked_moment": {"type": "string"},
+                        "disliked_moment": {"type": "string"},
+                        "evidence_start_second": {"type": "number"},
+                        "evidence_end_second": {"type": "number"},
+                        "evidence_excerpt": {"type": "string"},
+                        "decision_stage": {
+                            "type": "string",
+                            "enum": ["hook", "desarrollo", "prueba", "cta", "cierre"],
+                        },
                     },
                 },
             }
@@ -183,10 +198,12 @@ def video_summary_schema() -> dict[str, Any]:
     return {
         "type": "object",
         "additionalProperties": False,
-        "required": ["video_summary", "summary_narrative"],
+        "required": ["de_que_trata", "como_funciona_para_marketing", "fortalezas", "debilidades"],
         "properties": {
-            "video_summary": {"type": "string"},
-            "summary_narrative": {"type": "string"},
+            "de_que_trata": {"type": "string"},
+            "como_funciona_para_marketing": {"type": "string"},
+            "fortalezas": {"type": "array", "items": {"type": "string"}},
+            "debilidades": {"type": "array", "items": {"type": "string"}},
         },
     }
 

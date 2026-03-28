@@ -527,8 +527,8 @@ function derivePersonaInsights(
       );
       const verdict =
         retentionPercent >= 78
-          ? `watches ${retentionPercent}%`
-          : `leaves at ${formatMoment(averageDrop)}`;
+          ? `se queda ${retentionPercent}%`
+          : `abandona en ${formatMoment(averageDrop)}`;
 
       return {
         name,
@@ -537,7 +537,7 @@ function derivePersonaInsights(
         dropOffSecond: Math.round(averageDrop * 10) / 10,
         dropOffLabel: formatMoment(averageDrop),
         verdict,
-        angle: retentionPercent >= 70 ? strongestAngle : "Needs a faster value reveal",
+        angle: retentionPercent >= 70 ? strongestAngle : "Necesita mostrar el valor mas rapido",
         tag: "Senal de audiencia",
       } satisfies PersonaInsight;
     })
@@ -564,8 +564,8 @@ function derivePersonaInsightsFromBackend(
       dropOffLabel: formatMoment(persona.dropoff_second),
       verdict:
         persona.retention_percent >= 78
-          ? `watches ${persona.retention_percent}%`
-          : `leaves at ${formatMoment(persona.dropoff_second)}`,
+          ? `se queda ${persona.retention_percent}%`
+          : `abandona en ${formatMoment(persona.dropoff_second)}`,
       angle: strongestAngle,
       tag: index === 0 ? "Fit principal" : index === 1 ? "Fit secundario" : "Senal de audiencia",
     } satisfies PersonaInsight));
@@ -620,7 +620,7 @@ function deriveTimelineInsights(
       id: "overload",
       label: "Sobrecarga cognitiva",
       second: Math.round(midMoment * 10) / 10,
-      detail: `The middle asks for too much interpretation at once. ${topPersona} holds longer when the message stays sharper and simpler.`,
+      detail: `La mitad del video exige demasiada interpretacion de golpe. ${topPersona} retiene mejor cuando el mensaje se mantiene mas filoso y simple.`,
       tone: "risk",
     },
     {
@@ -722,6 +722,12 @@ function buildPersonaSegmentsFromRaw(personas: PersonaResult[]): PersonaSegment[
         dominantReasonCode: dominantReason[0],
         dominantReasonLabel: dominantReason[1].label,
         samplePersonas: items.slice(0, 2).map((item) => cleanPersonaName(item.name)),
+        sampleEvidence: items.slice(0, 2).map((item) => ({
+          name: cleanPersonaName(item.name),
+          dropoffSecond: item.dropoff_second,
+          reasonLabel: item.reason_label,
+          evidenceExcerpt: item.evidence_excerpt,
+        })),
       } satisfies PersonaSegment;
     })
     .sort((left, right) => right.averageRetention - left.averageRetention);
@@ -742,6 +748,12 @@ function buildSegmentDiagnosesFromRaw(personas: PersonaResult[]): SegmentDiagnos
       reasonCode: segment.dominantReasonCode,
       reasonLabel: segment.dominantReasonLabel,
       why,
+      examples: items.slice(0, 2).map((item) => ({
+        name: cleanPersonaName(item.name),
+        dropoffSecond: item.dropoff_second,
+        reasonLabel: item.reason_label,
+        evidenceExcerpt: item.evidence_excerpt,
+      })),
     } satisfies SegmentDiagnosis;
   });
 }
@@ -1834,19 +1846,64 @@ function GraphStep({
   );
 }
 
+type PersonaFilter = "top" | "early" | "diverse" | "all";
+
+function pickInitialPersonaSelection(personas: PersonaResult[]) {
+  const selected = new Map<string, PersonaResult>();
+  const byRetention = [...personas].sort((left, right) => right.retention_percent - left.retention_percent);
+  const byDropoff = [...personas].sort((left, right) => left.dropoff_second - right.dropoff_second);
+  const byMiddle = [...personas]
+    .sort((left, right) => left.dropoff_second - right.dropoff_second)
+    .slice(Math.floor(personas.length * 0.25), Math.max(Math.floor(personas.length * 0.75), 10));
+
+  for (const persona of byRetention.slice(0, 4)) {
+    selected.set(persona.persona_id, persona);
+  }
+
+  for (const persona of byDropoff.slice(0, 3)) {
+    selected.set(persona.persona_id, persona);
+  }
+
+  const seenReasons = new Set<string>();
+  for (const persona of byMiddle) {
+    const reason = persona.reason_code ?? "unclear_value";
+    if (seenReasons.has(reason)) {
+      continue;
+    }
+    seenReasons.add(reason);
+    selected.set(persona.persona_id, persona);
+    if (seenReasons.size >= 3) {
+      break;
+    }
+  }
+
+  return [...selected.values()].slice(0, 10);
+}
+
 function RawPersonasStep({
   personas,
 }: {
   personas: PersonaResult[];
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? personas : personas.slice(0, 10);
+  const [filter, setFilter] = useState<PersonaFilter>("diverse");
+  const visible = useMemo(() => {
+    if (filter === "all") {
+      return personas;
+    }
+    if (filter === "early") {
+      return [...personas].sort((left, right) => left.dropoff_second - right.dropoff_second).slice(0, 10);
+    }
+    if (filter === "top") {
+      return [...personas].sort((left, right) => right.retention_percent - left.retention_percent).slice(0, 10);
+    }
+    return pickInitialPersonaSelection(personas);
+  }, [filter, personas]);
 
   return (
     <section className="space-y-8">
       <StepIntro
         title="Las 100 personas sinteticas, sin caja negra."
-        description="Este es el USP central del producto. Antes de resumir nada, mostramos la data cruda: a quien simulamos, que atributo representa, cuando abandona y por que."
+        description="Este es el USP central del producto. Antes de resumir nada, mostramos la data cruda: a quien simulamos, que atributo representa, cuando abandona, que tramo del video evalua y por que toma esa decision."
       />
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
@@ -1856,16 +1913,30 @@ function RawPersonasStep({
               Dataset de audiencia sintetica
             </p>
             <h3 className="mt-3 font-display text-4xl font-semibold tracking-[-0.06em] text-slate-950">
-              100 viewers simulados con nombre, arquetipo y contexto.
+              100 personas simuladas con nombre, arquetipo y evidencia.
             </h3>
           </div>
-          <button
-            type="button"
-            onClick={() => setExpanded((current) => !current)}
-            className="rounded-full border border-slate-200 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white"
-          >
-            {expanded ? "Mostrar solo 10" : "Ver las 100"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {[
+              ["top", "Top retencion"],
+              ["early", "Abandono temprano"],
+              ["diverse", "Razones distintas"],
+              ["all", "Ver las 100"],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setFilter(id as PersonaFilter)}
+                className={`rounded-full px-4 py-3 text-sm font-semibold transition ${
+                  filter === id
+                    ? "bg-slate-950 text-white"
+                    : "border border-slate-200 bg-white/80 text-slate-700 hover:border-slate-300 hover:bg-white"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {visible.length === 0 ? (
@@ -1889,12 +1960,15 @@ function RawPersonasStep({
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       {persona.demographic_profile_label ?? persona.demographic_cluster ?? persona.age_range}
                     </span>
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      {persona.decision_stage ?? "etapa"}
+                    </span>
                   </div>
                   <h4 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
                     {cleanPersonaName(persona.name)}
                   </h4>
                   <p className="mt-2 text-sm leading-7 text-slate-600">
-                    {persona.age_range} · {persona.country} · {persona.income_bracket} · {persona.social_status}
+                    {[persona.age_range, persona.country, persona.income_bracket, persona.social_status].filter(Boolean).join(" / ")}
                   </p>
                 </div>
                 <div className="text-right">
@@ -1923,6 +1997,38 @@ function RawPersonasStep({
                     Resumen de interaccion
                   </p>
                   <p className="mt-2 text-sm leading-7 text-slate-600">{persona.summary_of_interacion}</p>
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                <div className="rounded-[1.2rem] border border-emerald-100 bg-emerald-50/70 px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                    Que le gusto
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-slate-700">
+                    {persona.liked_moment ?? "Conecta cuando la promesa se vuelve mas concreta."}
+                  </p>
+                </div>
+                <div className="rounded-[1.2rem] border border-rose-100 bg-rose-50/70 px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-700">
+                    Que la hizo irse
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-slate-700">
+                    {persona.disliked_moment ?? persona.why_they_left}
+                  </p>
+                </div>
+                <div className="rounded-[1.2rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Evidencia del video
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {persona.evidence_start_second !== undefined
+                      ? `${formatMoment(persona.evidence_start_second)} - ${formatMoment(persona.evidence_end_second ?? persona.evidence_start_second)}`
+                      : formatMoment(persona.dropoff_second)}
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">
+                    {persona.evidence_excerpt ?? "Todavia no hay extracto puntual de evidencia para esta persona."}
+                  </p>
                 </div>
               </div>
             </article>
@@ -1974,6 +2080,15 @@ function SegmentDropoffStep({
               <p className="mt-4 rounded-[1.2rem] border border-slate-200/80 bg-white/80 px-4 py-4 text-sm leading-7 text-slate-700">
                 Principal fuga: {segment.dominantReasonLabel}
               </p>
+              {segment.sampleEvidence?.length ? (
+                <div className="mt-4 space-y-2 rounded-[1.2rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4">
+                  {segment.sampleEvidence.map((sample) => (
+                    <p key={`${segment.label}-${sample.name}`} className="text-sm leading-7 text-slate-600">
+                      {sample.name}: {sample.reasonLabel} en {formatMoment(sample.dropoffSecond)}. {sample.evidenceExcerpt}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
             </article>
           );
         })}
@@ -1990,9 +2105,26 @@ function SegmentDropoffStep({
                 {item.label}
               </p>
               <p className="mt-3 text-base font-semibold text-slate-900">
-                Drop at {formatMoment(item.dropoffSecond)}: {item.reasonLabel}
+                Abandona en {formatMoment(item.dropoffSecond)}: {item.reasonLabel}
               </p>
               <p className="mt-3 text-sm leading-7 text-slate-600">{item.why}</p>
+              {item.examples?.length ? (
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  {item.examples.map((example) => (
+                    <div
+                      key={`${item.label}-${example.name}`}
+                      className="rounded-[1.2rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4"
+                    >
+                      <p className="text-sm font-semibold text-slate-900">
+                        {example.name} · {formatMoment(example.dropoffSecond)}
+                      </p>
+                      <p className="mt-2 text-sm leading-7 text-slate-600">
+                        {example.reasonLabel}. {example.evidenceExcerpt}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </article>
           ))}
         </div>

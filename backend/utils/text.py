@@ -25,7 +25,13 @@ def summary_has_placeholder_text(text: str) -> bool:
         "fallback",
         "placeholder",
         "uploaded clip",
+        "el mensaje se desarrolla asi",
+        "the message unfolds as follows",
     ]
     if any(marker in normalized for marker in markers):
         return True
-    return len(normalized.split()) < 18
+    if len(normalized.split()) < 18:
+        return True
+    if "fortalezas:" in normalized and "debilidades:" not in normalized:
+        return True
+    return False

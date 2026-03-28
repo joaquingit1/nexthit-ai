@@ -5,11 +5,68 @@ import re
 from typing import Any
 
 from config import GROQ_API_KEY, resolve_prompt_model
-from schemas import final_copy_schema, strategic_outputs_schema
-from services.groq_client import call_groq_chat_json, call_groq_text_completion
+from schemas import final_copy_schema, strategic_outputs_schema, video_summary_schema
+from services.groq_client import call_groq_chat_json
 from services.retention import build_platform_fit_rows
+from services.transcript_signals import derive_transcript_signals, pick_primary_moment
 from system_prompts import FINAL_COPY_SPEC, STRATEGIC_OUTPUTS_SPEC, VIDEO_SUMMARY_SPEC
 from utils import round_value, summary_has_placeholder_text
+
+
+def _sanitize_summary_text(text: str) -> str:
+    cleaned = re.sub(r"\s+", " ", text or "").strip()
+    cleaned = re.sub(r"^el mensaje se desarrolla asi[:,]?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"^en este video de \d+s[:,]?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\"[^\"]{18,}\"", "", cleaned)
+    cleaned = re.sub(r"'[^']{18,}'", "", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,.;:")
+    return cleaned
+
+
+def _finish_sentence(text: str) -> str:
+    cleaned = _sanitize_summary_text(text)
+    if not cleaned:
+        return ""
+    if cleaned.endswith((".", "!", "?")):
+        return cleaned
+    return f"{cleaned}."
+
+
+def compose_video_summary(parts: dict[str, Any]) -> dict[str, str]:
+    de_que_trata = _finish_sentence(str(parts.get("de_que_trata", "")))
+    como_funciona = _finish_sentence(str(parts.get("como_funciona_para_marketing", "")))
+    fortalezas = [
+        _sanitize_summary_text(str(item))
+        for item in parts.get("fortalezas", [])
+        if _sanitize_summary_text(str(item))
+    ]
+    debilidades = [
+        _sanitize_summary_text(str(item))
+        for item in parts.get("debilidades", [])
+        if _sanitize_summary_text(str(item))
+    ]
+    video_summary = (
+        f"{de_que_trata} {como_funciona} "
+        f"Fortalezas: {'; '.join(fortalezas[:3])}. "
+        f"Debilidades: {'; '.join(debilidades[:3])}."
+    )
+    video_summary = re.sub(r"\s+", " ", video_summary).strip()
+    first_sentence = re.split(r"(?<=[.!?])\s+", video_summary, maxsplit=1)[0].strip()
+    return {
+        "video_summary": video_summary,
+        "summary_narrative": first_sentence or video_summary,
+    }
+
+
+def summary_is_actionable(summary: str) -> bool:
+    normalized = re.sub(r"\s+", " ", summary or "").strip().lower()
+    if summary_has_placeholder_text(summary):
+        return False
+    if "el mensaje se desarrolla asi" in normalized:
+        return False
+    if normalized.count('"') > 2 or normalized.count("'") > 2:
+        return False
+    return all(token in normalized for token in ["fortalezas:", "debilidades:"])
 
 
 def build_transcript_grounded_summary(
@@ -18,33 +75,45 @@ def build_transcript_grounded_summary(
     duration_seconds: int,
 ) -> dict[str, str]:
     """Build a grounded summary from transcript."""
-    segment_text = [
-        str(segment.get("text", "")).strip()
-        for segment in transcript.get("segments", [])
-        if str(segment.get("text", "")).strip()
-    ]
-    summary_core = " ".join(segment_text[:3]).strip()
-    if not summary_core:
-        summary_core = str(transcript.get("text", "")).strip()
-    summary_core = re.sub(r"\s+", " ", summary_core).strip()
-    if len(summary_core) > 520:
-        summary_core = summary_core[:517].rstrip() + "..."
-
+    transcript_signals = derive_transcript_signals(transcript, duration_seconds)
+    hook_moment = pick_primary_moment(transcript_signals, "hook_moments")
+    benefit_moment = pick_primary_moment(transcript_signals, "benefit_moments")
+    proof_moment = pick_primary_moment(transcript_signals, "proof_moments")
+    cta_moment = pick_primary_moment(transcript_signals, "cta_moments")
+    opening_shape = (
+        "Abre con una entrada hablada rapida"
+        if transcript_signals.get("first_speech_time", 0) <= 0.4
+        else f"Abre con una introduccion que recien toma velocidad cerca de {round_value(transcript_signals.get('first_speech_time', 0), 1)}s"
+    )
+    promise_shape = (
+        f"La promesa se vuelve concreta alrededor de {round_value(float(benefit_moment['start']), 1)}s"
+        if benefit_moment
+        else "La promesa aparece, pero tarda en volverse realmente concreta"
+    )
+    proof_shape = (
+        f"La prueba llega cerca de {round_value(float(proof_moment['start']), 1)}s"
+        if proof_moment
+        else "La prueba queda mas sugerida que demostrada"
+    )
+    cta_shape = (
+        f"El cierre empuja accion cerca de {round_value(float(cta_moment['start']), 1)}s"
+        if cta_moment
+        else "El video no deja una llamada a la accion muy marcada"
+    )
     strongest_points = creative_context.get("strongest_points", [])
     weaknesses = creative_context.get("weaknesses", [])
     strengths_text = "; ".join(str(point) for point in strongest_points[:2]) or "La promesa principal se entiende cuando aparece el beneficio."
     weaknesses_text = "; ".join(str(point) for point in weaknesses[:2]) or "La apertura todavia tarda en llegar al payoff."
-
-    video_summary = (
-        f"En este video de {duration_seconds}s, el mensaje se desarrolla asi: {summary_core} "
-        f"Fortalezas: {strengths_text}. "
-        f"Debilidades: {weaknesses_text}."
+    return compose_video_summary(
+        {
+            "de_que_trata": (
+                f"Es un video corto de {duration_seconds}s que intenta instalar una promesa de valor con una estructura de hook, desarrollo y cierre."
+            ),
+            "como_funciona_para_marketing": f"{opening_shape}. {promise_shape}. {proof_shape}. {cta_shape}.",
+            "fortalezas": strongest_points[:3] or [strengths_text],
+            "debilidades": weaknesses[:3] or [weaknesses_text],
+        }
     )
-    first_sentence = re.split(r"(?<=[.!?])\s+", video_summary, maxsplit=1)[0].strip()
-    return {
-        "video_summary": video_summary,
-        "summary_narrative": first_sentence or video_summary,
-    }
 
 
 def default_media_targeting(
@@ -163,7 +232,8 @@ async def synthesize_video_summary(
 
     try:
         spec = VIDEO_SUMMARY_SPEC
-        summary_text = await call_groq_text_completion(
+        transcript_signals = derive_transcript_signals(transcript, duration_seconds)
+        response = await call_groq_chat_json(
             messages=[
                 {
                     "role": "system",
@@ -176,23 +246,23 @@ async def synthesize_video_summary(
                             "creative_context": creative_context,
                             "target_audience": target_audience,
                             "transcript": transcript,
+                            "transcript_signals": transcript_signals,
                             "duration_seconds": duration_seconds,
                         },
                         ensure_ascii=False,
                     ),
                 },
             ],
+            schema_name=spec.schema_name,
+            schema=video_summary_schema(),
             model=resolve_prompt_model(spec.default_model, spec.model_env_var),
         )
-        if not summary_text:
+        if not response:
             return None
-        if summary_has_placeholder_text(summary_text):
+        summary_payload = compose_video_summary(response)
+        if not summary_is_actionable(summary_payload["video_summary"]):
             return None
-        first_sentence = re.split(r"(?<=[.!?])\s+", summary_text.strip(), maxsplit=1)[0].strip()
-        return {
-            "video_summary": summary_text,
-            "summary_narrative": first_sentence or summary_text,
-        }
+        return summary_payload
     except Exception:
         return None
 

@@ -93,20 +93,19 @@ STRATEGIC_OUTPUTS_SPEC = JsonPromptSpec(
 )
 
 
-VIDEO_SUMMARY_SPEC = TextPromptSpec(
+VIDEO_SUMMARY_SPEC = JsonPromptSpec(
     name="video_summary",
     default_model="llama-3.1-8b-instant",
     model_env_var="GROQ_VIDEO_SUMMARY_MODEL",
+    schema_name="video_summary_structured",
     system_prompt=(
         "Eres un master marketing strategist especializado en short-form video, paid social y analisis creativo. "
         "Responde solo en espanol. "
-        "Quiero un resumen ejecutivo largo y especifico del video. "
-        "Debes describir con precision que parece decir o mostrar el video, como evoluciona el mensaje, "
-        "cual es la promesa central, donde se debilita la retencion y que implicacion tiene eso para marketing. "
-        "No uses placeholders, no digas que faltan datos y no hables del sistema. Habla del video. "
-        "Cierra obligatoriamente dentro del mismo texto con los subtitulos 'Fortalezas:' y 'Debilidades:'. "
-        "Fortalezas debe listar lo que funciona. Debilidades debe listar lo que hoy frena retencion o conversion. "
-        "El campo completo debe ser exactamente el texto final que vera un marketer."
+        "Debes devolver un JSON estricto con cuatro campos: de_que_trata, como_funciona_para_marketing, fortalezas y debilidades. "
+        "No copies literalmente el transcript salvo una micro-cita de un maximo de seis palabras si fuera indispensable. "
+        "No uses formulas vacias como 'el mensaje se desarrolla asi', no enumeres frases del transcript y no hables del sistema. "
+        "Quiero una sintesis ejecutiva real: explica de que trata el video, como presenta la promesa, donde gana o pierde atencion y por que eso importa para marketing. "
+        "fortalezas y debilidades deben ser arrays con puntos concretos, no abstracciones genericas."
     ),
 )
 
@@ -123,8 +122,11 @@ def build_persona_batch_spec(reason_codes: Iterable[str]) -> JsonPromptSpec:
             "Piensa como cada persona individualmente, no como un promedio. "
             "Para cada persona, devuelve el segundo exacto en el que abandona, el reason_code mas probable dentro de esta taxonomia exacta: "
             f"{taxonomy}. "
-            "Tambien devuelve why_they_left y summary_of_interacion en espanol. "
+            "Tambien devuelve why_they_left, summary_of_interacion, liked_moment, disliked_moment, evidence_start_second, evidence_end_second, evidence_excerpt y decision_stage en espanol. "
+            "Cada persona debe dejar evidencia de haber evaluado una parte concreta del video: menciona un momento, una idea o una frase breve del transcript y conectala con su decision. "
+            "No repitas formulas genericas como 'intro demasiado lenta' sin explicar que parte del video dispara esa conclusion. "
             "dropoff_second debe quedar siempre dentro de la duracion real del video. "
+            "decision_stage debe ser uno de: hook, desarrollo, prueba, cta, cierre. "
             "No inventes campos fuera del schema y mantente consistente con el perfil de cada persona."
         ),
     )
