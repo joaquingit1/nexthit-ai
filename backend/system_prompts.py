@@ -93,6 +93,48 @@ STRATEGIC_OUTPUTS_SPEC = JsonPromptSpec(
 )
 
 
+MULTIMODAL_TIMELINE_SPEC = JsonPromptSpec(
+    name="multimodal_timeline",
+    default_model="gemini-2.5-flash",
+    model_env_var="GEMINI_VIDEO_MODEL",
+    schema_name="multimodal_timeline",
+    system_prompt=(
+        "Eres un analista multimodal de creative intelligence para videos verticales cortos. "
+        "Tu trabajo es enriquecer un transcript ya timestamped con informacion visual alineada por segmento. "
+        "Recibiras un video y un transcript con segmentos existentes. No debes inventar una nueva estructura temporal: "
+        "debes responder usando exactamente esos segmentos como ancla. "
+        "Para cada segmento describe lo que se ve, el texto en pantalla si existe, y que senales creativas aporta para retencion y paid social. "
+        "Responde solo con JSON valido, estricto y util para un pipeline posterior de personas sinteticas. "
+        "Las descripciones deben ser concretas y verificables: menciona acciones, objetos, cambios visuales, overlays, captions, demos, pruebas o cortes visibles. "
+        "No repitas el transcript como si fuera descripcion visual."
+    ),
+    temperature=0.2,
+    timeout_seconds=180.0,
+    strict_json_schema=False,
+)
+
+
+VIDEO_CREATIVE_ANALYSIS_SPEC = JsonPromptSpec(
+    name="video_creative_analysis",
+    default_model="gemini-2.5-flash",
+    model_env_var="GEMINI_VIDEO_MODEL",
+    schema_name="video_creative_analysis",
+    system_prompt=(
+        "Eres director de analisis creativo para short-form marketing video. "
+        "Analiza el video de forma multimodal: lo que se dice, lo que se ve, el ritmo, el texto en pantalla, la claridad de la promesa, la prueba y el CTA. "
+        "Responde solo en espanol y solo con JSON valido. "
+        "El summary debe explicar que ocurre en el video de inicio a fin, combinando audio y visuales, sin citar grandes trozos verbatim. "
+        "Los scores deben ser enteros de 0 a 100. "
+        "El overall_score debe priorizar lectura visual, hook, claridad, ritmo y encaje de plataforma por encima del audio. "
+        "timeline_insights debe usar exactamente los ids: hook, energy, overload, loop. "
+        "No inventes campos fuera del schema."
+    ),
+    temperature=0.2,
+    timeout_seconds=180.0,
+    strict_json_schema=False,
+)
+
+
 VIDEO_SUMMARY_SPEC = TextPromptSpec(
     name="video_summary",
     default_model="llama-3.1-8b-instant",
@@ -142,6 +184,8 @@ def build_persona_batch_spec(reason_codes: Iterable[str]) -> JsonPromptSpec:
 PROMPT_SPECS = {
     CREATIVE_ANALYSIS_SPEC.name: CREATIVE_ANALYSIS_SPEC,
     FINAL_COPY_SPEC.name: FINAL_COPY_SPEC,
+    MULTIMODAL_TIMELINE_SPEC.name: MULTIMODAL_TIMELINE_SPEC,
     STRATEGIC_OUTPUTS_SPEC.name: STRATEGIC_OUTPUTS_SPEC,
+    VIDEO_CREATIVE_ANALYSIS_SPEC.name: VIDEO_CREATIVE_ANALYSIS_SPEC,
     VIDEO_SUMMARY_SPEC.name: VIDEO_SUMMARY_SPEC,
 }

@@ -95,6 +95,9 @@ export default function AppMain() {
       source.addEventListener("job.created", handleStreamEvent as EventListener);
       source.addEventListener("upload.validated", handleStreamEvent as EventListener);
       source.addEventListener("transcription.completed", handleStreamEvent as EventListener);
+      source.addEventListener("video.uploaded_to_gemini", handleStreamEvent as EventListener);
+      source.addEventListener("multimodal_timeline.completed", handleStreamEvent as EventListener);
+      source.addEventListener("video_analysis.completed", handleStreamEvent as EventListener);
       source.addEventListener("creative_context.completed", handleStreamEvent as EventListener);
       source.addEventListener("persona.batch.completed", handleStreamEvent as EventListener);
       source.addEventListener("demographics.completed", handleStreamEvent as EventListener);
@@ -205,13 +208,14 @@ export default function AppMain() {
               Subi el video, segui el analisis en vivo y aterriza en un informe completo.
             </h1>
             <p className="max-w-xl text-lg text-slate-600">
-              El navegador sube directo a Supabase, el backend usa Groq Whisper para transcripcion con timestamps, simula 100 personas en lotes y emite progreso hasta que el informe final esta listo.
+              El navegador sube directo a Supabase, el backend usa Groq Whisper para transcripcion con timestamps, Gemini para leer el video y enriquecerlo visualmente, simula 100 personas en lotes y emite progreso hasta que el informe final esta listo.
             </p>
             <div className="grid gap-4">
               {[
                 "La subida directa a storage evita los limites de body de Vercel.",
+                "Gemini convierte el transcript en una linea de tiempo multimodal con lo que se dice y lo que se ve.",
                 "Los lotes de personas se emiten a medida que terminan en vez de esperar 100 requests separadas.",
-                "El payload final sigue siendo compatible con /resultado y ahora trae transcript y audiencia mas ricos.",
+                "El payload final sigue siendo compatible con /resultado y ahora trae transcript, visuales y audiencia mas ricos.",
               ].map((item) => (
                 <div
                   key={item}

@@ -1,13 +1,8 @@
 from __future__ import annotations
 
-import json
 import random
 from typing import Any
 
-from config import resolve_prompt_model
-from schemas import creative_analysis_schema
-from services.groq_client import call_groq_chat_json
-from system_prompts import CREATIVE_ANALYSIS_SPEC
 from utils import clamp, round_value
 
 
@@ -17,23 +12,66 @@ def default_creative_analysis(
     duration_seconds: int,
     preferred_platform: str | None,
 ) -> dict[str, Any]:
-    """Generate default creative analysis scores."""
-    text = transcript["text"]
-    word_boost = clamp(len(text) / 260, 0, 1) * 7
-    rng = random.Random(f"{video_id}:{text[:140]}")
-    hook_score = int(clamp(70 + word_boost + rng.randint(-6, 12), 52, 95))
-    clarity_score = int(clamp(73 + word_boost + rng.randint(-5, 11), 55, 96))
-    pacing_score = int(clamp(68 + rng.randint(-8, 12), 48, 92))
-    audio_score = int(clamp(72 + rng.randint(-5, 10), 54, 93))
-    visual_score = int(clamp(74 + rng.randint(-5, 13), 55, 96))
-    novelty_score = int(clamp(66 + rng.randint(-8, 14), 44, 90))
-    cta_score = int(clamp(63 + rng.randint(-9, 16), 40, 89))
-    platform_fit_score = int(clamp(round_value(hook_score * 0.28 + clarity_score * 0.22 + pacing_score * 0.25 + visual_score * 0.25), 0, 100))
-    viral_score = int(clamp(round_value(hook_score * 0.4 + novelty_score * 0.35 + pacing_score * 0.25), 0, 100))
-    conversion_score = int(clamp(round_value(cta_score * 0.55 + clarity_score * 0.45), 0, 100))
-    ad_readiness_score = int(clamp(round_value(hook_score * 0.21 + clarity_score * 0.14 + pacing_score * 0.15 + audio_score * 0.1 + visual_score * 0.12 + novelty_score * 0.08 + cta_score * 0.1 + platform_fit_score * 0.1), 0, 100))
-    overall_score = int(clamp(round_value((hook_score + clarity_score + pacing_score + visual_score + platform_fit_score + ad_readiness_score) / 6), 0, 100))
-    best_platform = preferred_platform or ("Instagram Reels" if platform_fit_score >= 78 else "TikTok")
+    """Generate a fallback creative analysis while preserving the expected contract."""
+    text = transcript.get("text", "")
+    word_boost = clamp(len(text) / 260, 0, 1) * 6
+    rng = random.Random(f"{video_id}:{text[:140]}:{duration_seconds}")
+    hook_score = int(clamp(72 + word_boost + rng.randint(-6, 8), 50, 96))
+    clarity_score = int(clamp(73 + word_boost + rng.randint(-5, 8), 52, 96))
+    pacing_score = int(clamp(70 + rng.randint(-7, 8), 48, 94))
+    audio_score = int(clamp(68 + rng.randint(-7, 8), 45, 92))
+    visual_score = int(clamp(80 + rng.randint(-6, 8), 56, 97))
+    novelty_score = int(clamp(70 + rng.randint(-8, 9), 46, 92))
+    cta_score = int(clamp(66 + rng.randint(-8, 10), 40, 90))
+    platform_fit_score = int(
+        clamp(
+            round_value(
+                hook_score * 0.22
+                + clarity_score * 0.17
+                + pacing_score * 0.18
+                + visual_score * 0.23
+                + cta_score * 0.1
+                + novelty_score * 0.1
+            ),
+            0,
+            100,
+        )
+    )
+    viral_score = int(clamp(round_value(hook_score * 0.28 + novelty_score * 0.27 + visual_score * 0.25 + pacing_score * 0.2), 0, 100))
+    conversion_score = int(clamp(round_value(cta_score * 0.42 + clarity_score * 0.26 + visual_score * 0.18 + audio_score * 0.14), 0, 100))
+    ad_readiness_score = int(
+        clamp(
+            round_value(
+                hook_score * 0.17
+                + clarity_score * 0.12
+                + pacing_score * 0.13
+                + audio_score * 0.08
+                + visual_score * 0.2
+                + novelty_score * 0.08
+                + cta_score * 0.1
+                + platform_fit_score * 0.12,
+            ),
+            0,
+            100,
+        )
+    )
+    overall_score = int(
+        clamp(
+            round_value(
+                visual_score * 0.22
+                + hook_score * 0.16
+                + pacing_score * 0.14
+                + clarity_score * 0.14
+                + platform_fit_score * 0.12
+                + cta_score * 0.08
+                + viral_score * 0.08
+                + conversion_score * 0.06,
+            ),
+            0,
+            100,
+        )
+    )
+    best_platform = preferred_platform or ("TikTok" if visual_score >= 80 else "Instagram Reels")
     return {
         "id": f"creative-{video_id}",
         "video_id": video_id,
@@ -49,76 +87,78 @@ def default_creative_analysis(
         "viral_score": viral_score,
         "conversion_score": conversion_score,
         "ad_readiness_score": ad_readiness_score,
-        "overall_label": "Buen concepto, pero necesita una apertura más rápida" if hook_score < 78 else "Creativo con mucho potencial para testing pago",
-        "narrative": "La propuesta de valor se entiende cuando finalmente aparece, pero la apertura todavía gasta demasiado tiempo preparando antes de mostrar la prueba más fuerte.",
+        "overall_label": "Buen potencial creativo, pero el hook visual todavia puede subir.",
+        "narrative": "La pieza tiene una promesa trabajable, pero necesita que lo visual aterrice el beneficio antes y con mas claridad.",
         "strongest_points": [
-            "Hay un beneficio práctico y vendible en el mensaje central.",
-            "La mitad del video revela suficiente valor como para sostener a quienes ya vienen con intención alta.",
-            f"{best_platform} es el mejor encaje inicial de distribución.",
+            "La estructura permite construir un hook visual mas fuerte sin cambiar la idea base.",
+            "Hay una promesa util para social si la demostracion entra antes.",
+            f"{best_platform} aparece como el mejor primer espacio para testear este corte.",
         ],
         "weaknesses": [
-            "La primera decisión de seguir o abandonar ocurre antes de que aparezca el beneficio más fuerte.",
-            "El ritmo pierde fuerza en la mitad en vez de escalar.",
-            "La llamada a la acción llega cuando una parte importante de la atención ya cayó.",
+            "La lectura visual del beneficio puede aparecer demasiado tarde para la decision de swipe.",
+            "La prueba necesita mas presencia dentro de la ventana de mayor atencion.",
+            "La llamada a la accion no queda tan pegada al momento de mayor valor.",
         ],
         "timeline_insights": [
-            {"id": "hook", "label": "Hook débil", "second": 1.4, "detail": "Los primeros frames explican antes de demostrar el resultado.", "tone": "risk"},
-            {"id": "energy", "label": "Caída de energía", "second": round_value(max(2.8, duration_seconds * 0.4), 1), "detail": "Acá la edición se vuelve más descriptiva que dinámica.", "tone": "risk"},
-            {"id": "overload", "label": "Sobrecarga cognitiva", "second": round_value(max(4.2, duration_seconds * 0.68), 1), "detail": "En este tramo la audiencia tiene que procesar demasiado en muy poco tiempo.", "tone": "risk"},
-            {"id": "loop", "label": "Potencial de loop", "second": round_value(max(1, duration_seconds - 1.6), 1), "detail": "El cierre podría disparar más replays si espeja la apertura.", "tone": "opportunity"},
+            {"id": "hook", "label": "Hook visual", "second": 1.2, "detail": "La apertura necesita dejar mas claro que se gana con seguir mirando.", "tone": "risk"},
+            {"id": "energy", "label": "Caida de ritmo", "second": round_value(max(2.8, duration_seconds * 0.4), 1), "detail": "La mitad puede perder impulso si no aparece una nueva prueba.", "tone": "risk"},
+            {"id": "overload", "label": "Sobrecarga", "second": round_value(max(4.2, duration_seconds * 0.68), 1), "detail": "Aca puede acumularse demasiada informacion para una lectura de scroll rapido.", "tone": "risk"},
+            {"id": "loop", "label": "Potencial de loop", "second": round_value(max(1, duration_seconds - 1.6), 1), "detail": "El cierre puede aprovecharse mejor si devuelve al beneficio inicial.", "tone": "opportunity"},
         ],
         "creative_fixes": [
-            "Empezá con el resultado, no con la introducción.",
-            "Recortá los primeros 1.5s.",
-            "Sumá un pattern interrupt cerca de la primera gran caída de atención.",
-            "Mové la llamada a la acción más cerca del primer punto de prueba.",
+            "Arranca con la prueba visual o el payoff antes de la explicacion.",
+            "Reduce setup y cualquier beat que no agregue claridad.",
+            "Acerca el CTA al tramo con mayor prueba.",
+            "Usa texto en pantalla para reforzar promesa y beneficio.",
         ],
         "best_platform": best_platform,
-        "primary_angle": "Empezá con el resultado antes de la explicación.",
+        "primary_angle": "Mostra el resultado antes de la explicacion.",
+        "video_summary": "",
+        "video_analysis": None,
     }
 
 
-async def analyze_creative_context(
+def analyze_creative_context(
     video_id: str,
     transcript: dict[str, Any],
     duration_seconds: int,
     preferred_platform: str | None,
+    video_analysis: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Analyze creative context using Groq LLM."""
+    """Normalize multimodal Gemini output into the creative context contract used by the rest of the app."""
     fallback = default_creative_analysis(video_id, transcript, duration_seconds, preferred_platform)
-    try:
-        spec = CREATIVE_ANALYSIS_SPEC
-        response = await call_groq_chat_json(
-            messages=[
-                {
-                    "role": "system",
-                    "content": spec.system_prompt,
-                },
-                {
-                    "role": "user",
-                    "content": json.dumps(
-                        {
-                            "video_id": video_id,
-                            "duration_seconds": duration_seconds,
-                            "transcript": transcript,
-                            "preferred_platform": preferred_platform,
-                            "future_video_analysis": None,
-                        },
-                        ensure_ascii=False,
-                    ),
-                },
-            ],
-            schema_name=spec.schema_name,
-            schema=creative_analysis_schema(),
-            model=resolve_prompt_model(spec.default_model, spec.model_env_var),
-            temperature=spec.temperature,
-            timeout_seconds=spec.timeout_seconds,
-        )
-        if not response:
-            return fallback
-        merged = {**fallback, **response}
-        merged["timeline_insights"] = response.get("timeline_insights") or fallback["timeline_insights"]
-        return merged
-    except Exception as exc:
-        print(f"Creative analysis failed: {exc}")
+    if not video_analysis:
         return fallback
+
+    scores = video_analysis.get("scores", {})
+
+    def score(name: str, fallback_value: int) -> int:
+        return int(clamp(round(float(scores.get(name, fallback_value) or fallback_value)), 0, 100))
+
+    normalized = {
+        **fallback,
+        "overall_score": score("overall_score", fallback["overall_score"]),
+        "hook_score": score("hook_score", fallback["hook_score"]),
+        "clarity_score": score("clarity_score", fallback["clarity_score"]),
+        "pacing_score": score("pacing_score", fallback["pacing_score"]),
+        "audio_score": score("audio_score", fallback["audio_score"]),
+        "visual_score": score("visual_score", fallback["visual_score"]),
+        "novelty_score": score("novelty_score", fallback["novelty_score"]),
+        "cta_score": score("cta_score", fallback["cta_score"]),
+        "platform_fit_score": score("platform_fit_score", fallback["platform_fit_score"]),
+        "viral_score": score("viral_score", fallback["viral_score"]),
+        "conversion_score": score("conversion_score", fallback["conversion_score"]),
+        "ad_readiness_score": score("ad_readiness_score", fallback["ad_readiness_score"]),
+        "overall_label": str(video_analysis.get("overall_label", fallback["overall_label"])).strip() or fallback["overall_label"],
+        "narrative": str(video_analysis.get("narrative", fallback["narrative"])).strip() or fallback["narrative"],
+        "strongest_points": video_analysis.get("strongest_points") or fallback["strongest_points"],
+        "weaknesses": video_analysis.get("weaknesses") or fallback["weaknesses"],
+        "timeline_insights": video_analysis.get("timeline_insights") or fallback["timeline_insights"],
+        "creative_fixes": video_analysis.get("creative_fixes") or fallback["creative_fixes"],
+        "best_platform": str(video_analysis.get("best_platform", preferred_platform or fallback["best_platform"])).strip()
+        or fallback["best_platform"],
+        "primary_angle": str(video_analysis.get("primary_angle", fallback["primary_angle"])).strip() or fallback["primary_angle"],
+        "video_summary": str(video_analysis.get("summary", "")).strip(),
+        "video_analysis": video_analysis,
+    }
+    return normalized

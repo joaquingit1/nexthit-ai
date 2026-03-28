@@ -23,6 +23,12 @@ export type TranscriptSegment = {
   start: number;
   end: number;
   text: string;
+  visual_description?: string;
+  scene_labels?: string[];
+  on_screen_text?: string[];
+  visual_confidence?: number;
+  creative_signals?: string[];
+  retention_impact?: "positive" | "neutral" | "negative" | string;
 };
 
 export type TranscriptData = {
@@ -174,6 +180,37 @@ export type TimelineInsightItem = {
   tone: "risk" | "opportunity";
 };
 
+export type VideoAnalysisResult = {
+  summary: string;
+  hook: string;
+  visual_style: string;
+  pacing_notes: string;
+  on_screen_text_notes: string;
+  cta_notes: string;
+  strongest_points?: string[];
+  weaknesses?: string[];
+  creative_fixes?: string[];
+  best_platform?: string;
+  primary_angle?: string;
+  key_moments?: TimelineInsightItem[];
+  timeline_insights?: TimelineInsightItem[];
+  source_model?: string;
+  scores?: {
+    overall_score: number;
+    hook_score: number;
+    clarity_score: number;
+    pacing_score: number;
+    audio_score: number;
+    visual_score: number;
+    novelty_score: number;
+    cta_score: number;
+    platform_fit_score: number;
+    viral_score: number;
+    conversion_score: number;
+    ad_readiness_score: number;
+  };
+};
+
 export type VideoScoreSummary = {
   id: string;
   video_id: string;
@@ -267,7 +304,7 @@ export type AnalysisResponse = {
     changePlan?: ChangePlan;
     mediaTargeting?: MediaTargetingRecommendation[];
     versionStrategies?: VersionStrategy[];
-    videoAnalysis?: Record<string, unknown> | null;
+    videoAnalysis?: VideoAnalysisResult | null;
     scoreSummary?: VideoScoreSummary;
     statusSteps: string[];
     clip: {

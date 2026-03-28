@@ -249,6 +249,9 @@ function hasPlaceholderSummary(text: string | undefined) {
 }
 
 function buildSummaryFromTranscript(analysis: AnalysisResponse["analysis"]) {
+  if (analysis.videoAnalysis?.summary?.trim()) {
+    return analysis.videoAnalysis.summary.trim();
+  }
   const transcriptText =
     analysis.transcript?.segments
       ?.slice(0, 3)
@@ -312,6 +315,12 @@ function normalizeTranscriptSegments(segments: TranscriptSegment[] | undefined, 
         start,
         end: end > start ? end : Math.min(safeDuration, start + 0.2),
         text: segment.text?.trim() ?? "",
+        visual_description: segment.visual_description?.trim() ?? "",
+        scene_labels: segment.scene_labels ?? [],
+        on_screen_text: segment.on_screen_text ?? [],
+        visual_confidence: segment.visual_confidence,
+        creative_signals: segment.creative_signals ?? [],
+        retention_impact: segment.retention_impact,
       } satisfies TranscriptSegment;
     })
     .filter((segment) => segment.text.length > 0)
@@ -326,6 +335,9 @@ function normalizeTranscriptSegments(segments: TranscriptSegment[] | undefined, 
       start: 0,
       end: safeDuration,
       text: "No hubo transcript disponible para este clip.",
+      visual_description: "",
+      scene_labels: [],
+      on_screen_text: [],
     },
   ] satisfies TranscriptSegment[];
 }
@@ -1813,6 +1825,26 @@ function GraphStep({
             <p className="mt-3 text-base leading-8 text-slate-700">
               {activeTranscriptSegment.text}
             </p>
+            {activeTranscriptSegment.visual_description ? (
+              <>
+                <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Lo que se ve
+                </p>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  {activeTranscriptSegment.visual_description}
+                </p>
+              </>
+            ) : null}
+            {activeTranscriptSegment.on_screen_text?.length ? (
+              <>
+                <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Texto en pantalla
+                </p>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  {activeTranscriptSegment.on_screen_text.join(" / ")}
+                </p>
+              </>
+            ) : null}
             <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-400">
               Pasá por la línea de tiempo del gráfico para ver qué están escuchando las personas en cada segundo.
             </p>

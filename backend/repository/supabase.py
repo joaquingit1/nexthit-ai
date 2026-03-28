@@ -112,6 +112,9 @@ class Repository:
                 "video_id": persona["video_id"],
                 "persona_id": persona["persona_id"],
                 "name": persona["name"],
+                "archetype": persona.get("archetype"),
+                "demographic_profile_id": persona.get("demographic_profile_id"),
+                "demographic_profile_label": persona.get("demographic_profile_label"),
                 "age_range": persona["age_range"],
                 "country": persona["country"],
                 "occupation": persona["occupation"],
@@ -128,8 +131,16 @@ class Repository:
                 "batch_index": persona["batch_index"],
                 "dropoff_second": persona["dropoff_second"],
                 "retention_percent": persona["retention_percent"],
+                "reason_code": persona.get("reason_code"),
+                "reason_label": persona.get("reason_label"),
                 "why_they_left": persona["why_they_left"],
                 "summary_of_interacion": persona["summary_of_interacion"],
+                "liked_moment": persona.get("liked_moment"),
+                "disliked_moment": persona.get("disliked_moment"),
+                "evidence_start_second": persona.get("evidence_start_second"),
+                "evidence_end_second": persona.get("evidence_end_second"),
+                "evidence_excerpt": persona.get("evidence_excerpt"),
+                "decision_stage": persona.get("decision_stage"),
             }
             for persona in personas
         ]

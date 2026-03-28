@@ -22,11 +22,7 @@ from constants import (
 )
 from schemas import persona_batch_compact_schema
 from services.groq_client import call_groq_chat_json
-from services.transcript_signals import (
-    derive_transcript_signals,
-    pick_primary_moment,
-    stage_from_second,
-)
+from services.transcript_signals import derive_transcript_signals, pick_primary_moment, stage_from_second
 from system_prompts import build_persona_batch_spec
 from utils import clamp, round_value
 
@@ -54,8 +50,8 @@ def build_persona_library() -> list[dict[str, Any]]:
                     "social_status": profile["social_status"],
                     "interests": PERSONA_INTERESTS[(archetype_index + profile_index) % len(PERSONA_INTERESTS)],
                     "hobbies": PERSONA_HOBBIES[(archetype_index + profile_index) % len(PERSONA_HOBBIES)],
-                    "life_story": f"{archetype}. Consume short-form y decide en segundos si el video merece atención.",
-                    "platform_habits": "Principalmente consume Instagram Reels y TikTok en pausas cortas del día.",
+                    "life_story": f"{archetype}. Consume short-form y decide en segundos si el video merece atencion.",
+                    "platform_habits": "Principalmente consume Instagram Reels y TikTok en pausas cortas del dia.",
                     "motivations": PERSONA_MOTIVATIONS[archetype_index % len(PERSONA_MOTIVATIONS)],
                     "frustrations": PERSONA_FRUSTRATIONS[profile_index % len(PERSONA_FRUSTRATIONS)],
                     "segment_label": f"{profile['cluster']} {archetype}",
@@ -126,14 +122,18 @@ def build_compact_persona_prompt_payload(
                 "start": round_value(float(segment.get("start", 0)), 1),
                 "end": round_value(float(segment.get("end", segment.get("start", 0))), 1),
                 "stage": segment.get("stage"),
-                "tags": segment.get("tags", [])[:3],
+                "tags": segment.get("tags", [])[:4],
                 "excerpt": str(segment.get("excerpt", "")),
+                "visual_description": str(segment.get("visual_description", ""))[:180],
+                "visual_excerpt": str(segment.get("visual_excerpt", ""))[:120],
+                "on_screen_text": segment.get("on_screen_text", [])[:3],
+                "retention_impact": segment.get("retention_impact", "neutral"),
             }
         )
 
     return {
         "duration_seconds": duration_seconds,
-        "transcript_text": str(transcript.get("text", ""))[:700],
+        "transcript_text": str(transcript.get("text", ""))[:900],
         "beats": beats,
         "signal_summary": {
             "first_speech_time": round_value(float(transcript_signals.get("first_speech_time", 0) or 0), 1),
@@ -162,6 +162,12 @@ def build_compact_persona_prompt_payload(
             "best_platform": creative_context["best_platform"],
             "primary_angle": creative_context["primary_angle"],
             "timeline_insights": creative_context["timeline_insights"][:4],
+        },
+        "multimodal_analysis": {
+            "summary": str(creative_context.get("video_summary", ""))[:420],
+            "hook": str((creative_context.get("video_analysis") or {}).get("hook", ""))[:180],
+            "visual_style": str((creative_context.get("video_analysis") or {}).get("visual_style", ""))[:220],
+            "cta_notes": str((creative_context.get("video_analysis") or {}).get("cta_notes", ""))[:180],
         },
         "personas": compact_personas,
     }
@@ -270,6 +276,22 @@ def infer_reason_code(
     return "unclear_value", min(duration_seconds * 0.38, duration_seconds)
 
 
+def compose_segment_evidence(segment: dict[str, Any] | None) -> str:
+    if not segment:
+        return ""
+    parts: list[str] = []
+    excerpt = str(segment.get("excerpt", "")).strip()
+    visual_excerpt = str(segment.get("visual_excerpt", "")).strip()
+    on_screen_text = ", ".join(str(item).strip() for item in segment.get("on_screen_text", [])[:2] if str(item).strip())
+    if excerpt:
+        parts.append(f"voz: {excerpt}")
+    if visual_excerpt:
+        parts.append(f"visual: {visual_excerpt}")
+    if on_screen_text:
+        parts.append(f"texto en pantalla: {on_screen_text}")
+    return " | ".join(parts)
+
+
 def build_persona_evidence(
     persona: dict[str, Any],
     reason_code: str,
@@ -308,16 +330,21 @@ def build_persona_evidence(
     evidence_segment = disliked_segment or liked_segment
     evidence_start = round_value(float(evidence_segment["start"]), 1) if evidence_segment else round_value(anchor_second, 1)
     evidence_end = round_value(float(evidence_segment["end"]), 1) if evidence_segment else round_value(min(duration_seconds, anchor_second + 0.8), 1)
-    evidence_excerpt = str(evidence_segment.get("excerpt", "")) if evidence_segment else ""
+    evidence_excerpt = compose_segment_evidence(evidence_segment)
     decision_stage = str(evidence_segment.get("stage")) if evidence_segment else stage_from_second(anchor_second, duration_seconds)
 
-    liked_text = (
-        f"Se queda atento cuando aparece el tramo \"{liked_segment.get('excerpt', '')}\""
-        if liked_segment and liked_segment.get("excerpt")
-        else "Se queda atento cuando el video finalmente aterriza una idea concreta."
-    )
+    if liked_segment:
+        liked_evidence = compose_segment_evidence(liked_segment)
+        liked_text = (
+            f"Le engancha cuando aparece este tramo: {liked_evidence}"
+            if liked_evidence
+            else "Se queda atento cuando el video finalmente aterriza una idea concreta."
+        )
+    else:
+        liked_text = "Se queda atento cuando el video finalmente aterriza una idea concreta."
+
     disliked_text = (
-        f"Empieza a perder interes cuando el video entra en \"{evidence_excerpt}\""
+        f"Empieza a perder interes cuando entra este tramo: {evidence_excerpt}"
         if evidence_excerpt
         else "Empieza a perder interes cuando el video deja de avanzar con claridad."
     )
@@ -326,7 +353,7 @@ def build_persona_evidence(
         "disliked_moment": disliked_text,
         "evidence_start_second": evidence_start,
         "evidence_end_second": max(evidence_end, evidence_start),
-        "evidence_excerpt": evidence_excerpt or "No hay evidencia verbal suficientemente clara en ese tramo.",
+        "evidence_excerpt": evidence_excerpt or "No hay una evidencia multimodal suficientemente clara en ese tramo.",
         "decision_stage": decision_stage,
     }
 
@@ -381,11 +408,11 @@ def default_persona_reason(
     evidence = build_persona_evidence(persona, reason_code, dropoff_second, transcript_signals, duration_seconds)
     why_they_left = (
         f"{persona['name']} abandona por {reason_label.lower()} cerca de {dropoff_second}s. "
-        f"El quiebre aparece cuando evalúa \"{evidence['evidence_excerpt']}\" y siente que el video no termina "
+        f"El quiebre aparece cuando evalua {evidence['evidence_excerpt']} y siente que el video no termina "
         f"de resolver lo que esperaba ver."
     )
     summary_of_interacion = (
-        f"{persona['name']} primero conecta con el tramo que le resulta más prometedor, pero termina saliendo en la fase "
+        f"{persona['name']} primero conecta con el tramo que le resulta mas prometedor, pero termina saliendo en la fase "
         f"{evidence['decision_stage']} por {reason_label.lower()} al no encontrar suficiente avance."
     )
     return {
@@ -417,7 +444,7 @@ def normalize_persona_result(
     if decision_stage not in {"hook", "desarrollo", "prueba", "cta", "cierre"}:
         decision_stage = stage_from_second(evidence_start or dropoff_second, duration_seconds)
 
-    if len(evidence_excerpt.split()) < 3:
+    if len(evidence_excerpt.split()) < 4:
         evidence_fallback = build_persona_evidence(persona, reason_code, dropoff_second, transcript_signals, duration_seconds)
         evidence_start = evidence_fallback["evidence_start_second"]
         evidence_end = evidence_fallback["evidence_end_second"]
@@ -445,17 +472,21 @@ def batch_needs_retry(personas: list[dict[str, Any]]) -> bool:
     if not personas:
         return False
     reason_counts = Counter(item.get("reason_code", "unclear_value") for item in personas)
-    evidence_counts = Counter(str(item.get("evidence_excerpt", "")).strip().lower() for item in personas if item.get("evidence_excerpt"))
+    evidence_counts = Counter(
+        str(item.get("evidence_excerpt", "")).strip().lower()
+        for item in personas
+        if item.get("evidence_excerpt")
+    )
     dominant_reason_count = reason_counts.most_common(1)[0][1]
     dominant_evidence_count = evidence_counts.most_common(1)[0][1] if evidence_counts else 0
     distinct_reasons = len(reason_counts)
     distinct_dropoffs = len({round(float(item.get("dropoff_second", 0)), 1) for item in personas})
-    evidence_ok = sum(1 for item in personas if len(str(item.get("evidence_excerpt", "")).split()) >= 3)
+    evidence_ok = sum(1 for item in personas if len(str(item.get("evidence_excerpt", "")).split()) >= 4)
     dropoff_std = pstdev([float(item.get("dropoff_second", 0)) for item in personas]) if len(personas) > 1 else 0.0
     return (
-        dominant_reason_count >= max(12, int(len(personas) * 0.55))
-        or dominant_evidence_count >= max(10, int(len(personas) * 0.5))
-        or distinct_reasons < 5
+        dominant_reason_count >= max(10, int(len(personas) * 0.5))
+        or dominant_evidence_count >= max(8, int(len(personas) * 0.42))
+        or distinct_reasons < 6
         or distinct_dropoffs < 8
         or evidence_ok < max(16, int(len(personas) * 0.8))
         or dropoff_std < 1.4
@@ -482,10 +513,11 @@ async def request_persona_batch_from_model(
         ),
         "quality_requirements": [
             "Usa evidence_excerpt y timestamps reales.",
-            "No concentres casi todas las personas en el mismo reason_code si el transcript no lo justifica.",
+            "No concentres casi todas las personas en el mismo reason_code si el material no lo justifica.",
             "Haz que why_they_left y summary_of_interacion se sientan especificos del video y de la persona.",
             "Distribuye la atencion entre distintos momentos del video cuando el material tenga mas de un beat relevante.",
             "No repitas el mismo evidence_excerpt para la mayoria del batch.",
+            "Si citas evidencia, combina si hace falta voz, visual y texto en pantalla.",
             "Si necesitas ahorrar tokens, prioriza persona_id, dropoff_second, reason_code y evidence_excerpt; el backend completara el resto.",
         ],
     }
@@ -515,7 +547,10 @@ async def analyze_persona_batch(
     """Analyze a batch of personas using Groq LLM with evidence validation."""
     transcript_signals = derive_transcript_signals(transcript, duration_seconds)
     fallback_results = [
-        {**persona, **default_persona_reason(persona, creative_context, transcript, transcript_signals, duration_seconds)}
+        {
+            **persona,
+            **default_persona_reason(persona, creative_context, transcript, transcript_signals, duration_seconds),
+        }
         for persona in batch
     ]
     try:
@@ -553,8 +588,7 @@ async def analyze_persona_batch(
             if not batch_needs_retry(normalized):
                 return normalized
             retry_note = (
-                "La salida anterior colapso demasiado: diversifica reason_code, distribuye mejor dropoff_second y usa evidencia mas especifica "
-                "del transcript para cada persona."
+                "La salida anterior colapso demasiado: diversifica reason_code, distribuye mejor dropoff_second y usa evidencia multimodal mas especifica para cada persona."
             )
             if attempt == 1:
                 return fallback_results if batch_needs_retry(normalized) and not batch_needs_retry(fallback_results) else normalized

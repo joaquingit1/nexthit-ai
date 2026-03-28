@@ -384,6 +384,7 @@ async def synthesize_final_copy(
     personas: list[dict[str, Any]],
     transcript: dict[str, Any],
     duration_seconds: int,
+    video_analysis: dict[str, Any] | None = None,
     precomputed_summary: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Synthesize final copy using Groq LLM."""
@@ -415,6 +416,7 @@ async def synthesize_final_copy(
                     "content": json.dumps(
                         {
                             "creative_context": creative_context,
+                            "video_analysis": video_analysis,
                             "target_audience": target_audience,
                             "persona_examples": personas[:10],
                             "transcript": transcript,

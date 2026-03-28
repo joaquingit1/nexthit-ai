@@ -5,13 +5,18 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from config import PUBLIC_BACKEND_URL
+from config import ALLOW_MULTIMODAL_FALLBACK, PUBLIC_BACKEND_URL
 from constants import STATUS_STEPS
 from repository import repository
 from services.audience import aggregate_target_audience, build_segment_diagnoses
 from services.change_plan import build_change_plan
 from services.creative_analysis import analyze_creative_context
 from services.ffmpeg import compute_duration_seconds
+from services.multimodal_analysis import (
+    build_multimodal_timeline,
+    build_video_creative_analysis,
+    prepare_gemini_video,
+)
 from services.persona_simulation import PERSONA_LIBRARY, analyze_persona_batch
 from services.retention import (
     build_average_line,
@@ -19,7 +24,7 @@ from services.retention import (
     build_viewers_from_personas,
     find_major_drop_second,
 )
-from services.strategy import synthesize_final_copy, synthesize_strategic_outputs, synthesize_video_summary
+from services.strategy import synthesize_final_copy, synthesize_strategic_outputs
 from services.transcription import transcribe_video_with_whisper
 from utils import file_type_label, format_bytes, format_duration, format_timestamp, round_value, utc_now_iso
 
@@ -44,6 +49,7 @@ def build_final_analysis_payload(
     personas: list[dict[str, Any]],
     target_audience: dict[str, Any],
     final_copy: dict[str, Any],
+    video_analysis: dict[str, Any] | None,
     segment_diagnoses: list[dict[str, Any]],
     change_plan: dict[str, Any],
     media_targeting: list[dict[str, Any]],
@@ -89,7 +95,7 @@ def build_final_analysis_payload(
             "changePlan": change_plan,
             "mediaTargeting": media_targeting,
             "versionStrategies": version_strategies,
-            "videoAnalysis": None,
+            "videoAnalysis": video_analysis,
             "scoreSummary": score_summary,
             "statusSteps": STATUS_STEPS,
             "clip": {
@@ -190,10 +196,103 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
                 "No se pudo obtener una transcripcion real del audio. Volve a intentar con un video que tenga voz clara."
             )
 
-        creative_context = await analyze_creative_context(video_id, transcript, duration_seconds, preferred_platform)
-        await repository.update_job(job_id, {"stage": "creative_context.completed", "progress_percent": 45})
-        await repository.add_event(job_id=job_id, video_id=video_id, event_type="creative_context.completed", status="processing", stage="creative_context.completed", progress_percent=45, payload={"score_summary": creative_context})
-        video_summary = await synthesize_video_summary(creative_context, None, transcript, duration_seconds)
+        try:
+            uploaded_gemini_video = await prepare_gemini_video(temp_path, video.get("mime_type"))
+            await repository.update_job(job_id, {"stage": "video.uploaded_to_gemini", "progress_percent": 35})
+            await repository.add_event(
+                job_id=job_id,
+                video_id=video_id,
+                event_type="video.uploaded_to_gemini",
+                status="processing",
+                stage="video.uploaded_to_gemini",
+                progress_percent=35,
+                payload={
+                    "state": uploaded_gemini_video.get("state"),
+                    "mime_type": uploaded_gemini_video.get("mime_type"),
+                },
+            )
+
+            transcript = await build_multimodal_timeline(
+                uploaded_file=uploaded_gemini_video,
+                transcript=transcript,
+                duration_seconds=duration_seconds,
+            )
+            await repository.update_video(
+                video_id,
+                {
+                    "status": "multimodal_timeline_completed",
+                    "transcript_segments": transcript["segments"],
+                    "multimodal_timeline": transcript["segments"],
+                },
+            )
+            await repository.update_job(job_id, {"stage": "multimodal_timeline.completed", "progress_percent": 42})
+            await repository.add_event(
+                job_id=job_id,
+                video_id=video_id,
+                event_type="multimodal_timeline.completed",
+                status="processing",
+                stage="multimodal_timeline.completed",
+                progress_percent=42,
+                payload={
+                    "segment_count": len(transcript.get("segments", [])),
+                    "source": transcript.get("multimodal_source", "gemini"),
+                },
+            )
+
+            video_analysis = await build_video_creative_analysis(
+                video_id=video_id,
+                uploaded_file=uploaded_gemini_video,
+                transcript=transcript,
+                duration_seconds=duration_seconds,
+                preferred_platform=preferred_platform,
+            )
+            await repository.update_video(
+                video_id,
+                {
+                    "status": "video_analysis_completed",
+                    "video_analysis": video_analysis,
+                    "video_analysis_model": video_analysis.get("source_model"),
+                },
+            )
+            await repository.update_job(job_id, {"stage": "video_analysis.completed", "progress_percent": 47})
+            await repository.add_event(
+                job_id=job_id,
+                video_id=video_id,
+                event_type="video_analysis.completed",
+                status="processing",
+                stage="video_analysis.completed",
+                progress_percent=47,
+                payload={
+                    "summary": video_analysis.get("summary"),
+                    "scores": video_analysis.get("scores"),
+                    "source_model": video_analysis.get("source_model"),
+                },
+            )
+        except Exception as exc:
+            if not ALLOW_MULTIMODAL_FALLBACK:
+                raise RuntimeError(
+                    f"No se pudo completar el analisis multimodal con Gemini: {exc}"
+                ) from exc
+            print(f"Gemini multimodal failed, falling back to transcript-only mode: {exc}")
+            video_analysis = None
+
+        creative_context = analyze_creative_context(
+            video_id,
+            transcript,
+            duration_seconds,
+            preferred_platform,
+            video_analysis,
+        )
+        await repository.update_job(job_id, {"stage": "creative_context.completed", "progress_percent": 50})
+        await repository.add_event(
+            job_id=job_id,
+            video_id=video_id,
+            event_type="creative_context.completed",
+            status="processing",
+            stage="creative_context.completed",
+            progress_percent=50,
+            payload={"score_summary": creative_context},
+        )
 
         personas: list[dict[str, Any]] = []
         for batch_index in range(5):
@@ -228,7 +327,16 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
             personas,
             transcript,
             duration_seconds,
-            precomputed_summary=video_summary,
+            video_analysis=video_analysis,
+            precomputed_summary=(
+                {
+                    "video_summary": str((video_analysis or {}).get("summary", "")).strip(),
+                    "summary_narrative": str((video_analysis or {}).get("narrative", "")).strip()
+                    or str((video_analysis or {}).get("summary", "")).split(" Fortalezas:", 1)[0].strip(),
+                }
+                if video_analysis and str(video_analysis.get("summary", "")).strip()
+                else None
+            ),
         )
         strategic_outputs = await synthesize_strategic_outputs(
             creative_context=creative_context,
@@ -249,6 +357,7 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
             personas=personas,
             target_audience=target_audience,
             final_copy=final_copy,
+            video_analysis=video_analysis,
             segment_diagnoses=segment_diagnoses,
             change_plan=strategic_outputs["change_plan"],
             media_targeting=strategic_outputs["media_targeting"],

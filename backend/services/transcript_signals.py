@@ -137,6 +137,13 @@ def derive_transcript_signals(transcript: dict[str, Any], duration_seconds: int)
     segments = []
     for segment in transcript.get("segments", []):
         text = re.sub(r"\s+", " ", str(segment.get("text", "") or "")).strip()
+        visual_description = re.sub(r"\s+", " ", str(segment.get("visual_description", "") or "")).strip()
+        on_screen_text = [
+            re.sub(r"\s+", " ", str(item or "")).strip()
+            for item in segment.get("on_screen_text", [])
+            if str(item or "").strip()
+        ]
+        combined_text = " ".join([text, visual_description, " ".join(on_screen_text)]).strip()
         if not text:
             continue
         start = round_value(float(segment.get("start", 0) or 0), 2)
@@ -145,25 +152,33 @@ def derive_transcript_signals(transcript: dict[str, Any], duration_seconds: int)
         words = len(text.split())
         words_per_second = round_value(words / duration, 2)
         tags: list[str] = []
-        if segment_matches(text, HOOK_PATTERNS):
+        if segment_matches(combined_text, HOOK_PATTERNS):
             tags.append("hook")
-        if segment_matches(text, BENEFIT_PATTERNS):
+        if segment_matches(combined_text, BENEFIT_PATTERNS):
             tags.append("benefit")
-        if segment_matches(text, PROOF_PATTERNS):
+        if segment_matches(combined_text, PROOF_PATTERNS):
             tags.append("proof")
-        if segment_matches(text, CTA_PATTERNS):
+        if segment_matches(combined_text, CTA_PATTERNS):
             tags.append("cta")
         if words_per_second >= 3.4 or words >= 18:
             tags.append("overload")
+        for signal in segment.get("creative_signals", []) or []:
+            normalized_signal = str(signal).strip().lower()
+            if normalized_signal and normalized_signal not in tags:
+                tags.append(normalized_signal)
         segments.append(
             {
                 "start": start,
                 "end": end,
                 "text": text,
                 "excerpt": compact_excerpt(text),
+                "visual_description": visual_description,
+                "visual_excerpt": compact_excerpt(visual_description, max_words=14),
+                "on_screen_text": on_screen_text,
                 "words": words,
                 "words_per_second": words_per_second,
                 "tags": tags,
+                "retention_impact": str(segment.get("retention_impact", "neutral")).strip().lower() or "neutral",
             }
         )
 
