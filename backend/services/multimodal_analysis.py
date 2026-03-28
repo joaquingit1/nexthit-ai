@@ -5,7 +5,9 @@ from typing import Any
 from config import resolve_gemini_model
 from schemas import multimodal_timeline_schema, video_creative_analysis_schema
 from services.gemini_client import (
+    call_gemini_json,
     call_gemini_video_json,
+    delete_gemini_file,
     upload_video_to_gemini,
     wait_for_gemini_file_active,
 )
@@ -246,6 +248,12 @@ async def prepare_gemini_video(file_path: str, mime_type: str | None) -> dict[st
     return await wait_for_gemini_file_active(uploaded["name"])
 
 
+async def delete_multimodal_video(uploaded_file: dict[str, Any] | None) -> None:
+    if not uploaded_file:
+        return
+    await delete_gemini_file(str(uploaded_file.get("name", "")).strip())
+
+
 async def build_multimodal_timeline(
     *,
     uploaded_file: dict[str, Any],
@@ -283,21 +291,19 @@ async def build_multimodal_timeline(
 async def build_video_creative_analysis(
     *,
     video_id: str,
-    uploaded_file: dict[str, Any],
     transcript: dict[str, Any],
     duration_seconds: int,
     preferred_platform: str | None,
 ) -> dict[str, Any]:
-    payload = await call_gemini_video_json(
-        uploaded_file=uploaded_file,
+    payload = await call_gemini_json(
         system_prompt=VIDEO_CREATIVE_ANALYSIS_SPEC.system_prompt,
         prompt_payload={
             "video_id": video_id,
             "duration_seconds": duration_seconds,
             "preferred_platform": preferred_platform,
             "instruction": (
-                "Analiza este video como un creativo de paid social. "
-                "Usa tanto lo que se dice como lo que se ve. "
+                "Analiza este video como un creativo de paid social a partir de este timeline multimodal ya enriquecido. "
+                "No necesitas volver a mirar el archivo fuente: usa la descripcion visual, el texto en pantalla, las senales creativas y lo hablado. "
                 "El summary debe narrar que ocurre en el video de inicio a fin, de forma verificable y util para un jurado."
             ),
             "transcript": {

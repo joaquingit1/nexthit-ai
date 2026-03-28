@@ -14,6 +14,20 @@ from utils import strip_json_wrappers
 _GEMINI_CLIENT: genai.Client | None = None
 
 
+async def _call_with_retries(func, *, attempts: int = 3, base_delay_seconds: float = 2.0):
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return await asyncio.to_thread(func)
+        except Exception as exc:
+            last_error = exc
+            if attempt >= attempts:
+                break
+            await asyncio.sleep(base_delay_seconds * attempt)
+    assert last_error is not None
+    raise last_error
+
+
 def _build_http_options(timeout_seconds: float) -> types.HttpOptions:
     options: dict[str, Any] = {
         "api_version": "v1beta",
@@ -68,7 +82,7 @@ async def upload_video_to_gemini(file_path: str, mime_type: str | None = None) -
         )
         return normalize_uploaded_file(upload)
 
-    return await asyncio.to_thread(_upload)
+    return await _call_with_retries(_upload)
 
 
 async def wait_for_gemini_file_active(
@@ -86,7 +100,7 @@ async def wait_for_gemini_file_active(
             client = get_gemini_client(timeout)
             return normalize_uploaded_file(client.files.get(name=file_name))
 
-        current = await asyncio.to_thread(_get)
+        current = await _call_with_retries(_get, attempts=2, base_delay_seconds=1.5)
         if current["state"] == "ACTIVE":
             return current
         if current["state"] in {"FAILED", "ERROR"}:
@@ -141,20 +155,47 @@ async def call_gemini_video_json(
     temperature: float = 0.2,
     timeout_seconds: float | None = None,
 ) -> dict[str, Any]:
+    return await call_gemini_json(
+        file_part=types.Part.from_uri(
+            file_uri=uploaded_file["uri"],
+            mime_type=uploaded_file.get("mime_type") or "video/mp4",
+            media_resolution=types.PartMediaResolution(
+                level=types.PartMediaResolutionLevel.MEDIA_RESOLUTION_LOW,
+            ),
+        ),
+        system_prompt=system_prompt,
+        prompt_payload=prompt_payload,
+        schema=schema,
+        default_model=default_model,
+        model_env_var=model_env_var,
+        temperature=temperature,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+async def call_gemini_json(
+    *,
+    system_prompt: str,
+    prompt_payload: dict[str, Any],
+    schema: dict[str, Any],
+    default_model: str,
+    model_env_var: str | None = None,
+    temperature: float = 0.2,
+    timeout_seconds: float | None = None,
+    file_part: types.Part | None = None,
+) -> dict[str, Any]:
     resolved_model = resolve_gemini_model(default_model, model_env_var)
     timeout = timeout_seconds or GEMINI_TIMEOUT_SECONDS
 
     def _call() -> dict[str, Any]:
         client = get_gemini_client(timeout)
+        contents: list[Any] = []
+        if file_part is not None:
+            contents.append(file_part)
+        contents.append(json.dumps(prompt_payload, ensure_ascii=False))
         response = client.models.generate_content(
             model=resolved_model,
-            contents=[
-                types.Part.from_uri(
-                    file_uri=uploaded_file["uri"],
-                    mime_type=uploaded_file.get("mime_type") or "video/mp4",
-                ),
-                json.dumps(prompt_payload, ensure_ascii=False),
-            ],
+            contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 temperature=temperature,
@@ -164,4 +205,4 @@ async def call_gemini_video_json(
         )
         return _extract_response_payload(response)
 
-    return await asyncio.to_thread(_call)
+    return await _call_with_retries(_call)

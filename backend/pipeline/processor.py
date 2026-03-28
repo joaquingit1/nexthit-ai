@@ -15,6 +15,7 @@ from services.ffmpeg import compute_duration_seconds
 from services.multimodal_analysis import (
     build_multimodal_timeline,
     build_video_creative_analysis,
+    delete_multimodal_video,
     prepare_gemini_video,
 )
 from services.persona_simulation import PERSONA_LIBRARY, analyze_persona_batch
@@ -160,6 +161,7 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
 
     temp_path = None
     storage_path = video.get("storage_path")
+    uploaded_gemini_video: dict[str, Any] | None = None
     try:
         await repository.update_job(job_id, {"status": "processing", "stage": "upload.validated", "progress_percent": 10, "started_at": utc_now_iso()})
         await repository.add_event(job_id=job_id, video_id=video_id, event_type="upload.validated", status="processing", stage="upload.validated", progress_percent=10, payload={"video_id": video_id, "storage_path": video["storage_path"]})
@@ -241,7 +243,6 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
 
             video_analysis = await build_video_creative_analysis(
                 video_id=video_id,
-                uploaded_file=uploaded_gemini_video,
                 transcript=transcript,
                 duration_seconds=duration_seconds,
                 preferred_platform=preferred_platform,
@@ -377,5 +378,7 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
                 os.unlink(temp_path)
             except OSError:
                 pass
+        if uploaded_gemini_video:
+            await delete_multimodal_video(uploaded_gemini_video)
         if storage_path:
             await repository.delete_video_object(storage_path)
