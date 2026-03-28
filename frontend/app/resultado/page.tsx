@@ -20,6 +20,7 @@ import {
   type MediaTargetingRecommendation,
   type PersonaResult,
   type PersonaSegment,
+  type SavingsROI,
   type SegmentDiagnosis,
   type TimelineInsightItem,
   type TranscriptSegment,
@@ -70,54 +71,60 @@ const ANALYSIS_STEPS = [
     id: "score",
     title: "Puntaje y Resumen",
     eyebrow: "Paso 1",
-    description: "Abrimos con el puntaje total y un resumen ejecutivo completo del video.",
+    description: "Puntaje general del video con metricas clave de rendimiento y resumen ejecutivo.",
   },
   {
     id: "raw-personas",
     title: "100 Personas Sinteticas",
     eyebrow: "Paso 2",
-    description: "Mostramos primero la materia prima: nombres, atributos, momento de abandono y motivo de salida.",
+    description: "Dataset completo de audiencia simulada: perfil demografico, momento de abandono y motivo.",
   },
   {
     id: "segment-dropoff",
-    title: "Drop-Off por Segmento",
+    title: "Analisis por Segmento",
     eyebrow: "Paso 3",
-    description: "Agrupamos arquetipos y demografias para ver quien se queda mas, quien se cae y por que.",
+    description: "Segmentacion de audiencia por arquetipos con tasas de retencion y diagnostico de abandono.",
   },
   {
     id: "retention",
-    title: "Grafico de Retencion",
+    title: "Curva de Retencion",
     eyebrow: "Paso 4",
-    description: "La curva final se apoya en las 100 personas sinteticas y en el tiempo real del video.",
+    description: "Visualizacion de la retencion proyectada basada en simulacion de 100 personas.",
   },
   {
     id: "timeline",
-    title: "Momentos del Video",
+    title: "Momentos Clave",
     eyebrow: "Paso 5",
-    description: "Marcamos los momentos exactos del edit que empujan o frenan la retencion.",
+    description: "Mapa temporal de momentos criticos que impactan la retencion del video.",
   },
   {
     id: "changes",
-    title: "Que Cambiar",
+    title: "Plan de Cambios",
     eyebrow: "Paso 6",
-    description: "Traducimos transcript, curva y razones de abandono en cambios concretos al video.",
+    description: "Recomendaciones accionables basadas en el analisis de retencion y feedback de audiencia.",
   },
   {
     id: "targeting",
-    title: "Targeting de Medios",
+    title: "Estrategia de Medios",
     eyebrow: "Paso 7",
-    description: "Conectamos las debilidades creativas con una recomendacion de compra de medios.",
+    description: "Configuracion de segmentacion para campanas publicitarias basada en el analisis.",
   },
   {
     id: "versions",
-    title: "Versiones A/B/C",
+    title: "Variantes Creativas",
     eyebrow: "Paso 8",
-    description: "Proponemos tres versiones claramente distintas para iterar el creativo.",
+    description: "Tres propuestas de iteracion del video optimizadas para diferentes objetivos.",
+  },
+  {
+    id: "savings",
+    title: "Ahorro Estimado",
+    eyebrow: "Paso 9",
+    description: "Calculo del ahorro monetario y de tiempo al aplicar los cambios sugeridos vs re-grabar el video.",
   },
   {
     id: "crosspost",
     title: "Posts para Redes",
-    eyebrow: "Paso 9",
+    eyebrow: "Paso 10",
     description: "Generamos posts de texto listos a partir del transcript y del analisis.",
   },
 ] as const;
@@ -867,6 +874,36 @@ function buildVersionStrategiesFallback(
   ];
 }
 
+function buildSavingsRoiFallback(
+  analysis: AnalysisResponse["analysis"],
+  plan: ChangePlan,
+): SavingsROI {
+  const duration = Math.max(analysis.graph.durationSeconds || 15, 1);
+  const changeCount = Math.max(plan.actions.length, 1);
+  const complexityLevel: SavingsROI["complexity_level"] =
+    changeCount >= 6 ? "high" : changeCount >= 4 ? "medium" : "low";
+  const estimatedReshootCost = Math.round(duration * 18 + changeCount * 45 + 180);
+  const estimatedEditCost = Math.round(duration * 6 + changeCount * 20 + 60);
+  const savingsAmount = Math.max(estimatedReshootCost - estimatedEditCost, 0);
+  const savingsPercent = estimatedReshootCost
+    ? Math.round((savingsAmount / estimatedReshootCost) * 100)
+    : 0;
+  const timeSavedHours = Math.max(2, Math.round((duration / 12 + changeCount * 0.8) * 10) / 10);
+
+  return {
+    estimated_reshoot_cost: estimatedReshootCost,
+    estimated_edit_cost: estimatedEditCost,
+    savings_amount: savingsAmount,
+    savings_percent: savingsPercent,
+    time_saved_hours: timeSavedHours,
+    complexity_level: complexityLevel,
+    recommendation:
+      complexityLevel === "high"
+        ? "Conviene iterar sobre el corte actual: el volumen de cambios es alto, pero sigue siendo mas eficiente que re-grabar desde cero."
+        : "Conviene aplicar los cambios sugeridos sobre la edicion actual antes de considerar una re-grabacion completa.",
+  };
+}
+
 function deriveSocialPosts(transcriptText: string, analysis: AnalysisResponse["analysis"]) {
   const primaryAudience =
     analysis.targetAudience?.primaryAudience ?? analysis.graph.bestFitAudience;
@@ -1284,38 +1321,48 @@ function StoryScreen({
 
 function AnalysisStepper({
   currentStep,
+  maxReachedStep,
+  onStepClick,
 }: {
   currentStep: number;
+  maxReachedStep: number;
+  onStepClick: (step: number) => void;
 }) {
   return (
     <section className="sticky top-4 z-20 rounded-[1.8rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_50px_rgba(148,163,184,0.14)] backdrop-blur-xl">
       <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-slate-200/80">
         <div
           className="h-full rounded-full bg-[linear-gradient(90deg,#0f172a,#06b6d4)] transition-all duration-500"
-          style={{ width: `${((currentStep + 1) / ANALYSIS_STEPS.length) * 100}%` }}
+          style={{ width: `${((maxReachedStep + 1) / ANALYSIS_STEPS.length) * 100}%` }}
         />
       </div>
-      <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-9">
+      <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-10">
         {ANALYSIS_STEPS.map((step, index) => {
           const active = index === currentStep;
           const complete = index < currentStep;
+          const reachable = index <= maxReachedStep;
 
           return (
-            <div
+            <button
               key={step.id}
+              type="button"
+              onClick={() => reachable && onStepClick(index)}
+              disabled={!reachable}
               className={`rounded-[1.2rem] border px-3 py-3 text-left transition ${
                 active
                   ? "border-slate-900 bg-slate-950 text-white"
                   : complete
                     ? "border-cyan-200 bg-cyan-50/85 text-cyan-950"
-                    : "border-slate-200/80 bg-white/60 text-slate-600"
+                    : reachable
+                      ? "border-slate-200/80 bg-white/60 text-slate-600 hover:border-slate-300"
+                      : "cursor-not-allowed border-slate-100 bg-slate-50/40 text-slate-400 opacity-60"
               }`}
             >
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-70">
                 {step.eyebrow}
               </p>
               <p className="mt-2 font-semibold">{step.title}</p>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -1333,7 +1380,7 @@ function StepIntro({
   return (
     <div className="space-y-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
-        Analysis
+        Analisis
       </p>
       <h2 className="font-display text-4xl font-semibold tracking-[-0.05em] text-slate-950 md:text-5xl">
         {title}
@@ -1878,64 +1925,23 @@ function GraphStep({
   );
 }
 
-type PersonaFilter = "top" | "early" | "diverse" | "all";
-
-function pickInitialPersonaSelection(personas: PersonaResult[]) {
-  const selected = new Map<string, PersonaResult>();
-  const byRetention = [...personas].sort((left, right) => right.retention_percent - left.retention_percent);
-  const byDropoff = [...personas].sort((left, right) => left.dropoff_second - right.dropoff_second);
-  const byMiddle = [...personas]
-    .sort((left, right) => left.dropoff_second - right.dropoff_second)
-    .slice(Math.floor(personas.length * 0.25), Math.max(Math.floor(personas.length * 0.75), 10));
-
-  for (const persona of byRetention.slice(0, 4)) {
-    selected.set(persona.persona_id, persona);
-  }
-
-  for (const persona of byDropoff.slice(0, 3)) {
-    selected.set(persona.persona_id, persona);
-  }
-
-  const seenReasons = new Set<string>();
-  for (const persona of byMiddle) {
-    const reason = persona.reason_code ?? "unclear_value";
-    if (seenReasons.has(reason)) {
-      continue;
-    }
-    seenReasons.add(reason);
-    selected.set(persona.persona_id, persona);
-    if (seenReasons.size >= 3) {
-      break;
-    }
-  }
-
-  return [...selected.values()].slice(0, 10);
-}
+const PERSONAS_PER_PAGE = 6;
 
 function RawPersonasStep({
   personas,
 }: {
   personas: PersonaResult[];
 }) {
-  const [filter, setFilter] = useState<PersonaFilter>("diverse");
-  const visible = useMemo(() => {
-    if (filter === "all") {
-      return personas;
-    }
-    if (filter === "early") {
-      return [...personas].sort((left, right) => left.dropoff_second - right.dropoff_second).slice(0, 10);
-    }
-    if (filter === "top") {
-      return [...personas].sort((left, right) => right.retention_percent - left.retention_percent).slice(0, 10);
-    }
-    return pickInitialPersonaSelection(personas);
-  }, [filter, personas]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const totalPages = Math.ceil(personas.length / PERSONAS_PER_PAGE);
+  const startIndex = currentPage * PERSONAS_PER_PAGE;
+  const visible = personas.slice(startIndex, startIndex + PERSONAS_PER_PAGE);
 
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Las 100 personas sinteticas, sin caja negra."
-        description="Este es el USP central del producto. Antes de resumir nada, mostramos la data cruda: a quien simulamos, que atributo representa, cuando abandona, que tramo del video evalua y por que toma esa decision."
+        title="Dataset completo de audiencia simulada."
+        description="100 perfiles sintéticos con datos demográficos, momento de abandono, evidencia y motivo de salida."
       />
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
@@ -1945,29 +1951,36 @@ function RawPersonasStep({
               Dataset de audiencia sintetica
             </p>
             <h3 className="mt-3 font-display text-4xl font-semibold tracking-[-0.06em] text-slate-950">
-              100 personas simuladas con nombre, arquetipo y evidencia.
+              {personas.length} personas simuladas
             </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Mostrando {startIndex + 1}-{Math.min(startIndex + PERSONAS_PER_PAGE, personas.length)} de {personas.length}
+            </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              ["top", "Top retencion"],
-              ["early", "Abandono temprano"],
-              ["diverse", "Razones distintas"],
-              ["all", "Ver las 100"],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setFilter(id as PersonaFilter)}
-                className={`rounded-full px-4 py-3 text-sm font-semibold transition ${
-                  filter === id
-                    ? "bg-slate-950 text-white"
-                    : "border border-slate-200 bg-white/80 text-slate-700 hover:border-slate-300 hover:bg-white"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(0, page - 1))}
+              disabled={currentPage === 0}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-700 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <span className="min-w-[80px] text-center text-sm font-semibold text-slate-700">
+              {totalPages === 0 ? 0 : currentPage + 1} / {Math.max(totalPages, 1)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.min(totalPages - 1, page + 1))}
+              disabled={currentPage >= totalPages - 1}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-700 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -1991,9 +2004,6 @@ function RawPersonasStep({
                     </span>
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       {persona.demographic_profile_label ?? persona.demographic_cluster ?? persona.age_range}
-                    </span>
-                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {persona.decision_stage ?? "etapa"}
                     </span>
                   </div>
                   <h4 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
@@ -2066,6 +2076,21 @@ function RawPersonasStep({
             </article>
           ))}
         </div>
+
+        {totalPages > 1 ? (
+          <div className="mt-6 flex justify-center gap-1">
+            {Array.from({ length: totalPages }, (_, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => setCurrentPage(index)}
+                className={`h-2 rounded-full transition-all ${
+                  index === currentPage ? "w-6 bg-slate-900" : "w-2 bg-slate-300 hover:bg-slate-400"
+                }`}
+              />
+            ))}
+          </div>
+        ) : null}
       </section>
     </section>
   );
@@ -2078,15 +2103,21 @@ function SegmentDropoffStep({
   segments: PersonaSegment[];
   diagnoses: SegmentDiagnosis[];
 }) {
+  const [currentPage, setCurrentPage] = useState(0);
+  const diagnosesPerPage = 6;
+  const totalPages = Math.ceil(diagnoses.length / diagnosesPerPage);
+  const startIndex = currentPage * diagnosesPerPage;
+  const visibleDiagnoses = diagnoses.slice(startIndex, startIndex + diagnosesPerPage);
   const best = segments[0];
   const second = segments[1];
   const worst = segments[segments.length - 1];
+  const maxRetention = Math.max(...segments.map((segment) => segment.averageRetention), 1);
 
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Que segmentos se quedan y cuales se van."
-        description="Aca la simulacion se vuelve estrategica: encontramos el mejor encaje, el segundo mejor y el peor, y explicamos exactamente por que cada grupo abandona."
+        title="Segmentacion de audiencia por comportamiento."
+        description="Segmentos de audiencia con tasas de retención, momentos de abandono y causas principales."
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -2095,23 +2126,48 @@ function SegmentDropoffStep({
             return null;
           }
 
-          const title =
-            index === 0 ? "Audiencia con mejor encaje" : index === 1 ? "Segundo mejor encaje" : "Peor encaje";
+          const title = index === 0 ? "Mejor encaje" : index === 1 ? "Segundo mejor" : "Menor encaje";
+          const borderColor =
+            index === 0 ? "border-emerald-200" : index === 1 ? "border-amber-200" : "border-rose-200";
+          const bgColor =
+            index === 0 ? "bg-emerald-50/50" : index === 1 ? "bg-amber-50/50" : "bg-rose-50/50";
+          const progressColor =
+            segment.averageRetention >= 70 ? "bg-emerald-500" : segment.averageRetention >= 50 ? "bg-amber-500" : "bg-rose-500";
 
           return (
-            <article key={`${title}-${segment.label}`} className="result-panel rounded-[1.8rem] px-5 py-5">
+            <article key={`${title}-${segment.label}`} className={`result-panel rounded-[1.8rem] border-2 ${borderColor} ${bgColor} px-5 py-5`}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
                 {title}
               </p>
               <h3 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em] text-slate-950">
                 {segment.label}
               </h3>
-              <p className="mt-3 text-sm leading-7 text-slate-600">
-                {segment.support} personas · {segment.averageRetention}% de retencion media · abandono mediano en {formatMoment(segment.medianDropoffSecond)}
-              </p>
-              <p className="mt-4 rounded-[1.2rem] border border-slate-200/80 bg-white/80 px-4 py-4 text-sm leading-7 text-slate-700">
-                Principal fuga: {segment.dominantReasonLabel}
-              </p>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600">Retencion</span>
+                  <span className="font-semibold text-slate-900">{segment.averageRetention}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className={`h-full rounded-full transition-all ${progressColor}`}
+                    style={{ width: `${(segment.averageRetention / maxRetention) * 100}%` }}
+                  />
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-white/80 px-3 py-2 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Personas</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900">{segment.support}</p>
+                </div>
+                <div className="rounded-xl bg-white/80 px-3 py-2 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Abandono</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900">{formatMoment(segment.medianDropoffSecond)}</p>
+                </div>
+              </div>
+              <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/60 px-3 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Causa principal</p>
+                <p className="mt-1 text-sm font-medium text-slate-800">{segment.dominantReasonLabel}</p>
+              </div>
               {segment.sampleEvidence?.length ? (
                 <div className="mt-4 space-y-2 rounded-[1.2rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4">
                   {segment.sampleEvidence.map((sample) => (
@@ -2127,18 +2183,64 @@ function SegmentDropoffStep({
       </div>
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-          Diagnostico de abandono por segmento
-        </p>
-        <div className="mt-6 space-y-4">
-          {diagnoses.map((item) => (
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Diagnostico detallado por segmento
+            </p>
+            <p className="mt-1 text-sm text-slate-500">
+              Mostrando {startIndex + 1}-{Math.min(startIndex + diagnosesPerPage, diagnoses.length)} de {diagnoses.length}
+            </p>
+          </div>
+          {totalPages > 1 ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.max(0, page - 1))}
+                disabled={currentPage === 0}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-700 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <span className="min-w-[80px] text-center text-sm font-semibold text-slate-700">
+                {currentPage + 1} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.min(totalPages - 1, page + 1))}
+                disabled={currentPage >= totalPages - 1}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-700 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          ) : null}
+        </div>
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          {visibleDiagnoses.map((item, index) => (
             <article key={item.label} className="rounded-[1.5rem] border border-slate-200/80 bg-white/85 px-5 py-5">
-              <p className="font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-                {item.label}
-              </p>
-              <p className="mt-3 text-base font-semibold text-slate-900">
-                Abandona en {formatMoment(item.dropoffSecond)}: {item.reasonLabel}
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
+                    {item.label}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
+                      {formatMoment(item.dropoffSecond)}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-1 text-xs font-medium text-rose-700">
+                      {item.reasonLabel}
+                    </span>
+                  </div>
+                </div>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
+                  {startIndex + index + 1}
+                </span>
+              </div>
               <p className="mt-3 text-sm leading-7 text-slate-600">{item.why}</p>
               {item.examples?.length ? (
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -2160,6 +2262,20 @@ function SegmentDropoffStep({
             </article>
           ))}
         </div>
+        {totalPages > 1 ? (
+          <div className="mt-6 flex justify-center gap-1">
+            {Array.from({ length: totalPages }, (_, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => setCurrentPage(index)}
+                className={`h-2 rounded-full transition-all ${
+                  index === currentPage ? "w-6 bg-slate-900" : "w-2 bg-slate-300 hover:bg-slate-400"
+                }`}
+              />
+            ))}
+          </div>
+        ) : null}
       </section>
     </section>
   );
@@ -2180,8 +2296,8 @@ function TimelineStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Make the video timeline actionable."
-        description="This is where the product stops being a dashboard and starts behaving like a strategist. Every annotation is tied to a moment in the edit so the next creative decision is obvious."
+        title="Momentos clave del video con acciones concretas."
+        description="Anotaciones vinculadas a segundos específicos del video con acciones recomendadas."
       />
 
       <section className="result-panel overflow-hidden rounded-[2.2rem] px-6 py-8">
@@ -2338,23 +2454,42 @@ function MediaTargetingStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Recomendacion de medios."
-        description="Esta es la salida mas valiosa para una agencia: como transformar lo creativo en estructura de compra de medios y secuencias de pauta."
+        title="Configuracion de campanas publicitarias."
+        description="Segmentación y estructura de campaña basadas en el rendimiento proyectado."
       />
 
       <section className="result-panel rounded-[2rem] px-6 py-6">
         <div className="grid gap-4 lg:grid-cols-3">
-          {recommendations.map((item) => (
-            <article key={item.recommendation} className="rounded-[1.5rem] border border-slate-200/80 bg-white/85 px-5 py-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                Recomendación
-              </p>
-              <h3 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em] text-slate-950">
-                {item.recommendation}
-              </h3>
-              <p className="mt-4 text-sm leading-7 text-slate-600">{item.implementation}</p>
-            </article>
-          ))}
+          {recommendations.map((item, index) => {
+            const colors = [
+              "bg-blue-100 text-blue-600 border-blue-200",
+              "bg-purple-100 text-purple-600 border-purple-200",
+              "bg-amber-100 text-amber-600 border-amber-200",
+            ];
+            const icons = [
+              <svg key="target" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+              <svg key="chart" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
+              <svg key="bolt" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
+            ];
+
+            return (
+              <article key={item.recommendation} className={`rounded-[1.5rem] border-2 ${colors[index % 3]} px-5 py-5`}>
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] opacity-70">
+                    Recomendacion #{index + 1}
+                  </p>
+                  {icons[index % 3]}
+                </div>
+                <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
+                  {item.recommendation}
+                </h3>
+                <div className="mt-4 rounded-xl bg-white/60 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Implementacion</p>
+                  <p className="mt-1 text-sm leading-7 text-slate-700">{item.implementation}</p>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
     </section>
@@ -2366,36 +2501,126 @@ function VersionStrategiesStep({
 }: {
   versions: VersionStrategy[];
 }) {
+  const versionColors = [
+    { bg: "bg-emerald-50", border: "border-emerald-200", accent: "bg-emerald-500", label: "text-emerald-600" },
+    { bg: "bg-blue-50", border: "border-blue-200", accent: "bg-blue-500", label: "text-blue-600" },
+    { bg: "bg-violet-50", border: "border-violet-200", accent: "bg-violet-500", label: "text-violet-600" },
+  ];
+
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Tres versiones para iterar el creativo."
-        description="No mostramos solo analitica: proponemos tres direcciones creativas distintas para que el equipo sepa que variantes producir."
+        title="Variantes creativas para testing."
+        description="Tres propuestas de iteración con cambios estructurales para diferentes segmentos."
       />
 
       <div className="grid gap-4 xl:grid-cols-3">
-        {versions.map((version) => (
-          <article key={version.id} className="result-panel rounded-[1.8rem] px-5 py-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Variante {version.id}
-            </p>
-            <h3 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em] text-slate-950">
-              {version.name}
-            </h3>
-            <p className="mt-3 text-sm font-semibold text-slate-900">
-              Audiencia objetivo: {version.targetAudience}
-            </p>
-            <p className="mt-3 text-sm leading-7 text-slate-600">{version.direction}</p>
-            <div className="mt-5 space-y-2">
-              {version.structuralChanges.map((item) => (
-                <div key={item} className="rounded-[1.1rem] border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm leading-7 text-slate-700">
-                  {item}
+        {versions.map((version, index) => {
+          const colors = versionColors[index % 3];
+          return (
+            <article key={version.id} className={`result-panel rounded-[1.8rem] border-2 ${colors.border} ${colors.bg} px-5 py-5`}>
+              <div className="flex items-center justify-between">
+                <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${colors.accent} text-sm font-bold text-white`}>
+                  {version.id}
+                </span>
+                <svg className={`h-5 w-5 ${colors.label}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                </svg>
+              </div>
+              <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
+                {version.name}
+              </h3>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1">
+                <span className="text-xs font-semibold text-slate-600">{version.targetAudience}</span>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{version.direction}</p>
+              <div className="mt-5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Cambios estructurales</p>
+                <div className="mt-2 space-y-2">
+                  {version.structuralChanges.map((item) => (
+                    <div key={item} className="flex items-start gap-2 rounded-xl bg-white/60 px-3 py-2">
+                      <svg className={`mt-0.5 h-4 w-4 flex-shrink-0 ${colors.label}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+                      </svg>
+                      <span className="text-sm text-slate-700">{item}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <p className="mt-5 text-sm leading-7 text-slate-600">{version.whyItShouldResonate}</p>
-          </article>
-        ))}
+              </div>
+              <div className="mt-4 rounded-xl bg-white/80 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Por que funciona</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">{version.whyItShouldResonate}</p>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function SavingsROIStep({
+  savingsRoi,
+}: {
+  savingsRoi: SavingsROI | undefined;
+}) {
+  const complexityLabels = {
+    low: "Baja",
+    medium: "Media",
+    high: "Alta",
+  };
+
+  const complexityColors = {
+    low: "bg-green-100 text-green-700",
+    medium: "bg-amber-100 text-amber-700",
+    high: "bg-red-100 text-red-700",
+  };
+
+  return (
+    <section className="space-y-8">
+      <StepIntro
+        title="Ahorro estimado vs re-grabacion."
+        description="Comparativa de costos entre aplicar los cambios sugeridos y re-grabar el video desde cero."
+      />
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="result-panel rounded-[1.8rem] p-6 text-center">
+          <div className="text-3xl font-bold text-green-500">${savingsRoi?.savings_amount ?? 0}</div>
+          <div className="mt-1 text-sm text-slate-500">Ahorro total</div>
+        </div>
+        <div className="result-panel rounded-[1.8rem] p-6 text-center">
+          <div className="text-3xl font-bold text-teal-500">{savingsRoi?.savings_percent ?? 0}%</div>
+          <div className="mt-1 text-sm text-slate-500">Porcentaje de ahorro</div>
+        </div>
+        <div className="result-panel rounded-[1.8rem] p-6 text-center">
+          <div className="text-3xl font-bold text-blue-500">{savingsRoi?.time_saved_hours ?? 0}h</div>
+          <div className="mt-1 text-sm text-slate-500">Tiempo ahorrado</div>
+        </div>
+      </div>
+
+      <div className="result-panel rounded-[1.8rem] p-6">
+        <h4 className="mb-4 font-display text-lg font-semibold text-slate-950">Comparativa de costos</h4>
+        <div className="flex items-center gap-4">
+          <div className="flex-1 rounded-xl bg-red-50 p-4 text-center">
+            <div className="text-sm text-slate-500">Re-grabar video</div>
+            <div className="mt-1 text-2xl font-bold text-red-500">${savingsRoi?.estimated_reshoot_cost ?? 0}</div>
+          </div>
+          <div className="text-2xl text-slate-300">vs</div>
+          <div className="flex-1 rounded-xl bg-green-50 p-4 text-center">
+            <div className="text-sm text-slate-500">Aplicar cambios</div>
+            <div className="mt-1 text-2xl font-bold text-green-500">${savingsRoi?.estimated_edit_cost ?? 0}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="result-panel rounded-[1.8rem] p-6">
+        <p className="text-slate-700">{savingsRoi?.recommendation ?? "Aplica los cambios sugeridos para ahorrar dinero y tiempo."}</p>
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Complejidad:</span>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${complexityColors[savingsRoi?.complexity_level ?? "low"]}`}>
+            {complexityLabels[savingsRoi?.complexity_level ?? "low"]}
+          </span>
+        </div>
       </div>
     </section>
   );
@@ -2420,7 +2645,7 @@ function CrosspostStep({
     <section className="space-y-8">
       <StepIntro
         title="Genera posts para redes desde el transcript."
-        description="El paso final convierte la lectura del video en texto listo para usar en plataformas sociales, para que el analisis termine en distribucion y no solo en diagnostico."
+        description="Texto optimizado para redes sociales basado en el contenido del video."
       />
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
@@ -2551,6 +2776,7 @@ function DashboardContent() {
   const [ready, setReady] = useState(false);
   const [screenMode, setScreenMode] = useState<ScreenMode>(isNewUpload ? "story" : "analysis");
   const [currentStep, setCurrentStep] = useState(0);
+  const [maxReachedStep, setMaxReachedStep] = useState(isNewUpload ? 0 : ANALYSIS_STEPS.length - 1);
   const [viewerMode, setViewerMode] = useState<ViewerMode>("all");
   const [selectedPlatform, setSelectedPlatform] = useState("LinkedIn");
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
@@ -2652,6 +2878,13 @@ function DashboardContent() {
     return analysis.analysis.versionStrategies ?? buildVersionStrategiesFallback(analysis.analysis, changePlan);
   }, [analysis, changePlan]);
 
+  const savingsRoi = useMemo(() => {
+    if (!analysis || !changePlan) {
+      return undefined;
+    }
+    return analysis.analysis.savingsRoi ?? buildSavingsRoiFallback(analysis.analysis, changePlan);
+  }, [analysis, changePlan]);
+
   const socialPosts = useMemo(() => {
     if (!analysis) {
       return [] as SocialPost[];
@@ -2710,14 +2943,21 @@ function DashboardContent() {
           <StoryScreen analysis={analysis.analysis} onProceed={() => setScreenMode("analysis")} />
         ) : (
           <section className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  {analysis.analysis.productName}
-                </span>
-                <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => router.push("/analisis")}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-500 transition hover:border-slate-300 hover:bg-white hover:text-slate-700"
+                  title="Volver"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
                   {analysis.analysis.clip.fileName}
-                </span>
+                </h1>
               </div>
               <div className="flex flex-wrap gap-3">
                 <button
@@ -2739,7 +2979,11 @@ function DashboardContent() {
               </div>
             </div>
 
-            <AnalysisStepper currentStep={currentStep} />
+            <AnalysisStepper
+              currentStep={currentStep}
+              maxReachedStep={maxReachedStep}
+              onStepClick={setCurrentStep}
+            />
 
             <section key={step.id} className="result-stage-enter space-y-8 rounded-[2.4rem] px-1 py-2">
               {step.id === "score" ? <ScoreSummaryStep analysis={analysis.analysis} /> : null}
@@ -2777,6 +3021,10 @@ function DashboardContent() {
                 <VersionStrategiesStep versions={versionStrategies} />
               ) : null}
 
+              {step.id === "savings" ? (
+                <SavingsROIStep savingsRoi={savingsRoi} />
+              ) : null}
+
               {step.id === "crosspost" ? (
                 <CrosspostStep
                   posts={socialPosts}
@@ -2790,11 +3038,11 @@ function DashboardContent() {
               <StepFooter
                 currentStep={currentStep}
                 onBack={() => setCurrentStep((current) => Math.max(current - 1, 0))}
-                onNext={() =>
-                  setCurrentStep((current) =>
-                    Math.min(current + 1, ANALYSIS_STEPS.length - 1),
-                  )
-                }
+                onNext={() => {
+                  const nextStep = Math.min(currentStep + 1, ANALYSIS_STEPS.length - 1);
+                  setCurrentStep(nextStep);
+                  setMaxReachedStep((current) => Math.max(current, nextStep));
+                }}
                 onReturnToStory={() => setScreenMode("story")}
                 isNewUpload={isNewUpload}
               />

@@ -172,6 +172,16 @@ export type VersionStrategy = {
   whyItShouldResonate: string;
 };
 
+export type SavingsROI = {
+  estimated_reshoot_cost: number;
+  estimated_edit_cost: number;
+  savings_amount: number;
+  savings_percent: number;
+  recommendation: string;
+  time_saved_hours: number;
+  complexity_level: "low" | "medium" | "high";
+};
+
 export type TimelineInsightItem = {
   id: string;
   label: string;
@@ -304,6 +314,7 @@ export type AnalysisResponse = {
     changePlan?: ChangePlan;
     mediaTargeting?: MediaTargetingRecommendation[];
     versionStrategies?: VersionStrategy[];
+    savingsRoi?: SavingsROI;
     videoAnalysis?: VideoAnalysisResult | null;
     scoreSummary?: VideoScoreSummary;
     statusSteps: string[];
