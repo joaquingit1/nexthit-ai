@@ -10,7 +10,7 @@ export async function GET(
 ) {
   if (!getBackendBaseUrl()) {
     return NextResponse.json(
-      { error: "Backend URL is not configured." },
+      { error: "La URL del backend no esta configurada." },
       { status: 503 },
     );
   }

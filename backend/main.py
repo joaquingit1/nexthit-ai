@@ -42,12 +42,12 @@ app.add_middleware(
 )
 
 STATUS_STEPS = [
-    "Upload validated",
-    "Transcribing with Whisper",
-    "Running creative analysis",
+    "Subida validada",
+    "Transcribiendo con Whisper",
+    "Corriendo análisis creativo",
     "Simulating 100 personas",
-    "Aggregating target audience",
-    "Building final growth report",
+    "Agregando audiencia objetivo",
+    "Armando informe final de crecimiento",
 ]
 
 LOCAL_VIDEOS: dict[str, dict[str, Any]] = {}
@@ -75,24 +75,24 @@ PERSONA_LAST_NAME_SEEDS = [
 ]
 PERSONA_COLOR_PALETTE = ["#5eead4", "#38bdf8", "#f59e0b", "#a78bfa", "#22d3ee", "#fb7185", "#facc15", "#c084fc", "#4ade80", "#f97316"]
 PERSONA_ARCHETYPES = [
-    "Fast Scroller",
-    "Trend Chaser",
-    "Value Seeker",
-    "Skeptical Buyer",
-    "Niche Enthusiast",
-    "Casual Entertainer",
-    "Problem/Solution Shopper",
-    "Creator/Marketer",
-    "Impulse Buyer",
-    "Story-Driven Viewer",
+    "Scroller veloz",
+    "Cazador de tendencias",
+    "Buscador de valor",
+    "Comprador esceptico",
+    "Entusiasta de nicho",
+    "Entretenido casual",
+    "Comprador problema-solucion",
+    "Creador o marketer",
+    "Comprador impulsivo",
+    "Viewer guiado por historia",
 ]
-PERSONA_COUNTRIES = ["United States", "United Kingdom", "Canada", "Australia", "Germany", "France", "Mexico", "Brazil", "Spain", "Argentina"]
+PERSONA_COUNTRIES = ["Estados Unidos", "Reino Unido", "Canada", "Australia", "Alemania", "Francia", "Mexico", "Brasil", "Espana", "Argentina"]
 PERSONA_AGE_RANGES = ["18-24", "25-34", "35-44", "45-54", "55-64"]
-PERSONA_OCCUPATIONS = ["Junior marketer", "Growth lead", "Founder", "Fitness creator", "Media buyer", "Freelance strategist", "Community manager", "Brand designer", "Sales operator", "Student entrepreneur"]
+PERSONA_OCCUPATIONS = ["Marketer junior", "Lider de crecimiento", "Founder", "Creador fitness", "Comprador de medios", "Estratega freelance", "Community manager", "Disenador de marca", "Operador comercial", "Emprendedor estudiante"]
 PERSONA_INCOME_BRACKETS = ["$25k-$50k", "$50k-$90k", "$90k-$140k", "$140k-$220k"]
-PERSONA_SOCIAL_STATUS = ["Student", "Young professional", "Established professional", "Business owner"]
+PERSONA_SOCIAL_STATUS = ["Estudiante", "Profesional joven", "Profesional consolidado", "Dueno de negocio"]
 PERSONA_INTERESTS = [
-    ["short-form trends", "creator economy", "social growth"],
+    ["tendencias short-form", "economia creadora", "crecimiento en redes"],
     ["fitness content", "habit building", "lifestyle optimization"],
     ["performance marketing", "ad testing", "measurement"],
     ["productivity", "workflow automation", "business content"],
@@ -116,16 +116,16 @@ PERSONA_FRUSTRATIONS = [
     ["messy pacing", "dense messaging", "low novelty"],
 ]
 PERSONA_DEMOGRAPHIC_PROFILES = [
-    {"id": "demo-01", "label": "Gen Z urbanos", "cluster": "Gen Z", "age_range": "18-24", "country": "United States", "income_bracket": "$25k-$50k", "social_status": "Student"},
-    {"id": "demo-02", "label": "Gen Z creadores", "cluster": "Gen Z", "age_range": "18-24", "country": "Mexico", "income_bracket": "$25k-$50k", "social_status": "Young professional"},
-    {"id": "demo-03", "label": "Millennials performance", "cluster": "Millennial", "age_range": "25-34", "country": "United Kingdom", "income_bracket": "$50k-$90k", "social_status": "Young professional"},
-    {"id": "demo-04", "label": "Millennials founders", "cluster": "Millennial", "age_range": "25-34", "country": "Canada", "income_bracket": "$90k-$140k", "social_status": "Business owner"},
-    {"id": "demo-05", "label": "Profesionales expertos", "cluster": "Profesional", "age_range": "35-44", "country": "Germany", "income_bracket": "$90k-$140k", "social_status": "Established professional"},
-    {"id": "demo-06", "label": "Profesionales premium", "cluster": "Profesional", "age_range": "35-44", "country": "France", "income_bracket": "$140k-$220k", "social_status": "Established professional"},
-    {"id": "demo-07", "label": "Audiencia familiar", "cluster": "Familia", "age_range": "45-54", "country": "Spain", "income_bracket": "$50k-$90k", "social_status": "Established professional"},
-    {"id": "demo-08", "label": "Compradores maduros", "cluster": "Familia", "age_range": "45-54", "country": "Brazil", "income_bracket": "$90k-$140k", "social_status": "Business owner"},
-    {"id": "demo-09", "label": "Senior aspiracional", "cluster": "Senior", "age_range": "55-64", "country": "Australia", "income_bracket": "$140k-$220k", "social_status": "Business owner"},
-    {"id": "demo-10", "label": "Senior pragmatico", "cluster": "Senior", "age_range": "55-64", "country": "Argentina", "income_bracket": "$50k-$90k", "social_status": "Established professional"},
+    {"id": "demo-01", "label": "Gen Z urbanos", "cluster": "Gen Z", "age_range": "18-24", "country": "Estados Unidos", "income_bracket": "$25k-$50k", "social_status": "Estudiante"},
+    {"id": "demo-02", "label": "Gen Z creadores", "cluster": "Gen Z", "age_range": "18-24", "country": "Mexico", "income_bracket": "$25k-$50k", "social_status": "Profesional joven"},
+    {"id": "demo-03", "label": "Millennials performance", "cluster": "Millennial", "age_range": "25-34", "country": "Reino Unido", "income_bracket": "$50k-$90k", "social_status": "Profesional joven"},
+    {"id": "demo-04", "label": "Millennials founders", "cluster": "Millennial", "age_range": "25-34", "country": "Canada", "income_bracket": "$90k-$140k", "social_status": "Dueno de negocio"},
+    {"id": "demo-05", "label": "Profesionales expertos", "cluster": "Profesional", "age_range": "35-44", "country": "Alemania", "income_bracket": "$90k-$140k", "social_status": "Profesional consolidado"},
+    {"id": "demo-06", "label": "Profesionales premium", "cluster": "Profesional", "age_range": "35-44", "country": "Francia", "income_bracket": "$140k-$220k", "social_status": "Profesional consolidado"},
+    {"id": "demo-07", "label": "Audiencia familiar", "cluster": "Familia", "age_range": "45-54", "country": "Espana", "income_bracket": "$50k-$90k", "social_status": "Profesional consolidado"},
+    {"id": "demo-08", "label": "Compradores maduros", "cluster": "Familia", "age_range": "45-54", "country": "Brasil", "income_bracket": "$90k-$140k", "social_status": "Dueno de negocio"},
+    {"id": "demo-09", "label": "Senior aspiracional", "cluster": "Senior", "age_range": "55-64", "country": "Australia", "income_bracket": "$140k-$220k", "social_status": "Dueno de negocio"},
+    {"id": "demo-10", "label": "Senior pragmatico", "cluster": "Senior", "age_range": "55-64", "country": "Argentina", "income_bracket": "$50k-$90k", "social_status": "Profesional consolidado"},
 ]
 LEAVE_REASON_LABELS = {
     "silent_intro": "Arranque en silencio",
@@ -205,14 +205,14 @@ def format_bytes(byte_count: int | None) -> str:
 
 def file_type_label(content_type: str | None) -> str:
     if not content_type:
-        return "Uploaded clip"
+        return "Clip subido"
     if content_type.startswith("video/"):
-        return "Short-form video"
+        return "Video short-form"
     if content_type.startswith("audio/"):
-        return "Audio-driven asset"
+        return "Pieza guiada por audio"
     if content_type.startswith("image/"):
-        return "Visual asset"
-    return "Uploaded asset"
+        return "Pieza visual"
+    return "Pieza subida"
 
 
 def build_public_backend_url() -> str:
@@ -245,7 +245,7 @@ def get_json_text_from_groq(payload: dict[str, Any]) -> str:
 
 def build_transcript_segments(text: str, duration_seconds: int) -> list[dict[str, Any]]:
     normalized = re.sub(r"\s+", " ", text).strip()
-    source = normalized or "We analyze the clip like a real audience would, predict retention, and turn the result into a growth strategy."
+    source = normalized or "Analizamos el clip como lo haria una audiencia real, predecimos la retencion y convertimos el resultado en una estrategia de crecimiento."
     sentences = [sentence.strip() for sentence in re.split(r"(?<=[.!?])\s+", source) if sentence.strip()] or [source]
     segment_count = max(1, min(len(sentences), 6))
     slice_duration = duration_seconds / segment_count
@@ -347,7 +347,7 @@ def compute_duration_seconds(file_path: str, size_bytes: int | None) -> int:
 def maybe_prepare_audio_for_transcription(source_path: str) -> tuple[str, str]:
     ffmpeg_path = resolve_ffmpeg_path()
     if not ffmpeg_path:
-        raise RuntimeError("Audio extraction is required for transcription, but ffmpeg is unavailable.")
+        raise RuntimeError("La extraccion de audio es obligatoria para la transcripcion, pero ffmpeg no esta disponible.")
 
     temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     temp_audio.close()
@@ -376,7 +376,7 @@ def maybe_prepare_audio_for_transcription(source_path: str) -> tuple[str, str]:
         except OSError:
             pass
         stderr = process.stderr.strip() or "Unknown ffmpeg error."
-        raise RuntimeError(f"Audio extraction failed: {stderr}")
+        raise RuntimeError(f"Fallo la extraccion de audio: {stderr}")
     return temp_audio.name, temp_audio.name
 
 
@@ -1170,32 +1170,32 @@ def default_creative_analysis(video_id: str, transcript: dict[str, Any], duratio
         "viral_score": viral_score,
         "conversion_score": conversion_score,
         "ad_readiness_score": ad_readiness_score,
-        "overall_label": "Strong concept, faster opening needed" if hook_score < 78 else "Creative with strong paid testing potential",
-        "narrative": "The value proposition is clear once it arrives, but the opening still spends too much time setting up before the strongest proof lands.",
+        "overall_label": "Buen concepto, pero necesita una apertura más rápida" if hook_score < 78 else "Creativo con mucho potencial para testing pago",
+        "narrative": "La propuesta de valor se entiende cuando finalmente aparece, pero la apertura todavía gasta demasiado tiempo preparando antes de mostrar la prueba más fuerte.",
         "strongest_points": [
-            "There is a practical, marketable payoff in the core message.",
-            "The middle reveals enough value to keep high-intent viewers engaged.",
-            f"{best_platform} is the strongest initial distribution fit.",
+            "Hay un beneficio práctico y vendible en el mensaje central.",
+            "La mitad del video revela suficiente valor como para sostener a quienes ya vienen con intención alta.",
+            f"{best_platform} es el mejor encaje inicial de distribución.",
         ],
         "weaknesses": [
-            "The first swipe decision happens before the sharpest benefit lands.",
-            "The pacing softens in the middle instead of escalating.",
-            "The CTA arrives after a meaningful share of attention has already dropped.",
+            "La primera decisión de seguir o abandonar ocurre antes de que aparezca el beneficio más fuerte.",
+            "El ritmo pierde fuerza en la mitad en vez de escalar.",
+            "La llamada a la acción llega cuando una parte importante de la atención ya cayó.",
         ],
         "timeline_insights": [
-            {"id": "hook", "label": "Hook weak", "second": 1.4, "detail": "The opening frames explain before they prove the payoff.", "tone": "risk"},
-            {"id": "energy", "label": "Energy drop", "second": round_value(max(2.8, duration_seconds * 0.4), 1), "detail": "The edit becomes more descriptive than dynamic here.", "tone": "risk"},
-            {"id": "overload", "label": "Cognitive overload", "second": round_value(max(4.2, duration_seconds * 0.68), 1), "detail": "The audience has to interpret too much too quickly in this stretch.", "tone": "risk"},
-            {"id": "loop", "label": "Loop potential", "second": round_value(max(1, duration_seconds - 1.6), 1), "detail": "The ending could become a stronger replay trigger if it mirrors the opener.", "tone": "opportunity"},
+            {"id": "hook", "label": "Hook débil", "second": 1.4, "detail": "Los primeros frames explican antes de demostrar el resultado.", "tone": "risk"},
+            {"id": "energy", "label": "Caída de energía", "second": round_value(max(2.8, duration_seconds * 0.4), 1), "detail": "Acá la edición se vuelve más descriptiva que dinámica.", "tone": "risk"},
+            {"id": "overload", "label": "Sobrecarga cognitiva", "second": round_value(max(4.2, duration_seconds * 0.68), 1), "detail": "En este tramo la audiencia tiene que procesar demasiado en muy poco tiempo.", "tone": "risk"},
+            {"id": "loop", "label": "Potencial de loop", "second": round_value(max(1, duration_seconds - 1.6), 1), "detail": "El cierre podría disparar más replays si espeja la apertura.", "tone": "opportunity"},
         ],
         "creative_fixes": [
-            "Start with payoff, not intro.",
-            "Cut the first 1.5s.",
-            "Add a pattern interrupt near the first major attention dip.",
-            "Move the CTA closer to the first proof point.",
+            "Empezá con el resultado, no con la introducción.",
+            "Recortá los primeros 1.5s.",
+            "Sumá un pattern interrupt cerca de la primera gran caída de atención.",
+            "Mové la llamada a la acción más cerca del primer punto de prueba.",
         ],
         "best_platform": best_platform,
-        "primary_angle": "Lead with the result before the explanation.",
+        "primary_angle": "Empezá con el resultado antes de la explicación.",
     }
 
 
@@ -1245,48 +1245,48 @@ def default_persona_reason(persona: dict[str, Any], creative_context: dict[str, 
     reason_code = "intro_too_slow"
     base = first_hook + rng.uniform(-0.7, 0.8)
 
-    if archetype == "Fast Scroller":
+    if archetype == "Scroller veloz":
         base -= 1.3
         reason_code = "intro_too_slow"
-    elif archetype == "Trend Chaser":
+    elif archetype == "Cazador de tendencias":
         base -= 0.7
         reason_code = "low_novelty"
-    elif archetype == "Value Seeker":
+    elif archetype == "Buscador de valor":
         base += 0.2
         reason_code = "unclear_value"
-    elif archetype == "Skeptical Buyer":
+    elif archetype == "Comprador esceptico":
         base += 0.3
         reason_code = "claim_lacks_proof"
-    elif archetype == "Niche Enthusiast":
+    elif archetype == "Entusiasta de nicho":
         base += 0.6
         reason_code = "irrelevant_for_audience"
-    elif archetype == "Casual Entertainer":
+    elif archetype == "Entretenido casual":
         base -= 0.4
         reason_code = "low_energy"
-    elif archetype == "Problem/Solution Shopper":
+    elif archetype == "Comprador problema-solucion":
         base += 0.9
         reason_code = "unclear_value"
-    elif archetype == "Creator/Marketer":
+    elif archetype == "Creador o marketer":
         base += 0.5
         reason_code = "weak_visual_hook"
-    elif archetype == "Impulse Buyer":
+    elif archetype == "Comprador impulsivo":
         base -= 0.2
         reason_code = "cta_too_late"
-    elif archetype == "Story-Driven Viewer":
+    elif archetype == "Viewer guiado por historia":
         base += 0.8
         reason_code = "weak_story_payoff"
 
     if persona.get("age_range") == "18-24":
         base -= 0.4
-    if persona.get("social_status") == "Business owner":
+    if persona.get("social_status") == "Dueno de negocio":
         base += 0.5
-    if creative_context["cta_score"] < 60 and archetype in {"Impulse Buyer", "Problem/Solution Shopper"}:
+    if creative_context["cta_score"] < 60 and archetype in {"Comprador impulsivo", "Comprador problema-solucion"}:
         reason_code = "cta_too_late"
         base -= 0.2
-    if creative_context["clarity_score"] < 68 and archetype in {"Value Seeker", "Problem/Solution Shopper"}:
+    if creative_context["clarity_score"] < 68 and archetype in {"Buscador de valor", "Comprador problema-solucion"}:
         reason_code = "unclear_value"
         base -= 0.3
-    if creative_context["novelty_score"] < 62 and archetype in {"Trend Chaser", "Casual Entertainer"}:
+    if creative_context["novelty_score"] < 62 and archetype in {"Cazador de tendencias", "Entretenido casual"}:
         reason_code = "low_novelty"
         base -= 0.4
     if creative_context["audio_score"] < 60:
@@ -1543,7 +1543,7 @@ def build_change_plan(transcript: dict[str, Any], average_line: list[dict[str, A
                 "title": "Adelantar CTA",
                 "timestamp": cta_data["ctaTimestamp"],
                 "reason": f"El CTA aparece en {cta_data['ctaTimestamp']}s, despues de la mayor caida de atencion.",
-                "fix": f"Mover el CTA hacia {cta_data['recommendedNewTimestamp']}s y apoyarlo con el primer proof point.",
+                "fix": f"Mover el CTA hacia {cta_data['recommendedNewTimestamp']}s y apoyarlo con el primer punto de prueba.",
             }
         )
     elif cta_data["ctaPresent"]:
@@ -1629,7 +1629,7 @@ def default_version_strategies(target_audience: dict[str, Any], top_reasons: lis
     return [
         {
             "id": "A",
-            "name": "Version A",
+            "name": "Variante A",
             "targetAudience": primary,
             "direction": "Hook rápido para capturar atención desde el primer frame.",
             "structuralChanges": ["Abrir con outcome inmediato", "Cortar setup inicial", "Agregar patrón visual fuerte en segundo 2-3"],
@@ -1637,7 +1637,7 @@ def default_version_strategies(target_audience: dict[str, Any], top_reasons: lis
         },
         {
             "id": "B",
-            "name": "Version B",
+            "name": "Variante B",
             "targetAudience": secondary,
             "direction": "Edición centrada en prueba para compradores más escépticos.",
             "structuralChanges": ["Mostrar evidencia temprano", "Reducir claims abstractos", "Conectar CTA con la prueba principal"],
@@ -1645,7 +1645,7 @@ def default_version_strategies(target_audience: dict[str, Any], top_reasons: lis
         },
         {
             "id": "C",
-            "name": "Version C",
+            "name": "Variante C",
             "targetAudience": "Audiencias orientadas a storytelling",
             "direction": "Narrativa más aspiracional y emocional, con payoff más claro al cierre.",
             "structuralChanges": ["Reordenar el arco del relato", "Mantener tensión en mitad del video", "Cerrar con resolución memorable"],
@@ -1659,8 +1659,8 @@ def aggregate_target_audience(personas: list[dict[str, Any]]) -> dict[str, Any]:
     primary = segments[0] if segments else None
     secondary = segments[1] if len(segments) > 1 else None
     return {
-        "primaryAudience": primary["label"] if primary else "Gen Z Fast Scroller",
-        "secondaryAudience": secondary["label"] if secondary else "High-intent niche audience",
+        "primaryAudience": primary["label"] if primary else "Gen Z scroller veloz",
+        "secondaryAudience": secondary["label"] if secondary else "Audiencia de nicho de alta intencion",
         "countries": build_distribution_from_scalar(personas, "country"),
         "ageRanges": build_distribution_from_scalar(personas, "age_range"),
         "interests": build_distribution_from_list(personas, "interests"),
@@ -1739,12 +1739,12 @@ def build_platform_fit_rows(best_platform: str, creative_context: dict[str, Any]
             {
                 "platform": platform,
                 "fit": fit,
-                "tag": "Best current fit" if platform == best_platform else "Secondary fit",
-                "verdict": f"{platform} fits the current structure best." if platform == best_platform else f"{platform} becomes stronger after a faster hook and cleaner payoff.",
+                "tag": "Mejor encaje actual" if platform == best_platform else "Encaje secundario",
+                "verdict": f"{platform} encaja mejor con la estructura actual." if platform == best_platform else f"{platform} mejora si el hook es mas rapido y el payoff mas claro.",
                 "adaptations": [
-                    "Lead with a clearer first-frame promise.",
-                    "Bring proof earlier in the edit.",
-                    "Keep the CTA aligned with the opening promise.",
+                    "Empeza con una promesa mas clara en el primer frame.",
+                    "Lleva la prueba mas arriba dentro de la edicion.",
+                    "Mantene la llamada a la accion alineada con la promesa inicial.",
                 ],
             }
         )
@@ -1754,7 +1754,7 @@ def build_platform_fit_rows(best_platform: str, creative_context: dict[str, Any]
 def default_final_copy(creative_context: dict[str, Any], target_audience: dict[str, Any], duration_seconds: int) -> dict[str, Any]:
     primary = target_audience["primaryAudience"]
     secondary = target_audience["secondaryAudience"]
-    top_country = target_audience["countries"][0]["label"] if target_audience["countries"] else "United States"
+    top_country = target_audience["countries"][0]["label"] if target_audience["countries"] else "Estados Unidos"
     best_platform = creative_context["best_platform"]
     return {
         "video_summary": (
@@ -1767,23 +1767,23 @@ def default_final_copy(creative_context: dict[str, Any], target_audience: dict[s
         "strengths": creative_context["strongest_points"],
         "weaknesses": creative_context["weaknesses"],
         "recommendations": [
-            {"title": "Fix the opening", "issue": "The payoff arrives after the first swipe decision window.", "action": "Open with the result, not the explanation.", "example": "Start on the clearest visual or spoken benefit in the first second."},
-            {"title": "Tighten the mid-section", "issue": "Momentum softens when the edit becomes descriptive.", "action": "Add a pattern interrupt or proof beat where attention first dips.", "example": "Cut the first 1.5s and introduce a visual switch around second three."},
-            {"title": "Move the CTA earlier", "issue": "The ask currently lands after attention has already weakened.", "action": "Attach the CTA to the strongest payoff moment.", "example": "Ask for the click or save immediately after the clearest proof frame."},
-            {"title": "Build paid iterations around the winner", "issue": "The audience fit is strongest in a narrow cluster right now.", "action": "Launch the first paid test around the most resonant audience before widening.", "example": f"Start with {primary} in {top_country}, then branch to {secondary}."},
+            {"title": "Corregir la apertura", "issue": "El payoff llega despues de la primera ventana critica de swipe.", "action": "Abri con el resultado, no con la explicacion.", "example": "Arranca con el beneficio visual o hablado mas claro en el primer segundo."},
+            {"title": "Ajustar la parte media", "issue": "El impulso cae cuando la edicion se vuelve demasiado descriptiva.", "action": "Suma un pattern interrupt o un beat de prueba donde la atencion cae por primera vez.", "example": "Recorta los primeros 1.5s e introduci un cambio visual cerca del segundo tres."},
+            {"title": "Adelantar la llamada a la accion", "issue": "El pedido hoy aparece cuando la atencion ya se debilito.", "action": "Pega la llamada a la accion al momento de payoff mas fuerte.", "example": "Pedi el click o el guardado justo despues del frame de prueba mas claro."},
+            {"title": "Construir iteraciones pagas alrededor del ganador", "issue": "El mejor fit de audiencia hoy esta concentrado en un grupo bastante puntual.", "action": "Lanza el primer test pago sobre la audiencia que mas resuena antes de abrir el targeting.", "example": f"Empeza con {primary} en {top_country}, y despues abri hacia {secondary}."},
         ],
         "ad_strategy": {
-            "campaignGoal": "Best for paid creative testing",
-            "why": "The concept is strong enough to test in market, but the opening edit still holds the biggest upside.",
-            "focus": "Use paid spend as a learning loop first, then scale the winner after retention proves the new hook.",
+            "campaignGoal": "Ideal para testing creativo pago",
+            "why": "El concepto es lo suficientemente fuerte como para testearlo en mercado, pero la edicion de apertura sigue concentrando la mayor oportunidad de mejora.",
+            "focus": "Usa la inversion paga primero como bucle de aprendizaje y escala al ganador recien despues de que la retencion valide el nuevo hook.",
             "bestAudience": primary,
-            "audienceWhy": "This cluster keeps watching longer because the value becomes practical fast enough for them to stay engaged.",
+            "audienceWhy": "Este grupo sigue mirando mas tiempo porque el valor se vuelve practico lo suficientemente rapido como para sostener su atencion.",
             "messageAngle": creative_context["primary_angle"],
-            "creativeVariants": ["Payoff-first hook", "Problem-first hook", "Proof-first cut with earlier CTA"],
-            "audienceHypotheses": [f"Primary audience in {top_country}", secondary, "Retargeting pool of viewers who watched at least 50%"],
-            "testingApproach": "Launch two opening-hook variants with identical targeting, read retention first, then widen spend only on the flatter opening curve.",
+            "creativeVariants": ["Hook centrado en el resultado", "Hook centrado en el problema", "Version centrada en prueba con llamada a la accion mas temprana"],
+            "audienceHypotheses": [f"Audiencia principal en {top_country}", secondary, "Pool de retargeting de personas que vieron al menos el 50%"],
+            "testingApproach": "Lanza dos variantes de apertura con el mismo targeting, lee primero la retencion y recien despues amplia presupuesto sobre la curva mas plana.",
         },
-        "cross_post_summary": f"The transcript maps most cleanly to {best_platform}, but it can still travel to LinkedIn and Facebook with a clearer business framing.",
+        "cross_post_summary": f"El transcript encaja mejor en {best_platform}, pero tambien puede viajar a LinkedIn y Facebook con un encuadre mas orientado a negocio.",
         "platforms": build_platform_fit_rows(best_platform, creative_context),
     }
 
@@ -1941,7 +1941,7 @@ async def synthesize_strategic_outputs(
                         "Tu trabajo es convertir transcript, curva de retencion, 100 personas sinteticas y segmentos agregados en recomendaciones muy concretas. "
                         "Debes devolver JSON valido. "
                         "En change_plan.actions, cada fix debe ser accionable y atado a tiempo real del video cuando corresponda. "
-                        "En media_targeting, devuelve 3 recomendaciones del estilo 'Recommendation: Specific implementation', "
+                        "En media_targeting, devuelve 3 recomendaciones del estilo 'Recomendacion: implementacion especifica', "
                         "pensadas como salidas de agencia para compra de medios. "
                         "En version_strategies, crea 3 caminos A/B/C realmente distintos entre si y cada uno con un target_audience claro."
                     ),
@@ -2018,7 +2018,7 @@ def build_final_analysis_payload(
         "job_id": job_id,
         "analysis": {
             "productName": "AXIOM//LENS",
-            "sessionLabel": f"Session {job_id.replace('job-', '').upper()}",
+            "sessionLabel": f"Sesion {job_id.replace('job-', '').upper()}",
             "generatedAt": utc_now_iso(),
             "transcriptText": transcript["text"],
             "transcript": transcript,
@@ -2033,7 +2033,7 @@ def build_final_analysis_payload(
             "videoAnalysis": None,
             "scoreSummary": score_summary,
             "statusSteps": STATUS_STEPS,
-            "clip": {"fileName": video["original_filename"], "mediaType": file_type_label(video.get("mime_type")), "sizeLabel": format_bytes(video.get("size_bytes")), "durationLabel": format_duration(duration_seconds), "label": "Analyzed clip"},
+            "clip": {"fileName": video["original_filename"], "mediaType": file_type_label(video.get("mime_type")), "sizeLabel": format_bytes(video.get("size_bytes")), "durationLabel": format_duration(duration_seconds), "label": "Clip analizado"},
             "summary": {
                 "overallScore": creative_context["overall_score"],
                 "overallLabel": creative_context["overall_label"],
@@ -2046,8 +2046,8 @@ def build_final_analysis_payload(
                 ],
             },
             "graph": {
-                "title": "Audience Retention Simulation",
-                "subtitle": "100 synthetic personas, grouped into streamed batches, with a final average retention curve built from their predicted drop-off moments.",
+                "title": "Simulacion de retencion de audiencia",
+                "subtitle": "100 personas sinteticas, agrupadas en lotes emitidos en vivo, con una curva final de retencion promedio construida desde sus momentos de abandono predichos.",
                 "durationSeconds": duration_seconds,
                 "audienceSize": len(personas),
                 "averageWatchTime": f"{average_watch_time}s",
@@ -2063,14 +2063,14 @@ def build_final_analysis_payload(
                 "strengths": final_copy["strengths"],
                 "weaknesses": final_copy["weaknesses"],
                 "metrics": [
-                    {"name": "Hook Strength", "score": creative_context["hook_score"], "explanation": "How fast the opening earns the next second of attention."},
-                    {"name": "Message Clarity", "score": creative_context["clarity_score"], "explanation": "How clearly the benefit is understood."},
-                    {"name": "Pacing", "score": creative_context["pacing_score"], "explanation": "How much momentum the edit sustains after the opening."},
-                    {"name": "Audio / Delivery", "score": creative_context["audio_score"], "explanation": "How well the spoken or sonic layer supports the message."},
-                    {"name": "Visual Readability", "score": creative_context["visual_score"], "explanation": "How easily the video reads at scroll speed."},
-                    {"name": "Novelty", "score": creative_context["novelty_score"], "explanation": "How distinct or surprising the concept feels."},
-                    {"name": "CTA Strength", "score": creative_context["cta_score"], "explanation": "How effectively the video converts attention into action."},
-                    {"name": "Platform Fit", "score": creative_context["platform_fit_score"], "explanation": f"{creative_context['best_platform']} is the strongest initial distribution fit."},
+                    {"name": "Fuerza del hook", "score": creative_context["hook_score"], "explanation": "Que tan rapido la apertura gana el siguiente segundo de atencion."},
+                    {"name": "Claridad del mensaje", "score": creative_context["clarity_score"], "explanation": "Que tan claro se entiende el beneficio."},
+                    {"name": "Ritmo", "score": creative_context["pacing_score"], "explanation": "Cuanto impulso sostiene la edicion despues de la apertura."},
+                    {"name": "Audio / Entrega", "score": creative_context["audio_score"], "explanation": "Que tan bien la capa hablada o sonora sostiene el mensaje."},
+                    {"name": "Lectura visual", "score": creative_context["visual_score"], "explanation": "Que tan facil se lee el video a velocidad de scroll."},
+                    {"name": "Novedad", "score": creative_context["novelty_score"], "explanation": "Que tan distinto o sorpresivo se siente el concepto."},
+                    {"name": "Fuerza de la llamada a la accion", "score": creative_context["cta_score"], "explanation": "Que tan bien convierte la atencion en accion."},
+                    {"name": "Encaje de plataforma", "score": creative_context["platform_fit_score"], "explanation": f"{creative_context['best_platform']} es el encaje inicial mas fuerte para distribucion."},
                 ],
             },
             "recommendations": final_copy["recommendations"],
@@ -2202,7 +2202,7 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
 async def read_root():
     return {
         "status": "ok",
-        "message": "Backend ready for Supabase uploads, Whisper transcription, persona streaming, and final analysis synthesis.",
+        "message": "Backend listo para subidas a Supabase, transcripcion con Whisper, streaming de personas y sintesis final del analisis.",
         "supabase_configured": repository.configured,
         "groq_configured": bool(GROQ_API_KEY),
         "groq_transcription_model": GROQ_TRANSCRIPTION_MODEL,

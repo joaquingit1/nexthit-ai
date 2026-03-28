@@ -323,81 +323,81 @@ type SegmentMeta = {
 };
 
 const STATUS_STEPS = [
-  "Processing transcript",
-  "Reading visuals and pacing",
+  "Procesando transcript",
+  "Leyendo visuales y ritmo",
   "Simulating 100 personas",
-  "Building the growth plan",
+  "Armando el plan de crecimiento",
 ];
 
 const AUDIENCE_SEGMENTS: SegmentMeta[] = [
   {
-    name: "Gen Z Scroller",
+    name: "Scroller Gen Z",
     color: "#5eead4",
     resilience: 0.86,
     spikeBoost: 0.9,
-    angle: "Show the payoff before any explanation",
+    angle: "Mostrá el resultado antes de cualquier explicación",
   },
   {
-    name: "Fitness Enthusiast",
+    name: "Fan del fitness",
     color: "#38bdf8",
     resilience: 0.94,
     spikeBoost: 0.96,
-    angle: "Open with visible energy and a concrete benefit in second one",
+    angle: "Abrí con energía visible y un beneficio concreto en el segundo uno",
   },
   {
-    name: "Productivity Hacker",
+    name: "Obsesivo de la productividad",
     color: "#f59e0b",
     resilience: 0.91,
     spikeBoost: 1.08,
-    angle: "Promise a concrete outcome before explaining the process",
+    angle: "Prometé un resultado concreto antes de explicar el proceso",
   },
   {
-    name: "Impulse Shopper",
+    name: "Comprador impulsivo",
     color: "#a78bfa",
     resilience: 0.88,
     spikeBoost: 1.04,
-    angle: "Move the reward or CTA much earlier",
+    angle: "Mové el beneficio o la llamada a la acción mucho antes",
   },
   {
-    name: "Performance Marketer",
+    name: "Marketer de performance",
     color: "#22d3ee",
     resilience: 1.03,
     spikeBoost: 1.18,
-    angle: "Lead with a measurable result before the details",
+    angle: "Empezá con un resultado medible antes de los detalles",
   },
   {
-    name: "Busy Founder",
+    name: "Founder sin tiempo",
     color: "#fb7185",
     resilience: 0.98,
     spikeBoost: 1.05,
-    angle: "Trim the opening and land the key insight by second two",
+    angle: "Recortá la apertura y hacé caer la idea clave antes del segundo dos",
   },
   {
-    name: "Product Builder",
+    name: "Constructor de producto",
     color: "#facc15",
     resilience: 1.06,
     spikeBoost: 1.22,
-    angle: "Make the mid-video reveal much clearer",
+    angle: "Hacé mucho más clara la revelación de mitad de video",
   },
   {
-    name: "B2B Professional",
+    name: "Profesional B2B",
     color: "#c084fc",
     resilience: 1.1,
     spikeBoost: 1.12,
-    angle: "State the value directly and keep the framing crisp",
+    angle: "Decí el valor de forma directa y mantené el encuadre bien claro",
   },
 ];
 
 const PLATFORM_NAMES = ["TikTok", "Instagram Reels", "YouTube Shorts", "LinkedIn"] as const;
 
-const PERSONA_COUNTRIES = ["United States", "United Kingdom", "Canada", "Australia", "Germany"];
+const PERSONA_COUNTRIES = ["Estados Unidos", "Reino Unido", "Canadá", "Australia", "Alemania"];
 const PERSONA_AGE_RANGES = ["18-24", "25-34", "35-44", "45-54", "55-64"];
 const PERSONA_OCCUPATIONS = [
-  "Junior marketer",
-  "Growth lead",
+  "Marketer junior",
+  "Lider de crecimiento",
   "Founder",
-  "Creator",
-  "Freelance strategist",
+  "Creador",
+  "Estratega freelance",
 ];
 const PERSONA_INCOME_BRACKETS = [
   "$25k-$50k",
@@ -406,24 +406,24 @@ const PERSONA_INCOME_BRACKETS = [
   "$140k-$220k",
 ];
 const PERSONA_SOCIAL_STATUS = [
-  "Student",
-  "Young professional",
-  "Established professional",
-  "Business owner",
+  "Estudiante",
+  "Profesional joven",
+  "Profesional consolidado",
+  "Dueño de negocio",
 ];
 const PERSONA_INTEREST_CLUSTERS = [
-  ["short-form trends", "creator economy", "social growth"],
-  ["fitness content", "habit building", "lifestyle optimization"],
-  ["performance marketing", "ad testing", "measurement"],
-  ["productivity", "workflow automation", "business content"],
-  ["startups", "sales psychology", "brand building"],
+  ["tendencias short-form", "economía creadora", "crecimiento en redes"],
+  ["contenido fitness", "construcción de hábitos", "optimización del estilo de vida"],
+  ["marketing de performance", "testing de anuncios", "medición"],
+  ["productividad", "automatización de flujos", "contenido de negocios"],
+  ["startups", "psicología de ventas", "construcción de marca"],
 ];
 const PERSONA_HOBBY_CLUSTERS = [
-  ["scrolling Reels", "gym", "weekend travel"],
-  ["newsletter reading", "podcasts", "cycling"],
-  ["content creation", "video editing", "running"],
-  ["networking events", "coffee chats", "tennis"],
-  ["gaming", "side projects", "photography"],
+  ["scrollear Reels", "gym", "viajes de fin de semana"],
+  ["leer newsletters", "podcasts", "ciclismo"],
+  ["creación de contenido", "edición de video", "running"],
+  ["eventos de networking", "cafés de networking", "tenis"],
+  ["gaming", "proyectos paralelos", "fotografía"],
 ];
 
 export const ANALYSIS_STORAGE_KEY = "hackathon.analysis.latest";
@@ -485,22 +485,22 @@ function formatBytes(bytes?: number | null) {
 
 function fileTypeLabel(fileType?: string | null) {
   if (!fileType) {
-    return "Uploaded clip";
+    return "Clip subido";
   }
 
   if (fileType.startsWith("video/")) {
-    return "Short-form video";
+    return "Video short-form";
   }
 
   if (fileType.startsWith("audio/")) {
-    return "Audio-led asset";
+    return "Pieza guiada por audio";
   }
 
   if (fileType.startsWith("image/")) {
-    return "Visual asset";
+    return "Pieza visual";
   }
 
-  return "Uploaded asset";
+  return "Pieza subida";
 }
 
 function makeHandle(index: number, random: () => number) {
@@ -719,7 +719,7 @@ function buildTranscriptSegments(text: string, durationSeconds: number): Transcr
   const normalized = text.replace(/\s+/g, " ").trim();
   const source =
     normalized ||
-    "We analyze the video like a real audience would, predict retention, and turn those signals into creative and growth strategy.";
+    "Analizamos el video como lo haria una audiencia real, predecimos la retencion y convertimos esas senales en estrategia creativa y de crecimiento.";
   const sentences = source
     .split(/(?<=[.!?])\s+/)
     .map((sentence) => sentence.trim())
@@ -771,11 +771,11 @@ function buildMockPersonas(viewers: ViewerSimulation[], durationSeconds: number)
       dropoff_second: viewer.dropOffSecond,
       retention_percent: retentionPercent,
       why_they_left: leavesEarly
-        ? "The value proposition took too long to become concrete for this persona."
-        : "They stayed longer because the promise became useful before attention fully dropped.",
+        ? "La propuesta de valor tardó demasiado en volverse concreta para esta persona."
+        : "Se quedó más tiempo porque la promesa se volvió útil antes de que la atención cayera del todo.",
       summary_of_interacion: leavesEarly
-        ? `Stops around ${round(viewer.dropOffSecond, 1)}s when the setup keeps explaining instead of paying off.`
-        : `Watches about ${retentionPercent}% because the creative eventually proves the point clearly enough to hold attention.`,
+        ? `Se va cerca de ${round(viewer.dropOffSecond, 1)}s cuando la introducción sigue explicando en vez de entregar el resultado.`
+        : `Mira cerca del ${retentionPercent}% porque el creativo termina demostrando el punto con suficiente claridad como para sostener la atención.`,
     };
   });
 }
@@ -835,30 +835,30 @@ function buildTimelineInsights(
   const items: TimelineInsightItem[] = [
     {
       id: "hook",
-      label: "Hook weak",
+      label: "Hook débil",
       second: Math.max(0.8, Math.min(markers[0]?.second ?? 1.4, 2.6)),
-      detail: "The opening takes too long to reveal the payoff, so the first swipe decision happens before the strongest proof.",
+      detail: "La apertura tarda demasiado en mostrar el payoff, así que la primera decisión de swipe llega antes de la prueba más fuerte.",
       tone: "risk",
     },
     {
       id: "energy",
-      label: "Energy drop",
+      label: "Caída de energía",
       second: Math.max(2.4, Math.min(markers[1]?.second ?? durationSeconds * 0.42, durationSeconds - 6)),
-      detail: "Momentum softens when the edit explains instead of showing something visually new.",
+      detail: "El impulso cae cuando la edición explica en vez de mostrar algo visualmente nuevo.",
       tone: "risk",
     },
     {
       id: "overload",
-      label: "Cognitive overload",
+      label: "Sobrecarga cognitiva",
       second: Math.max(4, Math.min(durationSeconds * 0.72, durationSeconds - 3)),
-      detail: "Too much interpretation is required in this stretch, so the audience has to work harder than it wants to.",
+      detail: "En este tramo hace falta interpretar demasiado, así que la audiencia tiene que esforzarse más de lo que quiere.",
       tone: "risk",
     },
     {
       id: "loop",
-      label: "Loop potential",
+      label: "Potencial de loop",
       second: Math.max(1, durationSeconds - 1.5),
-      detail: "The closing beat can become a stronger replay moment if it visually echoes the first frame.",
+      detail: "El beat final puede transformarse en un mejor momento de replay si espeja visualmente el primer frame.",
       tone: "opportunity",
     },
   ];
@@ -878,7 +878,7 @@ function buildTargetAudience(
     primaryAudience:
       primary?.name ?? topAudienceSegment,
     secondaryAudience:
-      secondary?.name ?? "High-intent secondary audience",
+      secondary?.name ?? "Audiencia secundaria de alta intención",
     countries: buildAudienceDistribution(personas, "country"),
     ageRanges: buildAudienceDistribution(personas, "age_range"),
     interests: buildAudienceDistributionFromList(personas, "interests"),

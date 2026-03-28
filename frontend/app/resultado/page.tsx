@@ -68,15 +68,15 @@ type SocialPost = {
 const ANALYSIS_STEPS = [
   {
     id: "score",
-    title: "Score y Resumen",
+    title: "Puntaje y Resumen",
     eyebrow: "Paso 1",
-    description: "Abrimos con el score total y un resumen ejecutivo completo del video.",
+    description: "Abrimos con el puntaje total y un resumen ejecutivo completo del video.",
   },
   {
     id: "raw-personas",
     title: "100 Personas Sinteticas",
     eyebrow: "Paso 2",
-    description: "Mostramos primero la materia prima: nombres, atributos, drop-off y motivo de abandono.",
+    description: "Mostramos primero la materia prima: nombres, atributos, momento de abandono y motivo de salida.",
   },
   {
     id: "segment-dropoff",
@@ -92,7 +92,7 @@ const ANALYSIS_STEPS = [
   },
   {
     id: "timeline",
-    title: "Timeline Insights",
+    title: "Momentos del Video",
     eyebrow: "Paso 5",
     description: "Marcamos los momentos exactos del edit que empujan o frenan la retencion.",
   },
@@ -104,7 +104,7 @@ const ANALYSIS_STEPS = [
   },
   {
     id: "targeting",
-    title: "Media Targeting",
+    title: "Targeting de Medios",
     eyebrow: "Paso 7",
     description: "Conectamos las debilidades creativas con una recomendacion de compra de medios.",
   },
@@ -116,7 +116,7 @@ const ANALYSIS_STEPS = [
   },
   {
     id: "crosspost",
-    title: "Crossposting",
+    title: "Posts para Redes",
     eyebrow: "Paso 9",
     description: "Generamos posts de texto listos a partir del transcript y del analisis.",
   },
@@ -325,7 +325,7 @@ function normalizeTranscriptSegments(segments: TranscriptSegment[] | undefined, 
     {
       start: 0,
       end: safeDuration,
-      text: "Transcript unavailable for this clip.",
+      text: "No hubo transcript disponible para este clip.",
     },
   ] satisfies TranscriptSegment[];
 }
@@ -454,7 +454,7 @@ function parseStoredAnalysis(id: string | null) {
 function createDemoAnalysis() {
   return createAnalysisPayload({
     texto:
-      "This video shows how a creative team can predict retention before launching paid media. The system breaks the clip into speech, pacing, visuals, and on-screen text, simulates 100 viewer personas, and turns those signals into platform and paid growth strategy.",
+      "Este video muestra como un equipo creativo puede predecir la retencion antes de lanzar medios pagos. El sistema desarma el clip en voz, ritmo, visuales y texto en pantalla, simula 100 personas espectadoras y convierte esas senales en estrategia de plataforma y crecimiento pago.",
     fileName: "axiom-lens-demo.mp4",
     fileType: "video/mp4",
     fileSize: 8_400_000,
@@ -538,14 +538,14 @@ function derivePersonaInsights(
         dropOffLabel: formatMoment(averageDrop),
         verdict,
         angle: retentionPercent >= 70 ? strongestAngle : "Needs a faster value reveal",
-        tag: "Audience signal",
+        tag: "Senal de audiencia",
       } satisfies PersonaInsight;
     })
     .sort((left, right) => right.retentionPercent - left.retentionPercent)
     .slice(0, 8)
     .map((persona, index) => ({
       ...persona,
-      tag: index === 0 ? "Primary fit" : index === 1 ? "Secondary fit" : "Audience signal",
+      tag: index === 0 ? "Fit principal" : index === 1 ? "Fit secundario" : "Senal de audiencia",
     }));
 }
 
@@ -567,7 +567,7 @@ function derivePersonaInsightsFromBackend(
           ? `watches ${persona.retention_percent}%`
           : `leaves at ${formatMoment(persona.dropoff_second)}`,
       angle: strongestAngle,
-      tag: index === 0 ? "Primary fit" : index === 1 ? "Secondary fit" : "Audience signal",
+      tag: index === 0 ? "Fit principal" : index === 1 ? "Fit secundario" : "Senal de audiencia",
     } satisfies PersonaInsight));
 }
 
@@ -602,33 +602,33 @@ function deriveTimelineInsights(
   return [
     {
       id: "hook",
-      label: "Hook weak",
+      label: "Hook débil",
       second: Math.max(0.8, Math.min(dropMoment || 1.2, 2.4)),
       detail:
-        "The first swipe decision happens before the strongest proof lands. Lead with the payoff, not the setup.",
+        "La primera decisión de seguir o abandonar ocurre antes de que aparezca la prueba más fuerte. Mostrá el resultado antes que la explicación.",
       tone: "risk",
     },
     {
       id: "energy",
-      label: "Energy drop",
+      label: "Caída de energía",
       second: Math.max(2.5, Math.min(dropMoment || 3.4, duration - 6)),
       detail:
-        "Momentum softens when the video explains instead of showing. This is the moment to add movement, proof, or a pattern interrupt.",
+        "El impulso cae cuando el video explica en vez de mostrar. Este es el momento para sumar movimiento, prueba o un quiebre de patron.",
       tone: "risk",
     },
     {
       id: "overload",
-      label: "Cognitive overload",
+      label: "Sobrecarga cognitiva",
       second: Math.round(midMoment * 10) / 10,
       detail: `The middle asks for too much interpretation at once. ${topPersona} holds longer when the message stays sharper and simpler.`,
       tone: "risk",
     },
     {
       id: "loop",
-      label: "Loop potential",
+      label: "Potencial de loop",
       second: Math.round(loopMoment * 10) / 10,
       detail:
-        "The close can be turned into a replay moment. End on motion, outcome, or a question that naturally loops the first frame.",
+        "El cierre puede transformarse en un momento de replay. Termina con movimiento, resultado o una pregunta que haga loop con el primer frame.",
       tone: "opportunity",
     },
   ] satisfies TimelineInsight[];
@@ -678,7 +678,7 @@ function buildPersonaSegmentsFromRaw(personas: PersonaResult[]): PersonaSegment[
   const grouped = new Map<string, PersonaResult[]>();
 
   for (const persona of personas) {
-    const key = persona.segment_label || `${persona.demographic_cluster ?? "Audience"} ${persona.archetype ?? "Persona"}`;
+    const key = persona.segment_label || `${persona.demographic_cluster ?? "Audiencia"} ${persona.archetype ?? "Persona"}`;
     const current = grouped.get(key) ?? [];
     current.push(persona);
     grouped.set(key, current);
@@ -763,7 +763,7 @@ function buildChangePlanFallback(analysis: AnalysisResponse["analysis"]): Change
       title: "Resolver la mayor caida",
       timestamp: Math.round(biggestDropSecond * 10) / 10,
       reason: "La curva tiene su quiebre mas fuerte en ese tramo.",
-      fix: "Sumar prueba, demostracion o pattern interrupt en ese segundo.",
+      fix: "Sumar prueba, demostracion o un quiebre de patron en ese segundo.",
     },
   ].filter(Boolean) as ChangePlan["actions"];
 
@@ -786,21 +786,21 @@ function buildMediaTargetingFallback(
   const secondary = analysis.targetAudience?.secondaryAudience ?? "Audiencia secundaria";
   const firstReason = plan.topLeaveReasons[0]?.reasonLabel ?? "intro demasiado lenta";
   const secondReason = plan.topLeaveReasons[1]?.reasonLabel ?? "falta de prueba";
-  const thirdReason = plan.topLeaveReasons[2]?.reasonLabel ?? "CTA demasiado tarde";
+  const thirdReason = plan.topLeaveReasons[2]?.reasonLabel ?? "llamada a la accion demasiado tardia";
   const platform = bestPlatformLabel(analysis);
 
   return [
     {
-      recommendation: "Cold prospecting",
-      implementation: `Targetear ${primary} con una version hook-first en ${platform} que ataque ${firstReason.toLowerCase()} desde el primer segundo.`,
+      recommendation: "Prospeccion fria",
+      implementation: `Apuntar a ${primary} con una version que abra con el resultado en ${platform} y ataque ${firstReason.toLowerCase()} desde el primer segundo.`,
     },
     {
-      recommendation: "Mid-funnel retargeting",
-      implementation: `Servir una version proof-led a usuarios que vieron 50%+, corrigiendo ${secondReason.toLowerCase()} antes del segundo 4.`,
+      recommendation: "Retargeting de medio embudo",
+      implementation: `Servir una version liderada por prueba a usuarios que vieron 50%+, corrigiendo ${secondReason.toLowerCase()} antes del segundo 4.`,
     },
     {
-      recommendation: "High-intent conversion",
-      implementation: `Empujar una version mas directa sobre ${secondary}, adelantando CTA y resolviendo ${thirdReason.toLowerCase()} antes de la mayor caida.`,
+      recommendation: "Conversion de alta intencion",
+      implementation: `Empujar una version mas directa sobre ${secondary}, adelantando la llamada a la accion y resolviendo ${thirdReason.toLowerCase()} antes de la mayor caida.`,
     },
   ];
 }
@@ -813,28 +813,28 @@ function buildVersionStrategiesFallback(
   const secondary = analysis.targetAudience?.secondaryAudience ?? "Audiencia secundaria";
   const thirdAudience =
     analysis.targetAudience?.hobbies?.[0]?.label ?? "Audiencias orientadas a storytelling";
-  const keyFix = plan.actions[0]?.fix ?? "Abrir con outcome inmediato.";
+  const keyFix = plan.actions[0]?.fix ?? "Abrir con resultado inmediato.";
 
   return [
     {
       id: "A",
-      name: "Version A",
+      name: "Versión A",
       targetAudience: primary,
-      direction: "Fast-cut hook para capturar atencion desde el primer frame.",
-      structuralChanges: ["Abrir con el outcome", keyFix, "Meter pattern interrupt antes del segundo 3"],
+      direction: "Apertura de cortes rapidos para capturar atencion desde el primer frame.",
+      structuralChanges: ["Abrir con el resultado", keyFix, "Meter un quiebre de patron antes del segundo 3"],
       whyItShouldResonate: "Esta version maximiza velocidad de comprension para quienes deciden quedarse o irse en muy pocos frames.",
     },
     {
       id: "B",
-      name: "Version B",
+      name: "Versión B",
       targetAudience: secondary,
       direction: "Proof-heavy edit para perfiles mas racionales o escepticos.",
-      structuralChanges: ["Mostrar evidencia temprano", "Reducir claims abstractos", "Mover CTA junto al proof point"],
+      structuralChanges: ["Mostrar evidencia temprano", "Reducir claims abstractos", "Mover la llamada a la accion junto al punto de prueba"],
       whyItShouldResonate: "Esta direccion funciona mejor cuando la audiencia necesita prueba visible para seguir mirando.",
     },
     {
       id: "C",
-      name: "Version C",
+      name: "Versión C",
       targetAudience: thirdAudience,
       direction: "Aspiration-led edit con construccion narrativa mas emocional.",
       structuralChanges: ["Reordenar el relato", "Sostener tension en mitad del video", "Cerrar con payoff memorable"],
@@ -855,12 +855,12 @@ function deriveSocialPosts(transcriptText: string, analysis: AnalysisResponse["a
   const summarySeed = getSentenceSeed(transcriptText);
   const keywords = extractKeywords(transcriptText);
   const keywordLine =
-    keywords.length > 0 ? `Temas clave: ${keywords.join(", ")}.` : "Temas clave: retencion, prueba, growth.";
+    keywords.length > 0 ? `Temas clave: ${keywords.join(", ")}.` : "Temas clave: retencion, prueba y crecimiento.";
 
   return [
     {
       platform: "LinkedIn",
-      angle: "Profesional, insight-led",
+      angle: "Profesional, orientado a hallazgos",
       post: `${summarySeed}
 
 Analizamos este video corto con 100 personas sinteticas antes de invertir en medios.
@@ -897,16 +897,16 @@ Mejor creatividad significa menos desperdicio en medios.`,
       post: `Analizamos este video antes de invertir.
 
 100 personas sinteticas.
-Drop-off exacto.
+Abandono exacto.
 Curva de retencion prevista.
 
-Top audience: ${primaryAudience}
-Mejor fix: ${firstFix}
+Audiencia principal: ${primaryAudience}
+Mejor ajuste: ${firstFix}
 Mejor canal: ${bestPlatform}`,
     },
     {
       platform: "Threads",
-      angle: "Narrativo y creator-friendly",
+      angle: "Narrativo y amigable para creadores",
       post: `${summarySeed}
 
 En vez de adivinar si el edit funciona, simulamos 100 personas y vimos donde se rompe la atencion.
@@ -926,13 +926,13 @@ function EmptyState() {
       <div className="mx-auto max-w-4xl">
         <div className="result-panel rounded-[2rem] px-8 py-12 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
-            Missing analysis
+            Falta el análisis
           </p>
           <h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.05em] text-slate-950">
-            There is no analysis payload to display yet.
+            Todavía no hay un resultado listo para mostrar.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-600">
-            Upload a video first. The normal result flow now only renders real backend analysis data.
+            Subí un video primero. El flujo normal de resultados ahora solo muestra datos reales generados por el backend.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <button
@@ -940,7 +940,7 @@ function EmptyState() {
               onClick={() => router.push("/app")}
               className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
-              Analyze a video
+              Analizar un video
             </button>
           </div>
         </div>
@@ -1045,19 +1045,19 @@ function UploadDemoAnimation() {
               <span />
               <span />
             </div>
-            <p className="upload-demo-dropzone-title">Drop video</p>
-            <p className="upload-demo-dropzone-copy">Upload to simulate retention</p>
+            <p className="upload-demo-dropzone-title">Solta el video</p>
+            <p className="upload-demo-dropzone-copy">Subilo para simular la retencion</p>
           </div>
         </div>
 
         <div className="upload-demo-loader">
           <div className="upload-demo-loader-ring" />
-          <p className="upload-demo-loader-text">Analyzing...</p>
+          <p className="upload-demo-loader-text">Analizando...</p>
         </div>
 
         <div className="upload-demo-graph">
           <div className="upload-demo-graph-top">
-            <span className="upload-demo-graph-label">Predicted retention</span>
+            <span className="upload-demo-graph-label">Retencion prevista</span>
             <span className="upload-demo-graph-time">00:18</span>
           </div>
           <svg viewBox="0 0 240 120" className="upload-demo-graph-svg">
@@ -1104,11 +1104,11 @@ function StoryScreen({
         <StoryBackdrop />
         <div className="relative">
         <h1 className="mx-auto max-w-4xl font-display text-4xl font-semibold tracking-[-0.06em] text-slate-950 [text-shadow:0_10px_28px_rgba(255,255,255,0.62)] md:text-6xl">
-          See Who Stops Watching —
-          <span className="text-[#2f6fda]"> Before You Spend a Dollar</span>
+          Mira quién deja de ver
+          <span className="text-[#2f6fda]"> antes de gastar un dólar</span>
         </h1>
         <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-slate-700 md:text-xl">
-          We analyze your video like a real audience would — predicting retention, drop-offs, and exactly who your content resonates with.
+          Analizamos tu video como lo haría una audiencia real: predecimos retención, puntos de abandono y con qué perfiles resuena tu contenido.
         </p>
         </div>
       </section>
@@ -1117,8 +1117,8 @@ function StoryScreen({
         <div className="grid gap-6 md:grid-cols-3">
           {[
             {
-              title: "We Break Down Your Video",
-              body: "Speech, visuals, pacing, and on-screen text — frame by frame.",
+              title: "Desarmamos tu video",
+              body: "Analizamos voz, visuales, ritmo y texto en pantalla, segundo por segundo.",
               icon: (
                 <div className="relative mx-auto h-20 w-28 rounded-[1.4rem] bg-[linear-gradient(135deg,#2f6fda,#94b9ff)] shadow-[0_14px_35px_rgba(47,111,218,0.2)]">
                   <div className="absolute inset-x-3 top-3 h-1 rounded-full bg-white/40" />
@@ -1128,8 +1128,8 @@ function StoryScreen({
               ),
             },
             {
-              title: "We Simulate a Real Audience",
-              body: "100 synthetic viewers with different behaviors and interests watch your video.",
+              title: "Simulamos una audiencia real",
+              body: "100 personas sintéticas con comportamientos e intereses distintos miran tu video.",
               icon: (
                 <div className="mx-auto grid w-28 grid-cols-4 gap-1.5 rounded-[1.4rem] bg-[#dbe7ff] p-3 shadow-[0_14px_35px_rgba(47,111,218,0.12)]">
                   {["#f2b28b", "#7a5c4d", "#d7a174", "#5f4637", "#c79a74", "#2f6fda", "#9c6b51", "#f0c49c", "#6f4f3f", "#f5cfaa", "#496aa8", "#c88b62"].map((color, index) => (
@@ -1143,8 +1143,8 @@ function StoryScreen({
               ),
             },
             {
-              title: "We Predict Performance & Growth",
-              body: "You'll see where people drop off, who stays engaged, and how to improve + scale.",
+              title: "Predecimos performance y crecimiento",
+              body: "Vas a ver dónde abandonan, quiénes se quedan y cómo mejorar para escalar.",
               icon: (
                 <div className="relative mx-auto h-20 w-28 rounded-[1.4rem] border border-[#cfe0ff] bg-[linear-gradient(180deg,#f8fbff,#eef4ff)] shadow-[0_14px_35px_rgba(47,111,218,0.1)]">
                   <div className="absolute inset-2 bg-[linear-gradient(rgba(47,111,218,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(47,111,218,0.08)_1px,transparent_1px)] bg-[length:16px_16px]" />
@@ -1175,16 +1175,16 @@ function StoryScreen({
 
         <div className="mt-8 border-t border-dashed border-slate-200 pt-8">
           <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
-            What You’ll Get
+            Qué vas a obtener
           </h2>
           <div className="mt-5 grid gap-8 text-left md:grid-cols-[minmax(0,1fr),340px] md:items-center">
             <div className="grid gap-x-8 gap-y-3">
             {[
-              "Predicted retention curve",
-              "Exact drop-off timestamps (with reasons)",
-              "Audience segments that engage most",
-              "Actionable creative fixes",
-              "Paid growth strategy tailored to your video",
+              "Curva de retención predicha",
+              "Tiempos exactos de abandono con sus motivos",
+              "Segmentos de audiencia que más conectan",
+              "Ajustes creativos accionables",
+              "Estrategia de crecimiento paga adaptada a tu video",
             ].map((item) => (
               <div key={item} className="flex items-start gap-3 text-[17px] leading-7 text-slate-800">
                 <span className="mt-1 text-[#2f6fda]">✓</span>
@@ -1197,13 +1197,13 @@ function StoryScreen({
         </div>
 
         <div className="mt-8 border-t border-dashed border-slate-200 pt-8">
-          <p className="text-lg text-slate-500">Not guesswork — built on patterns from:</p>
+          <p className="text-lg text-slate-500">No es intuición: está construido sobre patrones de:</p>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {[
-              "attention dynamics",
-              "high-performing short-form content",
-              "storytelling structure",
-              "growth strategy generation",
+              "dinámicas de atención",
+              "contenido short-form de alto rendimiento",
+              "estructura narrativa",
+              "generación de estrategia de crecimiento",
             ].map((item) => (
               <div key={item} className="flex items-start gap-3 text-base leading-7 text-slate-700">
                 <span className="mt-1 text-[#2f6fda]">✓</span>
@@ -1225,16 +1225,16 @@ function StoryScreen({
               ))}
             </div>
             <p className="text-base font-medium text-slate-700">
-              Your creative intelligence report is being generated...
+              Tu informe de inteligencia creativa se está generando...
             </p>
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-slate-400">
             {[
-              "Identifying weak hooks...",
-              "Simulating audience behavior...",
-              "Mapping retention strategy...",
-              "Generating growth strategy...",
+              "Detectando ganchos debiles...",
+              "Simulando el comportamiento de la audiencia...",
+              "Mapeando la estrategia de retención...",
+              "Generando la estrategia de crecimiento...",
             ].map((item) => (
               <span key={item} className="inline-flex items-center gap-2">
                 <span className="text-[#c4d7ff]">✓</span>
@@ -1251,7 +1251,7 @@ function StoryScreen({
           onClick={onProceed}
           className="rounded-full bg-slate-950 px-8 py-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
         >
-          Proceed to analysis
+          Ir al análisis
         </button>
       </div>
     </section>
@@ -1365,14 +1365,14 @@ function ScoreSummaryStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Score total y resumen ejecutivo."
+        title="Puntaje total y resumen ejecutivo."
         description="Antes de entrar a la curva, esta pantalla responde dos preguntas: que tan fuerte es el creativo y que esta pasando realmente en el video."
       />
 
       <section className="grid gap-5 xl:grid-cols-[0.76fr_1.24fr]">
         <article className="result-panel rounded-[2.2rem] px-6 py-7">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-            Score creativo total
+            Puntaje creativo total
           </p>
           <div className="mt-6 flex items-center justify-center">
             <div className="relative h-[280px] w-[280px]">
@@ -1406,7 +1406,7 @@ function ScoreSummaryStep({
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Score
+                  Puntaje
                 </p>
                 <p
                   className="mt-2 font-display text-6xl font-semibold tracking-[-0.08em] md:text-7xl"
@@ -1452,10 +1452,10 @@ function ScoreSummaryStep({
 
           <div className="mt-8 grid gap-4 md:grid-cols-2">
             {[
-              ["Clip length", analysis.clip.durationLabel],
-              ["Best platform fit", analysis.crossPost.platforms[0]?.platform ?? "Instagram Reels"],
-              ["Primary audience", analysis.graph.bestFitAudience],
-              ["Most common drop", analysis.graph.mostCommonDropOff],
+              ["Duración del clip", analysis.clip.durationLabel],
+              ["Mejor encaje de plataforma", analysis.crossPost.platforms[0]?.platform ?? "Instagram Reels"],
+              ["Audiencia principal", analysis.graph.bestFitAudience],
+              ["Abandono más común", analysis.graph.mostCommonDropOff],
             ].map(([label, value]) => (
               <div key={label} className="rounded-[1.4rem] border border-slate-200/80 bg-white/80 px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
@@ -1570,14 +1570,14 @@ function GraphStep({
     <section className="space-y-8">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <StepIntro
-          title="See the retention story first."
-          description="This is the core proof. Viewers appear in waves, exactly like the original demo: each thin line is a simulated person, and the bright curve updates as more personas are processed."
+          title="Primero, mirá la historia de retención."
+          description="Esta es la prueba central. Las personas aparecen por tandas, igual que en el demo original: cada línea fina es una persona simulada y la curva brillante se actualiza a medida que se procesan más perfiles."
         />
 
         <div className="flex flex-wrap gap-2">
           {[
-            { id: "all", label: "Audience + average" },
-            { id: "average", label: "Average only" },
+            { id: "all", label: "Audiencia + promedio" },
+            { id: "average", label: "Solo promedio" },
           ].map((option) => (
             <button
               key={option.id}
@@ -1597,17 +1597,17 @@ function GraphStep({
             onClick={() => setSimulationRunId((current) => current + 1)}
             className="rounded-full border border-slate-200 bg-white/70 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 transition hover:border-slate-300 hover:bg-white"
           >
-            Replay simulation
+            Repetir simulación
           </button>
         </div>
       </div>
 
       <div className="grid gap-4 text-sm md:grid-cols-4">
         {[
-          ["Overall score", `${analysis.summary.overallScore}/100`],
-          ["Average watch time", analysis.graph.averageWatchTime],
-          ["Most common drop", analysis.graph.mostCommonDropOff],
-          ["Best-fit audience", analysis.graph.bestFitAudience],
+          ["Puntaje general", `${analysis.summary.overallScore}/100`],
+          ["Tiempo promedio de visualización", analysis.graph.averageWatchTime],
+          ["Abandono más común", analysis.graph.mostCommonDropOff],
+          ["Audiencia con mejor encaje", analysis.graph.bestFitAudience],
         ].map(([label, value]) => (
           <div key={label} className="border-b border-slate-200/80 pb-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
@@ -1624,12 +1624,12 @@ function GraphStep({
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Simulation status
+              Estado de la simulación
             </p>
             <p className="mt-2 text-sm leading-7 text-slate-700">
               {simulationComplete
-                ? `Simulation complete. All ${analysis.graph.audienceSize} personas have been processed.`
-                : `Simulating audience behavior: ${simulatedViewerCount} of ${analysis.graph.audienceSize} personas loaded.`}
+                ? `Simulación completa. Ya procesamos las ${analysis.graph.audienceSize} personas.`
+                : `Simulando el comportamiento de la audiencia: ${simulatedViewerCount} de ${analysis.graph.audienceSize} personas cargadas.`}
             </p>
           </div>
           <p className="font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
@@ -1784,7 +1784,7 @@ function GraphStep({
         <div className="mt-5 grid gap-3 border-t border-slate-200/80 pt-4 lg:grid-cols-[minmax(0,180px),minmax(0,1fr),minmax(0,140px)] lg:items-start">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Transcript at
+              Transcript en
             </p>
             <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
               {formatMoment(activeSecond)}
@@ -1796,24 +1796,24 @@ function GraphStep({
           </div>
           <div className="rounded-[1.5rem] border border-slate-200/80 bg-white/70 px-4 py-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Spoken moment
+              Fragmento hablado
             </p>
             <p className="mt-3 text-base leading-8 text-slate-700">
               {activeTranscriptSegment.text}
             </p>
             <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-400">
-              Hover the graph timeline to inspect what viewers are hearing at each second.
+              Pasá por la línea de tiempo del gráfico para ver qué están escuchando las personas en cada segundo.
             </p>
           </div>
           <div className="rounded-[1.5rem] border border-slate-200/80 bg-white/70 px-4 py-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Predicted retention
+              Retención predicha
             </p>
             <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
               {Math.round(activeAveragePoint.retention)}%
             </p>
             <p className="mt-2 text-sm leading-7 text-slate-600">
-              This ties the transcript to the exact second on the real video timeline.
+              Esto conecta el transcript con el segundo exacto dentro de la línea de tiempo real del video.
             </p>
           </div>
         </div>
@@ -1899,7 +1899,7 @@ function RawPersonasStep({
                 </div>
                 <div className="text-right">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    Drop-off
+                    Abandono
                   </p>
                   <p className="mt-2 font-display text-4xl font-semibold tracking-[-0.05em] text-slate-950">
                     {formatMoment(persona.dropoff_second)}
@@ -1948,7 +1948,7 @@ function SegmentDropoffStep({
     <section className="space-y-8">
       <StepIntro
         title="Que segmentos se quedan y cuales se van."
-        description="Aca la simulacion se vuelve estrategica: encontramos el mejor fit, el segundo mejor y el peor fit, y explicamos exactamente por que cada grupo abandona."
+        description="Aca la simulacion se vuelve estrategica: encontramos el mejor encaje, el segundo mejor y el peor, y explicamos exactamente por que cada grupo abandona."
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -1958,7 +1958,7 @@ function SegmentDropoffStep({
           }
 
           const title =
-            index === 0 ? "Best-fit audience" : index === 1 ? "Second-best fit" : "Worst fit";
+            index === 0 ? "Audiencia con mejor encaje" : index === 1 ? "Segundo mejor encaje" : "Peor encaje";
 
           return (
             <article key={`${title}-${segment.label}`} className="result-panel rounded-[1.8rem] px-5 py-5">
@@ -1969,7 +1969,7 @@ function SegmentDropoffStep({
                 {segment.label}
               </h3>
               <p className="mt-3 text-sm leading-7 text-slate-600">
-                {segment.support} personas · {segment.averageRetention}% retencion media · drop-off mediano en {formatMoment(segment.medianDropoffSecond)}
+                {segment.support} personas · {segment.averageRetention}% de retencion media · abandono mediano en {formatMoment(segment.medianDropoffSecond)}
               </p>
               <p className="mt-4 rounded-[1.2rem] border border-slate-200/80 bg-white/80 px-4 py-4 text-sm leading-7 text-slate-700">
                 Principal fuga: {segment.dominantReasonLabel}
@@ -1981,7 +1981,7 @@ function SegmentDropoffStep({
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-          Drop-off diagnosis by segment
+          Diagnostico de abandono por segmento
         </p>
         <div className="mt-6 space-y-4">
           {diagnoses.map((item) => (
@@ -2108,7 +2108,7 @@ function ChangePlanStep({
     <section className="space-y-8">
       <StepIntro
         title="Que cambiar en el video."
-        description="Cada accion nace de transcript, curva de retencion, CTA y razones de abandono. No es copy generico: son cambios ubicados en el tiempo del video."
+        description="Cada accion nace del transcript, la curva de retencion, la llamada a la accion y las razones de abandono. No es copy generico: son cambios ubicados en el tiempo del video."
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
@@ -2146,7 +2146,7 @@ function ChangePlanStep({
               <article key={item.reasonCode} className="rounded-[1.4rem] border border-slate-200/80 bg-white/85 px-4 py-4">
                 <p className="font-semibold text-slate-950">{item.reasonLabel}</p>
                 <p className="mt-2 text-sm text-slate-500">
-                  {item.count} personas · drop-off medio {formatMoment(item.averageDropoffSecond)}
+                  {item.count} personas · abandono medio {formatMoment(item.averageDropoffSecond)}
                 </p>
                 <p className="mt-3 text-sm leading-7 text-slate-600">{item.example}</p>
               </article>
@@ -2174,7 +2174,7 @@ function MediaTargetingStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Media targeting recommendation."
+        title="Recomendacion de medios."
         description="Esta es la salida mas valiosa para una agencia: como transformar lo creativo en estructura de compra de medios y secuencias de pauta."
       />
 
@@ -2183,7 +2183,7 @@ function MediaTargetingStep({
           {recommendations.map((item) => (
             <article key={item.recommendation} className="rounded-[1.5rem] border border-slate-200/80 bg-white/85 px-5 py-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                Recommendation
+                Recomendación
               </p>
               <h3 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em] text-slate-950">
                 {item.recommendation}
@@ -2213,13 +2213,13 @@ function VersionStrategiesStep({
         {versions.map((version) => (
           <article key={version.id} className="result-panel rounded-[1.8rem] px-5 py-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Version {version.id}
+              Variante {version.id}
             </p>
             <h3 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em] text-slate-950">
               {version.name}
             </h3>
             <p className="mt-3 text-sm font-semibold text-slate-900">
-              Target: {version.targetAudience}
+              Audiencia objetivo: {version.targetAudience}
             </p>
             <p className="mt-3 text-sm leading-7 text-slate-600">{version.direction}</p>
             <div className="mt-5 space-y-2">
@@ -2255,8 +2255,8 @@ function CrosspostStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Generate cross-post copy from the transcript."
-        description="The final step turns the video reading into ready-to-use text for social platforms, so the analysis naturally ends in distribution instead of stopping at diagnosis."
+        title="Genera posts para redes desde el transcript."
+        description="El paso final convierte la lectura del video en texto listo para usar en plataformas sociales, para que el analisis termine en distribucion y no solo en diagnostico."
       />
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
@@ -2282,17 +2282,17 @@ function CrosspostStep({
             <div className="space-y-4">
               <div className="rounded-[1.6rem] border border-slate-200/80 bg-white/80 px-5 py-5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Tone
+                  Tono
                 </p>
                 <p className="mt-3 text-lg font-semibold text-slate-950">{activePost.angle}</p>
               </div>
 
               <div className="rounded-[1.6rem] border border-slate-200/80 bg-white/80 px-5 py-5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Use case
+                  Uso recomendado
                 </p>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Built from the transcript and the strongest retention audience, then adapted for text-first sharing.
+                  Armado desde el transcript y la audiencia con mejor retencion, despues adaptado para formatos donde manda el texto.
                 </p>
               </div>
             </div>
@@ -2301,7 +2301,7 @@ function CrosspostStep({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    Generated post
+                    Post generado
                   </p>
                   <p className="mt-2 text-lg font-semibold text-slate-950">{activePost.platform}</p>
                 </div>
@@ -2310,7 +2310,7 @@ function CrosspostStep({
                   onClick={() => onCopy(activePost.platform, activePost.post)}
                   className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
                 >
-                  {copiedPlatform === activePost.platform ? "Copied" : "Copy text"}
+                  {copiedPlatform === activePost.platform ? "Copiado" : "Copiar texto"}
                 </button>
               </div>
 
@@ -2346,7 +2346,7 @@ function StepFooter({
         onClick={onReturnToStory}
         className="text-sm font-semibold text-slate-500 transition hover:text-slate-900"
       >
-        Back to explainer
+        Volver a la explicación
       </button>
 
       <div className="flex flex-wrap gap-3">
@@ -2356,7 +2356,7 @@ function StepFooter({
           disabled={isFirst}
           className="rounded-full border border-slate-200 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Previous step
+          Paso anterior
         </button>
         <button
           type="button"
@@ -2364,7 +2364,7 @@ function StepFooter({
           disabled={isLast}
           className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLast ? "Complete" : "Next step"}
+          {isLast ? "Completado" : "Siguiente paso"}
         </button>
       </div>
     </div>
@@ -2554,14 +2554,14 @@ function DashboardContent() {
                   onClick={() => router.push("/app")}
                   className="rounded-full border border-slate-200 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white"
                 >
-                  Analyze another video
+                  Analizar otro video
                 </button>
                 <button
                   type="button"
                   onClick={() => setScreenMode("story")}
                   className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
                 >
-                  Return to explainer
+                  Volver a la explicación
                 </button>
               </div>
             </div>
@@ -2634,7 +2634,7 @@ function DashboardContent() {
 
 export default function ResultadoPage() {
   return (
-    <Suspense fallback={<div className="px-4 py-12 text-slate-500">Loading result...</div>}>
+    <Suspense fallback={<div className="px-4 py-12 text-slate-500">Cargando resultado...</div>}>
       <DashboardContent />
     </Suspense>
   );

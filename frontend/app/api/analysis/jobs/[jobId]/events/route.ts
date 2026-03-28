@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { jobId: string } },
 ) {
   if (!getBackendBaseUrl()) {
-    return new Response("Backend URL is not configured.", { status: 503 });
+    return new Response("La URL del backend no esta configurada.", { status: 503 });
   }
 
   const upstream = await fetch(

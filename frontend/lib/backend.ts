@@ -10,7 +10,7 @@ export function buildBackendUrl(path: string) {
   const baseUrl = getBackendBaseUrl();
 
   if (!baseUrl) {
-    throw new Error("Backend URL is not configured.");
+    throw new Error("La URL del backend no esta configurada.");
   }
 
   return new URL(path, `${baseUrl}/`);

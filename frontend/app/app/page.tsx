@@ -26,8 +26,8 @@ export default function AppMain() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
-  const [statusText, setStatusText] = useState("Ready to upload your video.");
-  const [streamNote, setStreamNote] = useState("No job started yet.");
+  const [statusText, setStatusText] = useState("Listo para subir tu video.");
+  const [streamNote, setStreamNote] = useState("Todavia no se inicio ningun job.");
 
   const waitForStreamedResult = async (job: AnalysisJobEnvelope) =>
     new Promise<AnalysisResponse>((resolve, reject) => {
@@ -47,7 +47,7 @@ export default function AppMain() {
         });
 
         if (!resultResponse.ok) {
-          reject(new Error("The analysis finished but the final payload could not be retrieved."));
+          reject(new Error("El analisis termino, pero no se pudo recuperar el payload final."));
           return;
         }
 
@@ -57,7 +57,7 @@ export default function AppMain() {
       const handleStreamEvent = (rawEvent: MessageEvent<string>) => {
         const event = JSON.parse(rawEvent.data) as AnalysisStreamEvent;
         setProgressPercent(event.progress_percent ?? 0);
-        setStatusText(event.stage?.replace(/\./g, " ") || "Processing analysis");
+        setStatusText(event.stage?.replace(/\./g, " ") || "Procesando analisis");
 
         if (event.type === "persona.batch.completed") {
           const batchIndex =
@@ -68,8 +68,8 @@ export default function AppMain() {
               : null;
           setStreamNote(
             batchIndex
-              ? `Persona batch ${batchIndex}/5 completed and streamed.`
-              : "A persona batch just completed.",
+              ? `Lote de personas ${batchIndex}/5 completado y emitido.`
+              : "Se completo un lote de personas.",
           );
         }
 
@@ -86,7 +86,7 @@ export default function AppMain() {
                 event.payload &&
                 "error" in event.payload
                 ? String((event.payload as { error: string }).error)
-                : "The backend job failed.",
+                : "Fallo el job del backend.",
             ),
           );
         }
@@ -102,7 +102,7 @@ export default function AppMain() {
       source.addEventListener("job.failed", handleStreamEvent as EventListener);
       source.onerror = () => {
         if (!settled) {
-          setStreamNote("Waiting for the backend stream to reconnect...");
+          setStreamNote("Esperando que el stream del backend se reconecte...");
         }
       };
     });
@@ -111,18 +111,18 @@ export default function AppMain() {
     event.preventDefault();
 
     if (!archivo) {
-      window.alert("Please upload a video file first.");
+      window.alert("Primero subi un archivo de video.");
       return;
     }
 
     setLoading(true);
     setProgressPercent(3);
-    setStatusText("Preparing upload ticket...");
-    setStreamNote("The browser will upload the file directly to Supabase.");
+    setStatusText("Preparando ticket de subida...");
+    setStreamNote("El navegador subira el archivo directamente a Supabase.");
 
     try {
       if (!supabase) {
-        throw new Error("Supabase is not configured in the frontend environment.");
+        throw new Error("Supabase no esta configurado en el entorno del frontend.");
       }
 
       const uploadInitUrl = getPublicBackendBaseUrl()
@@ -143,12 +143,12 @@ export default function AppMain() {
       });
 
       if (!uploadInitResponse.ok) {
-        throw new Error("Could not create the upload ticket.");
+        throw new Error("No se pudo crear el ticket de subida.");
       }
 
       const uploadTicket = (await uploadInitResponse.json()) as UploadInitResponse;
       setProgressPercent(10);
-      setStatusText("Uploading video directly to Supabase...");
+      setStatusText("Subiendo video directamente a Supabase...");
 
       const { error: uploadError } = await supabase.storage
         .from(uploadTicket.bucket)
@@ -162,8 +162,8 @@ export default function AppMain() {
       }
 
       setProgressPercent(18);
-      setStatusText("Creating backend analysis job...");
-      setStreamNote("The backend will transcribe, score, simulate 100 personas, and stream progress.");
+      setStatusText("Creando job de analisis en el backend...");
+      setStreamNote("El backend va a transcribir, puntuar, simular 100 personas y emitir el progreso.");
 
       const jobResponse = await fetch(createJobUrl, {
         method: "POST",
@@ -175,18 +175,18 @@ export default function AppMain() {
       });
 
       if (!jobResponse.ok) {
-        throw new Error("Could not create the analysis job.");
+        throw new Error("No se pudo crear el job de analisis.");
       }
 
       const job = (await jobResponse.json()) as AnalysisJobEnvelope;
       setProgressPercent(job.progress_percent);
       setStatusText(job.stage);
-      setStreamNote("Listening for live persona batches...");
+      setStreamNote("Escuchando los lotes de personas en vivo...");
 
       const finalAnalysis = await waitForStreamedResult(job);
       storeAnalysisResult(router, finalAnalysis);
     } catch (error) {
-      console.error("Error processing the upload pipeline:", error);
+      console.error("Error al procesar el pipeline de subida:", error);
       window.alert(error instanceof Error ? error.message : "Hubo un error al procesar el video.");
     } finally {
       setLoading(false);
@@ -199,19 +199,19 @@ export default function AppMain() {
         <div className="grid w-full gap-8 lg:grid-cols-[0.85fr_1.15fr]">
           <section className="space-y-6">
             <span className="inline-flex rounded-full border border-cyan-200 bg-white/80 px-4 py-2 text-sm font-semibold text-cyan-950">
-              AXIOM//LENS intake
+              AXIOM//LENS ingreso
             </span>
             <h1 className="font-display text-4xl font-bold tracking-tight md:text-5xl">
-              Upload the video, stream the analysis, and land on a report the frontend can use end to end.
+              Subi el video, segui el analisis en vivo y aterriza en un informe completo.
             </h1>
             <p className="max-w-xl text-lg text-slate-600">
-              The browser now uploads directly to Supabase, the backend uses Groq Whisper for timestamped transcription, simulates 100 personas in batches, and streams progress until the final report is ready.
+              El navegador sube directo a Supabase, el backend usa Groq Whisper para transcripcion con timestamps, simula 100 personas en lotes y emite progreso hasta que el informe final esta listo.
             </p>
             <div className="grid gap-4">
               {[
-                "Direct-to-storage upload avoids Vercel body limits.",
-                "Persona batches stream as they complete instead of waiting for 100 separate requests.",
-                "The final payload still matches the current /resultado experience, with richer transcript and audience data added on top.",
+                "La subida directa a storage evita los limites de body de Vercel.",
+                "Los lotes de personas se emiten a medida que terminan en vez de esperar 100 requests separadas.",
+                "El payload final sigue siendo compatible con /resultado y ahora trae transcript y audiencia mas ricos.",
               ].map((item) => (
                 <div
                   key={item}
@@ -224,15 +224,15 @@ export default function AppMain() {
           </section>
 
           <section className="card-surface rounded-[2rem] border border-white/70 p-8 shadow-soft">
-            <h2 className="font-display text-3xl font-bold text-ink">Upload the creative</h2>
+            <h2 className="font-display text-3xl font-bold text-ink">Subi el creativo</h2>
             <p className="mt-2 text-slate-500">
-              Add the video and we will transcribe it, simulate the audience, and build the report.
+              Agrega el video y lo vamos a transcribir, simular contra la audiencia y convertir en informe.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-6">
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Video file
+                  Archivo de video
                 </label>
                 <input
                   type="file"
@@ -263,7 +263,7 @@ export default function AppMain() {
                 disabled={loading}
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-ink px-6 py-4 text-lg font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? "Running the pipeline..." : "Analyze video"}
+                {loading ? "Ejecutando el pipeline..." : "Analizar video"}
               </button>
             </form>
           </section>
