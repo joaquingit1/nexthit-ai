@@ -70,10 +70,10 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-slate-200/60 bg-white">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 border-b border-slate-200/60 px-6">
+      <Link href="/" className="flex h-16 items-center gap-2 border-b border-slate-200/60 px-6 transition hover:bg-slate-50">
         <img src="/logo.svg" alt="NextHit" className="h-8 w-auto" />
         <span className="text-lg font-bold text-slate-900">NextHit</span>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 space-y-6 px-3 py-4">
