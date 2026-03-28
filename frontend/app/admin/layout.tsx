@@ -3,10 +3,10 @@ import type { Metadata } from "next";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export const metadata: Metadata = {
-  title: "Resultado del Analisis",
+  title: "Admin",
 };
 
-export default function ResultadoLayout({
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;

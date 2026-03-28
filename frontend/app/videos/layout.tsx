@@ -3,10 +3,10 @@ import type { Metadata } from "next";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export const metadata: Metadata = {
-  title: "Resultado del Analisis",
+  title: "Videos",
 };
 
-export default function ResultadoLayout({
+export default function VideosLayout({
   children,
 }: {
   children: React.ReactNode;

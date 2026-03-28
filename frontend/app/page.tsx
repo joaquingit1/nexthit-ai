@@ -113,8 +113,26 @@ export default function LandingPage() {
           <span className="text-lg font-bold text-slate-900">NextHit</span>
         </Link>
 
-        {/* Espacio para opciones futuras */}
-        <div className="flex-1" />
+        <div className="flex flex-1 items-center gap-6 pl-8">
+          <Link
+            href="/funcionalidades"
+            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
+            Funcionalidades
+          </Link>
+          <Link
+            href="/casos-de-uso"
+            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
+            Casos de Uso
+          </Link>
+          <Link
+            href="/precios"
+            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
+            Precios
+          </Link>
+        </div>
 
         <Link
           href="/app"

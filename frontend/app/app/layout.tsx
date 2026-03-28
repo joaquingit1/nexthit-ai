@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import DashboardLayout from "@/components/DashboardLayout";
+
 export const metadata: Metadata = {
   title: "Analizar Video",
 };
@@ -9,5 +11,5 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <DashboardLayout>{children}</DashboardLayout>;
 }

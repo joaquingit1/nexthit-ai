@@ -13,12 +13,13 @@ import {
 } from "@/lib/analysis";
 import { buildBrowserBackendUrl, getPublicBackendBaseUrl } from "@/lib/backend";
 import { supabase } from "@/lib/supabase";
+import UserPersonaFilters, { defaultFilters, type PersonaFilters } from "@/components/UserPersonaFilters";
 
 function storeAnalysisResult(router: ReturnType<typeof useRouter>, data: AnalysisResponse) {
   const serialized = JSON.stringify(data);
   window.localStorage.setItem(ANALYSIS_STORAGE_KEY, serialized);
   window.localStorage.setItem(`${ANALYSIS_STORAGE_PREFIX}${data.id}`, serialized);
-  router.push(`/resultado?id=${encodeURIComponent(data.id)}`);
+  router.push(`/resultado?id=${encodeURIComponent(data.id)}&new=1`);
 }
 
 export default function AppMain() {
@@ -28,6 +29,42 @@ export default function AppMain() {
   const [progressPercent, setProgressPercent] = useState(0);
   const [statusText, setStatusText] = useState("Listo para analizar");
   const [streamNote, setStreamNote] = useState("Subi un video para comenzar el analisis.");
+  const [showPersonaFilters, setShowPersonaFilters] = useState(false);
+  const [personaFilters, setPersonaFilters] = useState<PersonaFilters>(defaultFilters);
+
+  const getActiveFiltersCount = () => {
+    return Object.values(personaFilters).reduce((acc, arr) => acc + arr.length, 0);
+  };
+
+  const buildPersonaPromptFromFilters = (filters: PersonaFilters): string | null => {
+    const parts: string[] = [];
+
+    if (filters.ageRanges.length > 0) {
+      parts.push(`Rango de edad: ${filters.ageRanges.join(", ")}`);
+    }
+    if (filters.genders.length > 0) {
+      parts.push(`Genero: ${filters.genders.join(", ")}`);
+    }
+    if (filters.incomeBrackets.length > 0) {
+      parts.push(`Nivel de ingresos: ${filters.incomeBrackets.join(", ")}`);
+    }
+    if (filters.purchaseIntents.length > 0) {
+      parts.push(`Intencion de compra: ${filters.purchaseIntents.join(", ")}`);
+    }
+    if (filters.socialStatuses.length > 0) {
+      parts.push(`Perfil social: ${filters.socialStatuses.join(", ")}`);
+    }
+    if (filters.interests.length > 0) {
+      parts.push(`Intereses: ${filters.interests.join(", ")}`);
+    }
+    if (filters.platforms.length > 0) {
+      parts.push(`Plataformas principales: ${filters.platforms.join(", ")}`);
+    }
+
+    if (parts.length === 0) return null;
+
+    return `Genera personas sinteticas con las siguientes caracteristicas:\n${parts.join("\n")}`;
+  };
 
   const waitForStreamedResult = async (job: AnalysisJobEnvelope) =>
     new Promise<AnalysisResponse>((resolve, reject) => {
@@ -175,12 +212,15 @@ export default function AppMain() {
       setStatusText("Iniciando analisis...");
       setStreamNote("Procesando tu video.");
 
+      const personaPrompt = buildPersonaPromptFromFilters(personaFilters);
       const jobResponse = await fetch(createJobUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           video_id: uploadTicket.video_id,
           storage_path: uploadTicket.object_path,
+          persona_filters: getActiveFiltersCount() > 0 ? personaFilters : undefined,
+          persona_prompt: personaPrompt,
         }),
       });
 
@@ -204,9 +244,8 @@ export default function AppMain() {
   };
 
   return (
-    <main className="min-h-screen px-4 py-12">
-      <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-6xl items-center">
-        <div className="grid w-full gap-8 lg:grid-cols-[0.85fr_1.15fr]">
+    <div className="flex w-full min-h-[calc(100vh-3rem)] items-center">
+      <div className="grid w-full gap-8 lg:grid-cols-[0.85fr_1.15fr]">
           <section className="space-y-6">
             <span className="inline-flex rounded-full border border-cyan-200 bg-white/80 px-4 py-2 text-sm font-semibold text-cyan-950">
               NextHit
@@ -253,6 +292,43 @@ export default function AppMain() {
                 />
               </div>
 
+              {/* User Persona Config */}
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Audiencia objetivo
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPersonaFilters(true)}
+                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+                      <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">
+                        {getActiveFiltersCount() > 0
+                          ? `${getActiveFiltersCount()} filtros configurados`
+                          : "Audiencia general"
+                        }
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {getActiveFiltersCount() > 0
+                          ? "Click para modificar"
+                          : "Click para personalizar la simulacion"
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+
               <div className="rounded-[1.6rem] border border-slate-200/80 bg-white/80 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-slate-900">{statusText}</p>
@@ -279,7 +355,14 @@ export default function AppMain() {
             </form>
           </section>
         </div>
-      </div>
-    </main>
+
+      {/* User Persona Filters Popup */}
+      <UserPersonaFilters
+        isOpen={showPersonaFilters}
+        onClose={() => setShowPersonaFilters(false)}
+        filters={personaFilters}
+        onFiltersChange={setPersonaFilters}
+      />
+    </div>
   );
 }
