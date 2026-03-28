@@ -57,6 +57,16 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
+  const isItemActive = (href: string) => {
+    if (pathname === href) return true;
+    if (pathname.startsWith(href + "/")) return true;
+    // /resultado muestra un analisis, asi que Analisis deberia estar activo
+    if (href === "/analisis" && pathname.startsWith("/resultado")) return true;
+    // /app es subir video, relacionado con Videos
+    if (href === "/videos" && pathname === "/app") return true;
+    return false;
+  };
+
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-slate-200/60 bg-white">
       {/* Logo */}
@@ -74,7 +84,7 @@ export default function Sidebar() {
             </p>
             <div className="space-y-1">
               {section.items.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                const isActive = isItemActive(item.href);
                 return (
                   <Link
                     key={item.href}
