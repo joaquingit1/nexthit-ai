@@ -3,3 +3,5 @@ uvicorn
 python-multipart
 supabase
 python-dotenv
+httpx
+imageio-ffmpeg

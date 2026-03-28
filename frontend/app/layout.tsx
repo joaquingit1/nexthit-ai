@@ -14,8 +14,8 @@ const bodyFont = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Hackathon Template",
-  description: "Next.js + FastAPI + Supabase starter for rapid prototypes.",
+  title: "AXIOM//LENS",
+  description: "Futuristic video intelligence dashboard for short-form analysis demos.",
 };
 
 export default function RootLayout({

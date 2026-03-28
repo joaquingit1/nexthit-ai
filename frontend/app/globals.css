@@ -8,10 +8,12 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   min-height: 100vh;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top left, rgba(125, 211, 252, 0.18), transparent 30%),
     radial-gradient(circle at bottom right, rgba(45, 212, 191, 0.18), transparent 25%),
@@ -48,4 +50,557 @@ textarea {
   background-size: 120px 120px;
   opacity: 0.45;
   pointer-events: none;
+}
+
+.analysis-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(56, 189, 248, 0.14), transparent 24%),
+    radial-gradient(circle at 86% 20%, rgba(245, 158, 11, 0.14), transparent 20%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0));
+}
+
+.analysis-grid {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.14) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.analysis-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.78)),
+    rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(20px);
+}
+
+.result-shell {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 10% 14%, rgba(14, 165, 233, 0.14), transparent 24%),
+    radial-gradient(circle at 88% 18%, rgba(34, 197, 94, 0.12), transparent 18%),
+    linear-gradient(180deg, #f7fafc 0%, #eff5f8 56%, #f8fafc 100%);
+}
+
+.result-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.72), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0));
+}
+
+.result-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.7)),
+    rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 24px 70px rgba(148, 163, 184, 0.14);
+  backdrop-filter: blur(18px);
+}
+
+.result-stage-enter {
+  animation: resultStageEnter 420ms cubic-bezier(0.18, 0.88, 0.32, 1) both;
+}
+
+.result-draw-line {
+  stroke-dasharray: 2200;
+  stroke-dashoffset: 2200;
+  animation: resultDrawLine 1.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.result-viewer-line {
+  animation: resultViewerFade 320ms ease both;
+}
+
+.story-sphere {
+  will-change: transform;
+  transition: transform 420ms ease-out;
+  animation: storyFloat 14s ease-in-out infinite;
+}
+
+.upload-demo-shell {
+  position: relative;
+}
+
+.upload-demo-stage {
+  position: relative;
+  min-height: 290px;
+  overflow: hidden;
+  border: 1px solid rgba(217, 229, 255, 0.95);
+  border-radius: 1.9rem;
+  background:
+    linear-gradient(180deg, rgba(249, 251, 255, 0.96), rgba(241, 246, 255, 0.88)),
+    rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 20px 50px rgba(47, 111, 218, 0.08);
+}
+
+.upload-demo-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(47, 111, 218, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 111, 218, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.62), transparent 92%);
+}
+
+.upload-demo-glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(26px);
+  opacity: 0.8;
+}
+
+.upload-demo-glow-one {
+  width: 120px;
+  height: 120px;
+  left: -14px;
+  top: -10px;
+  background: rgba(95, 185, 255, 0.24);
+}
+
+.upload-demo-glow-two {
+  width: 96px;
+  height: 96px;
+  right: 18px;
+  bottom: 22px;
+  background: rgba(47, 111, 218, 0.18);
+}
+
+.upload-demo-file {
+  position: absolute;
+  left: 34px;
+  top: 34px;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(207, 224, 255, 0.9);
+  box-shadow: 0 14px 30px rgba(47, 111, 218, 0.1);
+  animation: uploadFileMove 6.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+  z-index: 3;
+}
+
+.upload-demo-file-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 30px;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2f6fda, #6ea8ff);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.upload-demo-file-name {
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.upload-demo-cursor {
+  position: absolute;
+  left: 44px;
+  top: 30px;
+  width: 22px;
+  height: 30px;
+  background: #0f172a;
+  clip-path: polygon(0 0, 100% 58%, 58% 58%, 74% 100%, 56% 100%, 40% 64%, 0 88%);
+  filter: drop-shadow(0 10px 16px rgba(15, 23, 42, 0.18));
+  animation: uploadCursorMove 6.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+  z-index: 4;
+}
+
+.upload-demo-cursor-core {
+  position: absolute;
+  inset: 2px auto auto 2px;
+  width: 16px;
+  height: 22px;
+  background: white;
+  clip-path: polygon(0 0, 100% 58%, 58% 58%, 74% 100%, 56% 100%, 40% 64%, 0 88%);
+}
+
+.upload-demo-dropzone {
+  position: absolute;
+  right: 26px;
+  top: 28px;
+  width: 176px;
+  height: 132px;
+  padding: 10px;
+  border-radius: 1.6rem;
+  border: 2px dashed rgba(47, 111, 218, 0.26);
+  background: rgba(255, 255, 255, 0.42);
+  animation: uploadDropzonePulse 6.8s ease-in-out infinite;
+}
+
+.upload-demo-dropzone-inner {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.2rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(239, 244, 255, 0.46));
+  text-align: center;
+}
+
+.upload-demo-dots {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.upload-demo-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(47, 111, 218, 0.36);
+}
+
+.upload-demo-dropzone-title {
+  margin: 0.8rem 0 0;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.upload-demo-dropzone-copy {
+  margin: 0.3rem 0 0;
+  color: #64748b;
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.upload-demo-loader {
+  position: absolute;
+  left: 34px;
+  bottom: 34px;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: uploadLoaderReveal 6.8s ease-in-out infinite;
+}
+
+.upload-demo-loader-ring {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 2px solid rgba(47, 111, 218, 0.14);
+  border-top-color: #2f6fda;
+  animation: uploadLoaderSpin 1s linear infinite;
+}
+
+.upload-demo-loader-text {
+  margin: 0;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.upload-demo-graph {
+  position: absolute;
+  inset: auto 22px 18px 22px;
+  min-height: 132px;
+  padding: 0.95rem 1rem 0.85rem;
+  border-radius: 1.55rem;
+  border: 1px solid rgba(207, 224, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 40px rgba(47, 111, 218, 0.08);
+  opacity: 0;
+  transform: translateY(22px) scale(0.97);
+  animation: uploadGraphReveal 6.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.upload-demo-graph-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.upload-demo-graph-label,
+.upload-demo-graph-time {
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.upload-demo-graph-svg {
+  width: 100%;
+  height: auto;
+}
+
+.upload-demo-graph-line {
+  stroke-dasharray: 280;
+  stroke-dashoffset: 280;
+  animation: uploadGraphLineDraw 6.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.upload-demo-graph-dot {
+  opacity: 0;
+  animation: uploadGraphDotReveal 6.8s ease-in-out infinite;
+}
+
+.analysis-dark-card {
+  background:
+    linear-gradient(180deg, rgba(3, 18, 30, 0.96), rgba(6, 27, 44, 0.92)),
+    #05111c;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 24px 60px rgba(3, 18, 30, 0.22);
+}
+
+.signal-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.signal-sheen::after {
+  content: "";
+  position: absolute;
+  inset: -120% auto -120% -30%;
+  width: 28%;
+  transform: rotate(18deg);
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  animation: signalSweep 8s linear infinite;
+}
+
+.signal-dot {
+  box-shadow: 0 0 0 0 rgba(94, 234, 212, 0.42);
+  animation: signalPulse 2.4s infinite;
+}
+
+.metric-bar {
+  background: linear-gradient(90deg, #67e8f9, #fbbf24);
+}
+
+.placeholder-wave {
+  background:
+    linear-gradient(90deg, rgba(148, 163, 184, 0.1), rgba(148, 163, 184, 0.24), rgba(148, 163, 184, 0.1));
+  background-size: 220% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes signalSweep {
+  0% {
+    transform: translateX(-40%) rotate(18deg);
+  }
+
+  100% {
+    transform: translateX(540%) rotate(18deg);
+  }
+}
+
+@keyframes signalPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(94, 234, 212, 0.38);
+  }
+
+  70% {
+    box-shadow: 0 0 0 12px rgba(94, 234, 212, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(94, 234, 212, 0);
+  }
+}
+
+@keyframes resultStageEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes resultDrawLine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes resultViewerFade {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes storyFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(0, -12px, 0) scale(1.04);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes uploadCursorMove {
+  0%,
+  16% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  28%,
+  42% {
+    transform: translate3d(158px, 26px, 0) scale(1);
+  }
+
+  58%,
+  100% {
+    transform: translate3d(158px, 26px, 0) scale(1);
+  }
+}
+
+@keyframes uploadFileMove {
+  0%,
+  12% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+
+  26%,
+  38% {
+    transform: translate3d(134px, 18px, 0) scale(0.98);
+    opacity: 1;
+  }
+
+  44%,
+  100% {
+    transform: translate3d(134px, 18px, 0) scale(0.94);
+    opacity: 0;
+  }
+}
+
+@keyframes uploadDropzonePulse {
+  0%,
+  18%,
+  100% {
+    border-color: rgba(47, 111, 218, 0.26);
+    box-shadow: inset 0 0 0 0 rgba(47, 111, 218, 0);
+  }
+
+  32%,
+  42% {
+    border-color: rgba(47, 111, 218, 0.56);
+    box-shadow: inset 0 0 0 6px rgba(47, 111, 218, 0.08);
+  }
+}
+
+@keyframes uploadLoaderReveal {
+  0%,
+  42%,
+  100% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  48%,
+  70% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  78%,
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes uploadLoaderSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes uploadGraphReveal {
+  0%,
+  60% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.97);
+  }
+
+  70%,
+  92% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes uploadGraphLineDraw {
+  0%,
+  66% {
+    stroke-dashoffset: 280;
+  }
+
+  82%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes uploadGraphDotReveal {
+  0%,
+  78% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  84%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

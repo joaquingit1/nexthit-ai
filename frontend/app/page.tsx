@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const PATH_POINTS = [
   { x: 10, y: 76 },
@@ -29,36 +29,49 @@ function getPointAtProgress(progress: number) {
 
 export default function LandingPage() {
   const [progress, setProgress] = useState(0);
+  const touchStartY = useRef<number | null>(null);
 
   useEffect(() => {
-    let ticking = false;
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
 
-    const updateProgress = () => {
-      const scrollRange = Math.max(
-        document.documentElement.scrollHeight - window.innerHeight,
-        1,
-      );
-      const nextProgress = Math.min(window.scrollY / scrollRange, 1);
-      setProgress(nextProgress);
-      ticking = false;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+
+    const updateProgress = (deltaY: number) => {
+      setProgress((current) => {
+        const next = current + deltaY / 1800;
+        return Math.max(0, Math.min(1, next));
+      });
     };
 
-    const handleScroll = () => {
-      if (ticking) {
-        return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      updateProgress(event.deltaY);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowDown" || event.key === "PageDown" || event.key === " ") {
+        event.preventDefault();
+        updateProgress(160);
       }
 
-      ticking = true;
-      window.requestAnimationFrame(updateProgress);
+      if (event.key === "ArrowUp" || event.key === "PageUp") {
+        event.preventDefault();
+        updateProgress(-160);
+      }
     };
 
-    updateProgress();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
+      html.style.overflow = previousHtmlOverflow;
+      body.style.overflow = previousBodyOverflow;
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 
@@ -69,8 +82,31 @@ export default function LandingPage() {
   const hasReachedEnd = progress >= 0.99;
 
   return (
-    <main className="relative h-[230vh] bg-white text-slate-950">
-      <section className="landing-stage sticky top-0 h-screen overflow-hidden">
+    <main
+      className="relative h-screen overflow-hidden bg-white text-slate-950"
+      onTouchStart={(event) => {
+        touchStartY.current = event.touches[0]?.clientY ?? null;
+      }}
+      onTouchMove={(event) => {
+        const startY = touchStartY.current;
+        const currentY = event.touches[0]?.clientY;
+
+        if (startY == null || currentY == null) {
+          return;
+        }
+
+        const deltaY = startY - currentY;
+        setProgress((current) => {
+          const next = current + deltaY / 1800;
+          return Math.max(0, Math.min(1, next));
+        });
+        touchStartY.current = currentY;
+      }}
+      onTouchEnd={() => {
+        touchStartY.current = null;
+      }}
+    >
+      <section className="landing-stage relative h-screen overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(52,211,153,0.12),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,247,250,0.98))]" />
 
         <div
