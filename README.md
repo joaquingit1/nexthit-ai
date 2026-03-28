@@ -1,4 +1,4 @@
-# AXIOM//LENS
+# NextHit
 
 Plataforma de analisis predictivo para videos cortos de marketing. Simula audiencias sinteticas para predecir retencion y optimizar creativos antes de invertir en pauta.
 

@@ -76,7 +76,7 @@ def build_final_analysis_payload(
         "video_id": video["id"],
         "job_id": job_id,
         "analysis": {
-            "productName": "AXIOM//LENS",
+            "productName": "NextHit",
             "sessionLabel": f"Sesion {job_id.replace('job-', '').upper()}",
             "generatedAt": utc_now_iso(),
             "transcriptText": transcript["text"],

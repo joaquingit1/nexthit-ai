@@ -449,7 +449,7 @@ function createDemoAnalysis() {
   return createAnalysisPayload({
     texto:
       "Este video muestra como un equipo creativo puede predecir la retencion antes de lanzar medios pagos. El sistema desarma el clip en voz, ritmo, visuales y texto en pantalla, simula 100 personas espectadoras y convierte esas senales en estrategia de plataforma y crecimiento pago.",
-    fileName: "axiom-lens-demo.mp4",
+    fileName: "nexthit-demo.mp4",
     fileType: "video/mp4",
     fileSize: 8_400_000,
     backendMessage:
