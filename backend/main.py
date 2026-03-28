@@ -20,6 +20,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from supabase import Client, create_client
+from system_prompts import (
+    CREATIVE_ANALYSIS_SPEC,
+    FINAL_COPY_SPEC,
+    STRATEGIC_OUTPUTS_SPEC,
+    TRANSCRIPTION_SPEC,
+    VIDEO_SUMMARY_SPEC,
+    build_persona_batch_spec,
+)
 
 load_dotenv()
 
@@ -28,9 +36,17 @@ SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "videos-raw")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1").rstrip("/")
-GROQ_TRANSCRIPTION_MODEL = os.getenv("GROQ_TRANSCRIPTION_MODEL", "whisper-large-v3-turbo")
-GROQ_TEXT_MODEL = os.getenv("GROQ_TEXT_MODEL", "llama-3.1-8b-instant")
+GROQ_TRANSCRIPTION_MODEL = os.getenv("GROQ_TRANSCRIPTION_MODEL", TRANSCRIPTION_SPEC.default_model)
+GROQ_TEXT_MODEL = os.getenv("GROQ_TEXT_MODEL", CREATIVE_ANALYSIS_SPEC.default_model)
 PUBLIC_BACKEND_URL = os.getenv("PUBLIC_BACKEND_URL", "").rstrip("/")
+
+
+def resolve_prompt_model(default_model: str, model_env_var: str | None = None) -> str:
+    if model_env_var:
+        override = os.getenv(model_env_var, "").strip()
+        if override:
+            return override
+    return os.getenv("GROQ_TEXT_MODEL", default_model).strip() or default_model
 
 app = FastAPI(title="Hackathon API", version="2.0.0")
 app.add_middleware(
@@ -668,13 +684,13 @@ async def transcribe_video_with_whisper(file_path: str, user_context: str, durat
         content_type = guess_transcription_content_type(transcription_path)
         with open(transcription_path, "rb") as media_file:
             media_bytes = media_file.read()
-        async with httpx.AsyncClient(timeout=180) as client:
+        async with httpx.AsyncClient(timeout=TRANSCRIPTION_SPEC.timeout_seconds) as client:
             response = await client.post(
                 f"{GROQ_BASE_URL}/audio/transcriptions",
                 headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
                 data={
-                    "model": GROQ_TRANSCRIPTION_MODEL,
-                    "response_format": "verbose_json",
+                    "model": os.getenv(TRANSCRIPTION_SPEC.model_env_var, GROQ_TRANSCRIPTION_MODEL),
+                    "response_format": TRANSCRIPTION_SPEC.response_format,
                     "timestamp_granularities[]": "segment",
                 },
                 files={"file": (Path(transcription_path).name, media_bytes, content_type)},
@@ -718,6 +734,8 @@ async def call_groq_chat_json(
     schema: dict[str, Any],
     strict: bool = True,
     model: str | None = None,
+    temperature: float = 0.2,
+    timeout_seconds: float = 180.0,
 ) -> dict[str, Any] | None:
     if not GROQ_API_KEY:
         return None
@@ -725,7 +743,7 @@ async def call_groq_chat_json(
     request_payload = {
         "model": model or GROQ_TEXT_MODEL,
         "messages": messages,
-        "temperature": 0.2,
+        "temperature": temperature,
         "response_format": {
             "type": "json_schema",
             "json_schema": {
@@ -736,7 +754,7 @@ async def call_groq_chat_json(
         },
     }
 
-    async with httpx.AsyncClient(timeout=180) as client:
+    async with httpx.AsyncClient(timeout=timeout_seconds) as client:
         response = await client.post(
             f"{GROQ_BASE_URL}/chat/completions",
             headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
@@ -744,6 +762,36 @@ async def call_groq_chat_json(
         )
     response.raise_for_status()
     return json.loads(get_json_text_from_groq(response.json()))
+
+
+async def call_groq_text_completion(
+    *,
+    messages: list[dict[str, Any]],
+    model: str | None = None,
+    temperature: float = 0.2,
+    timeout_seconds: float = 180.0,
+) -> str | None:
+    if not GROQ_API_KEY:
+        return None
+
+    async with httpx.AsyncClient(timeout=timeout_seconds) as client:
+        response = await client.post(
+            f"{GROQ_BASE_URL}/chat/completions",
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+            json={
+                "model": model or GROQ_TEXT_MODEL,
+                "messages": messages,
+                "temperature": temperature,
+            },
+        )
+    response.raise_for_status()
+    payload = response.json()
+    choices = payload.get("choices", [])
+    if not choices:
+        return None
+    message = choices[0].get("message", {})
+    content = str(message.get("content", "")).strip()
+    return content or None
 
 
 def creative_analysis_schema() -> dict[str, Any]:
@@ -1202,15 +1250,12 @@ def default_creative_analysis(video_id: str, transcript: dict[str, Any], duratio
 async def analyze_creative_context(video_id: str, transcript: dict[str, Any], duration_seconds: int, preferred_platform: str | None) -> dict[str, Any]:
     fallback = default_creative_analysis(video_id, transcript, duration_seconds, preferred_platform)
     try:
+        spec = CREATIVE_ANALYSIS_SPEC
         response = await call_groq_chat_json(
             messages=[
                 {
                     "role": "system",
-                    "content": (
-                        "You are a senior short-form creative strategist. Score the creative for marketing effectiveness. "
-                        "Use the transcript and duration only. timeline_insights must use ids hook, energy, overload, loop. "
-                        "All scores must be integers from 0 to 100."
-                    ),
+                    "content": spec.system_prompt,
                 },
                 {
                     "role": "user",
@@ -1226,8 +1271,11 @@ async def analyze_creative_context(video_id: str, transcript: dict[str, Any], du
                     ),
                 },
             ],
-            schema_name="creative_analysis",
+            schema_name=spec.schema_name,
             schema=creative_analysis_schema(),
+            model=resolve_prompt_model(spec.default_model, spec.model_env_var),
+            temperature=spec.temperature,
+            timeout_seconds=spec.timeout_seconds,
         )
         if not response:
             return fallback
@@ -1314,18 +1362,12 @@ def default_persona_reason(persona: dict[str, Any], creative_context: dict[str, 
 async def analyze_persona_batch(batch: list[dict[str, Any]], creative_context: dict[str, Any], transcript: dict[str, Any], duration_seconds: int) -> list[dict[str, Any]]:
     fallback_results = [{**persona, **default_persona_reason(persona, creative_context, duration_seconds)} for persona in batch]
     try:
+        spec = build_persona_batch_spec(LEAVE_REASON_LABELS.keys())
         response = await call_groq_chat_json(
             messages=[
                 {
                     "role": "system",
-                    "content": (
-                        "Eres un simulador de audiencia para videos cortos de marketing. "
-                        "Piensa como cada persona individualmente y devuelve el segundo exacto en el que abandona, "
-                        "el reason_code mas probable dentro de esta taxonomia exacta: "
-                        f"{', '.join(LEAVE_REASON_LABELS.keys())}. "
-                        "Tambien devuelve why_they_left y summary_of_interacion en espanol. "
-                        "Keep dropoff_second within the duration."
-                    ),
+                    "content": spec.system_prompt,
                 },
                 {
                     "role": "user",
@@ -1349,8 +1391,11 @@ async def analyze_persona_batch(batch: list[dict[str, Any]], creative_context: d
                     ),
                 },
             ],
-            schema_name="persona_batch",
+            schema_name=spec.schema_name,
             schema=persona_batch_schema(),
+            model=resolve_prompt_model(spec.default_model, spec.model_env_var),
+            temperature=spec.temperature,
+            timeout_seconds=spec.timeout_seconds,
         )
         if not response or "personas" not in response:
             return fallback_results
@@ -1798,46 +1843,32 @@ async def synthesize_video_summary(
         return None
 
     try:
-        async with httpx.AsyncClient(timeout=180) as client:
-            response = await client.post(
-                f"{GROQ_BASE_URL}/chat/completions",
-                headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
-                json={
-                    "model": GROQ_TEXT_MODEL,
-                    "temperature": 0.2,
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": (
-                                "Eres un master marketing strategist especializado en short-form video, paid social y analisis creativo. "
-                                "Responde solo en espanol. "
-                                "Quiero un resumen ejecutivo largo y especifico del video. "
-                                "Debes describir con precision que parece decir o mostrar el video, como evoluciona el mensaje segundo a segundo, "
-                                "cual es la promesa central, donde se debilita la retencion y que implicacion tiene eso para marketing. "
-                                "No uses placeholders, no digas que faltan datos, no hables del sistema. Habla del video. "
-                                "Cierra obligatoriamente con dos subtitulos dentro del mismo texto: 'Fortalezas:' y 'Debilidades:'. "
-                                "Fortalezas debe listar lo que funciona del creativo. Debilidades debe listar lo que hoy le frena retencion o conversion. "
-                                "El campo completo debe ser el texto final que vera un marketer."
-                            ),
-                        },
-                        {
-                            "role": "user",
-                            "content": json.dumps(
-                                {
-                                    "creative_context": creative_context,
-                                    "target_audience": target_audience,
-                                    "transcript": transcript,
-                                    "duration_seconds": duration_seconds,
-                                },
-                                ensure_ascii=False,
-                            ),
-                        },
-                    ],
+        spec = VIDEO_SUMMARY_SPEC
+        summary_text = await call_groq_text_completion(
+            messages=[
+                {
+                    "role": "system",
+                    "content": spec.system_prompt,
                 },
-            )
-        response.raise_for_status()
-        payload = response.json()
-        summary_text = str(payload["choices"][0]["message"]["content"]).strip()
+                {
+                    "role": "user",
+                    "content": json.dumps(
+                        {
+                            "creative_context": creative_context,
+                            "target_audience": target_audience,
+                            "transcript": transcript,
+                            "duration_seconds": duration_seconds,
+                        },
+                        ensure_ascii=False,
+                    ),
+                },
+            ],
+            model=resolve_prompt_model(spec.default_model, spec.model_env_var),
+            temperature=spec.temperature,
+            timeout_seconds=spec.timeout_seconds,
+        )
+        if not summary_text:
+            return None
         if summary_has_placeholder_text(summary_text):
             return None
         first_sentence = re.split(r"(?<=[.!?])\s+", summary_text.strip(), maxsplit=1)[0].strip()
@@ -1850,6 +1881,7 @@ async def synthesize_video_summary(
 
 
 async def synthesize_final_copy(creative_context: dict[str, Any], target_audience: dict[str, Any], personas: list[dict[str, Any]], transcript: dict[str, Any], duration_seconds: int) -> dict[str, Any]:
+    spec = FINAL_COPY_SPEC
     fallback = default_final_copy(creative_context, target_audience, duration_seconds)
     grounded_summary = build_transcript_grounded_summary(transcript, creative_context, duration_seconds)
     fallback["video_summary"] = grounded_summary["video_summary"]
@@ -1865,12 +1897,7 @@ async def synthesize_final_copy(creative_context: dict[str, Any], target_audienc
             messages=[
                 {
                     "role": "system",
-                    "content": (
-                        "Estás convirtiendo el análisis creativo y la simulación de audiencias en un informe de marketing pulido. "
-                        "Devuelve video_summary y summary_narrative en español. "
-                        "video_summary debe describir concretamente de qué trata el video, cuál es su mensaje, cómo se desarrolla y qué problema principal aparece en el comportamiento de la audiencia. "
-                        "Evita frases genéricas: usa el transcript y los datos para que el resumen se sienta específico del video."
-                    ),
+                    "content": spec.system_prompt,
                 },
                 {
                     "role": "user",
@@ -1886,8 +1913,11 @@ async def synthesize_final_copy(creative_context: dict[str, Any], target_audienc
                     ),
                 },
             ],
-            schema_name="final_copy",
+            schema_name=spec.schema_name,
             schema=final_copy_schema(),
+            model=resolve_prompt_model(spec.default_model, spec.model_env_var),
+            temperature=spec.temperature,
+            timeout_seconds=spec.timeout_seconds,
         )
         if not response:
             return fallback
@@ -1917,6 +1947,7 @@ async def synthesize_strategic_outputs(
     change_plan: dict[str, Any],
     segment_diagnoses: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    spec = STRATEGIC_OUTPUTS_SPEC
     fallback = {
         "change_plan": change_plan,
         "media_targeting": default_media_targeting(
@@ -1935,16 +1966,7 @@ async def synthesize_strategic_outputs(
             messages=[
                 {
                     "role": "system",
-                    "content": (
-                        "Eres un director de estrategia creativa para una agencia de performance marketing. "
-                        "Responde solo en espanol. "
-                        "Tu trabajo es convertir transcript, curva de retencion, 100 personas sinteticas y segmentos agregados en recomendaciones muy concretas. "
-                        "Debes devolver JSON valido. "
-                        "En change_plan.actions, cada fix debe ser accionable y atado a tiempo real del video cuando corresponda. "
-                        "En media_targeting, devuelve 3 recomendaciones del estilo 'Recomendacion: implementacion especifica', "
-                        "pensadas como salidas de agencia para compra de medios. "
-                        "En version_strategies, crea 3 caminos A/B/C realmente distintos entre si y cada uno con un target_audience claro."
-                    ),
+                    "content": spec.system_prompt,
                 },
                 {
                     "role": "user",
@@ -1963,8 +1985,11 @@ async def synthesize_strategic_outputs(
                     ),
                 },
             ],
-            schema_name="strategic_outputs",
+            schema_name=spec.schema_name,
             schema=strategic_outputs_schema(),
+            model=resolve_prompt_model(spec.default_model, spec.model_env_var),
+            temperature=spec.temperature,
+            timeout_seconds=spec.timeout_seconds,
         )
         if not response:
             return fallback

@@ -77,11 +77,23 @@ Variables requeridas del backend:
 - `GROQ_TEXT_MODEL`
 - `PUBLIC_BACKEND_URL`
 
+Variables opcionales por prompt:
+- `GROQ_CREATIVE_ANALYSIS_MODEL`
+- `GROQ_PERSONA_BATCH_MODEL`
+- `GROQ_VIDEO_SUMMARY_MODEL`
+- `GROQ_FINAL_COPY_MODEL`
+- `GROQ_STRATEGIC_OUTPUTS_MODEL`
+
 Defaults recomendados:
 - `SUPABASE_BUCKET=videos-raw`
 - `GROQ_BASE_URL=https://api.groq.com/openai/v1`
 - `GROQ_TRANSCRIPTION_MODEL=whisper-large-v3-turbo`
 - `GROQ_TEXT_MODEL=llama-3.1-8b-instant`
+
+Buenas practicas de prompts:
+- Los system prompts y parametros por tarea viven en [backend/system_prompts.py](c:\Users\jo\Desktop\hackathon test\backend\system_prompts.py)
+- La logica del pipeline en [backend/main.py](c:\Users\jo\Desktop\hackathon test\backend\main.py) solo consume esos specs centralizados
+- Cada tarea puede cambiar de modelo via env sin tocar la logica de negocio
 
 ## Levantar frontend local
 
