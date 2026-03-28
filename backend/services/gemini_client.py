@@ -160,9 +160,6 @@ async def call_gemini_video_json(
         file_part=types.Part.from_uri(
             file_uri=uploaded_file["uri"],
             mime_type=uploaded_file.get("mime_type") or "video/mp4",
-            media_resolution=types.PartMediaResolution(
-                level=types.PartMediaResolutionLevel.MEDIA_RESOLUTION_LOW,
-            ),
         ),
         system_prompt=system_prompt,
         prompt_payload=prompt_payload,
