@@ -1,124 +1,107 @@
 # AXIOM//LENS
 
-Webapp de inteligencia creativa multimodal para videos cortos de marketing.
+Plataforma de analisis predictivo para videos cortos de marketing. Simula audiencias sinteticas para predecir retencion y optimizar creativos antes de invertir en pauta.
 
-El sistema hoy hace esto:
-- recibe un video desde `/app`
-- lo sube directo a Supabase Storage
-- extrae duracion y audio
-- transcribe con Groq Whisper con timestamps
-- analiza el creativo
-- simula 100 personas sinteticas en 5 lotes
-- agrega segmentos, motivos de abandono y audiencia objetivo
-- devuelve un informe completo en `/resultado`
+## Que hace
+
+1. **Sube un video** desde `/app` directo a Supabase Storage
+2. **Transcribe** el audio con Groq Whisper
+3. **Analiza** el creativo (hook, claridad, ritmo, audio, visual, CTA)
+4. **Simula 100 personas** sinteticas con perfiles demograficos y comportamientos distintos
+5. **Predice abandono** por segmento con motivos especificos
+6. **Genera recomendaciones** accionables para mejorar el video
+7. **Entrega un informe** interactivo en 8 pasos en `/resultado`
+
+## Informe de analisis (8 pasos)
+
+| Paso | Nombre | Descripcion |
+|------|--------|-------------|
+| 1 | Puntaje y Resumen | Score general con metricas clave de rendimiento |
+| 2 | 100 Personas Sinteticas | Dataset de audiencia simulada con paginacion |
+| 3 | Analisis por Segmento | Retencion por arquetipo con diagnostico de abandono |
+| 4 | Curva de Retencion | Grafico interactivo de retencion proyectada |
+| 5 | Momentos Clave | Mapa temporal de puntos criticos del video |
+| 6 | Plan de Cambios | Acciones especificas con timestamps |
+| 7 | Estrategia de Medios | Configuracion de segmentacion para campanas |
+| 8 | Variantes Creativas | Tres propuestas de iteracion para testing |
 
 ## Stack
 
-- `frontend/`: Next.js desplegado en Vercel
-- `backend/`: FastAPI desplegado en Vercel
-- `supabase/`: storage, tablas y migraciones
-- `groq`: transcripcion y generacion de texto
+- **Frontend**: Next.js 14 + Tailwind CSS (Vercel)
+- **Backend**: FastAPI con arquitectura modular (Vercel)
+- **Storage**: Supabase (videos + base de datos)
+- **AI**: Groq (Whisper para transcripcion, LLaMA para analisis)
 
-## Estado actual
+## Estructura del proyecto
 
-Checklist de avance:
-- [x] Subida directa del video desde el navegador a Supabase
-- [x] Pipeline asincronico de analisis con jobs persistidos
-- [x] Transcripcion con timestamps
-- [x] Extraccion forzada de audio antes de transcribir
-- [x] Simulacion de 100 personas en 5 lotes
-- [x] SSE para progreso en vivo
-- [x] Resultado persistido y compatible con `/resultado`
-- [x] Paso de score y resumen
-- [x] Paso de 100 personas sinteticas
-- [x] Paso de drop-off por segmento
-- [x] Paso de grafico de retencion con transcript por hover
-- [x] Paso de timeline
-- [x] Paso de que cambiar
-- [x] Paso de media targeting
-- [x] Paso de versiones A/B/C
-- [x] Paso de posts para redes
-- [x] Repo GitHub sincronizado
-- [x] Frontend y backend desplegados
-
-Pendientes importantes:
-- [ ] Analisis visual real del video
-- [ ] OCR real de texto en pantalla
-- [ ] Analisis multimodal completo con video, no solo transcript
-- [ ] Hardening del backend serverless para clips mas largos
-
-## Estructura
-
-```text
-backend/
-frontend/
-supabase/
-README.md
+```
+axiom-lens/
+├── frontend/                 # Next.js app
+│   ├── app/
+│   │   ├── page.tsx         # Landing
+│   │   ├── app/page.tsx     # Upload de video
+│   │   └── resultado/       # Dashboard de resultados
+│   └── lib/                 # Utilidades y tipos
+│
+├── backend/                  # FastAPI (arquitectura modular)
+│   ├── main.py              # App init + routers
+│   ├── config.py            # Variables de entorno
+│   ├── system_prompts.py    # Prompts centralizados
+│   ├── routes/              # Endpoints (health, uploads, jobs)
+│   ├── services/            # Logica de negocio
+│   │   ├── transcription.py
+│   │   ├── creative_analysis.py
+│   │   ├── persona_simulation.py
+│   │   ├── audience.py
+│   │   ├── retention.py
+│   │   ├── change_plan.py
+│   │   └── strategy.py
+│   ├── repository/          # Acceso a Supabase
+│   ├── pipeline/            # Procesador de jobs
+│   ├── models/              # Request/Response Pydantic
+│   ├── schemas/             # JSON schemas para Groq
+│   ├── constants/           # Constantes y labels
+│   └── utils/               # Helpers
+│
+└── supabase/                # Config y migraciones
 ```
 
-## Levantar backend local
+## Setup local
+
+### Backend
 
 ```bash
 cd backend
-python -m venv .venv
+py -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
 uvicorn main:app --reload --port 8000
 ```
 
-Variables requeridas del backend:
+**Variables requeridas:**
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_BUCKET`
+- `SUPABASE_BUCKET` (default: `videos-raw`)
 - `GROQ_API_KEY`
-- `GROQ_BASE_URL`
-- `GROQ_TRANSCRIPTION_MODEL`
-- `GROQ_TEXT_MODEL`
-- `PUBLIC_BACKEND_URL`
+- `GROQ_TEXT_MODEL` (default: `llama-3.1-8b-instant`)
 
-Variables opcionales por prompt:
-- `GROQ_CREATIVE_ANALYSIS_MODEL`
-- `GROQ_PERSONA_BATCH_MODEL`
-- `GROQ_VIDEO_SUMMARY_MODEL`
-- `GROQ_FINAL_COPY_MODEL`
-- `GROQ_STRATEGIC_OUTPUTS_MODEL`
-
-Defaults recomendados:
-- `SUPABASE_BUCKET=videos-raw`
-- `GROQ_BASE_URL=https://api.groq.com/openai/v1`
-- `GROQ_TRANSCRIPTION_MODEL=whisper-large-v3-turbo`
-- `GROQ_TEXT_MODEL=llama-3.1-8b-instant`
-
-Buenas practicas de prompts:
-- Los system prompts y parametros por tarea viven en [backend/system_prompts.py](c:\Users\jo\Desktop\hackathon test\backend\system_prompts.py)
-- La logica del pipeline en [backend/main.py](c:\Users\jo\Desktop\hackathon test\backend\main.py) solo consume esos specs centralizados
-- Cada tarea puede cambiar de modelo via env sin tocar la logica de negocio
-
-## Levantar frontend local
+### Frontend
 
 ```bash
 cd frontend
-copy .env.local.example .env.local
 npm install
+copy .env.local.example .env.local
 npm run dev
 ```
 
-Variables requeridas del frontend:
+**Variables requeridas:**
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_BACKEND_URL`
 - `BACKEND_URL`
 
-Usar el mismo origen del backend para ambas variables de backend. `NEXT_PUBLIC_BACKEND_URL` es importante porque el navegador se conecta directo al stream SSE.
-
-## Supabase
-
-Este repo ya incluye:
-- configuracion local en [supabase/config.toml](c:\Users\jo\Desktop\hackathon test\supabase\config.toml)
-- migracion de esquema y bucket en [supabase/migrations/202603280001_init_analysis.sql](c:\Users\jo\Desktop\hackathon test\supabase\migrations\202603280001_init_analysis.sql)
-
-Flujo CLI:
+### Supabase
 
 ```bash
 npx supabase@latest login
@@ -126,62 +109,69 @@ npx supabase@latest link --project-ref TU_PROJECT_REF
 npx supabase@latest db push
 ```
 
-Esto crea:
-- `videos`
-- `analysis_jobs`
-- `analysis_results`
-- `persona_results`
-- `analysis_events`
-- bucket privado `videos-raw`
+Crea las tablas: `videos`, `analysis_jobs`, `analysis_results`, `persona_results`, `analysis_events`
 
-## Vercel
+## API Endpoints
 
-Variables de entorno de produccion necesarias:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_BACKEND_URL`
-- `BACKEND_URL`
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | `/` | Health check |
+| POST | `/api/uploads/init` | Crear ticket de subida |
+| POST | `/api/analysis/jobs` | Crear job de analisis |
+| GET | `/api/analysis/jobs/{id}` | Estado del job |
+| GET | `/api/analysis/jobs/{id}/events` | Stream SSE de progreso |
+| GET | `/api/analysis/jobs/{id}/result` | Resultado final |
 
-Valores sugeridos:
-- `NEXT_PUBLIC_BACKEND_URL=https://tu-backend`
-- `BACKEND_URL=https://tu-backend`
+## Flujo de procesamiento
 
-Deploy:
-
-```bash
-cd frontend
-npx vercel --prod
+```
+Usuario sube video → Ticket de subida → Upload a Supabase
+                                              ↓
+                                        Crear job
+                                              ↓
+                    ┌─────────────────────────┴─────────────────────────┐
+                    ↓                                                   ↓
+              Descargar video                                    SSE al frontend
+                    ↓
+              Calcular duracion
+                    ↓
+              Transcribir (Whisper)
+                    ↓
+              Analisis creativo
+                    ↓
+              Simular 100 personas (5 lotes x 20)
+                    ↓
+              Agregar segmentos y audiencia
+                    ↓
+              Sintetizar recomendaciones
+                    ↓
+              Guardar resultado → Redirect a /resultado
 ```
 
-Nota:
-- el frontend esta desplegado en Vercel
-- el backend tambien esta desplegado en Vercel para esta demo
-- como el analisis corre por un request largo con SSE, conviene mantener clips cortos
+## Deploy
 
-## Flujo en vivo
+El proyecto esta configurado para deploy en Vercel (frontend y backend).
 
-1. El usuario sube un video en `/app`
-2. El navegador pide un ticket de subida al backend
-3. El navegador sube el archivo directo a Supabase Storage
-4. El navegador crea un job de analisis
-5. El backend:
-   - descarga el video
-   - calcula la duracion
-   - transcribe con Groq Whisper
-   - corre analisis creativo
-   - ejecuta 5 lotes de 20 personas
-   - agrega segmentos y audiencia
-   - sintetiza el `AnalysisResponse` final
-6. El navegador escucha eventos SSE y redirige a `/resultado`
+```bash
+cd frontend && npx vercel --prod
+cd backend && npx vercel --prod
+```
 
-## URLs actuales
+## URLs de produccion
 
-- Frontend: `https://frontend-sooty-kappa-40.vercel.app`
-- Backend: `https://backend-five-gamma-99.vercel.app`
-- GitHub: `https://github.com/joaquingit1/axiom-lens`
+- Frontend: https://frontend-sooty-kappa-40.vercel.app
+- Backend: https://backend-five-gamma-99.vercel.app
+- Repo: https://github.com/joaquingit1/axiom-lens
+
+## Pendientes
+
+- [ ] Analisis visual real del video (frames)
+- [ ] OCR de texto en pantalla
+- [ ] Analisis multimodal completo (video + audio + texto)
+- [ ] Soporte para videos mas largos
 
 ## Notas
 
-- Los videos crudos se borran de Supabase Storage cuando termina el procesamiento.
-- El flujo normal ya no deberia mezclar demo placeholders con resultados reales.
-- Si un resultado viejo aparece raro en `/resultado`, volver a correr el video para regenerar el payload con la version nueva.
+- Los videos se eliminan de Storage al terminar el procesamiento
+- El modo demo esta disponible en `/resultado?demo=1`
+- Los prompts estan centralizados en `backend/system_prompts.py`
