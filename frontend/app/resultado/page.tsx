@@ -27,6 +27,7 @@ import {
   type VersionStrategy,
   type ViewerSimulation,
 } from "@/lib/analysis";
+import { buildBrowserBackendUrl } from "@/lib/backend";
 
 type ViewerMode = "all" | "average";
 type ScreenMode = "story" | "analysis";
@@ -116,16 +117,16 @@ const ANALYSIS_STEPS = [
     description: "Tres propuestas de iteracion del video optimizadas para diferentes objetivos.",
   },
   {
-    id: "savings",
-    title: "Ahorro Estimado",
-    eyebrow: "Paso 9",
-    description: "Calculo del ahorro monetario y de tiempo al aplicar los cambios sugeridos vs re-grabar el video.",
-  },
-  {
     id: "crosspost",
     title: "Posts para Redes",
-    eyebrow: "Paso 10",
+    eyebrow: "Paso 9",
     description: "Generamos posts de texto listos a partir del transcript y del analisis.",
+  },
+  {
+    id: "savings",
+    title: "Ahorro Estimado",
+    eyebrow: "Paso 10",
+    description: "Calculo del ahorro monetario y de tiempo al aplicar los cambios sugeridos vs re-grabar el video.",
   },
 ] as const;
 
@@ -2936,6 +2937,38 @@ function DashboardContent() {
     }
   };
 
+  const handleExportPDF = async () => {
+    try {
+      const response = await fetch(buildBrowserBackendUrl("/api/export/pdf"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          analysis: analysis.analysis,
+          job_id: analysis.job_id || analysis.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("No se pudo generar el PDF.");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `analisis-${analysis.job_id || analysis.id || "nexthit"}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      window.alert(error instanceof Error ? error.message : "No se pudo generar el PDF.");
+    }
+  };
+
   return (
     <main className="result-shell min-h-screen overflow-x-hidden px-4 py-5 md:px-6 md:py-6">
       <div className="space-y-6">
@@ -2960,6 +2993,16 @@ function DashboardContent() {
                 </h1>
               </div>
               <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleExportPDF()}
+                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Exportar PDF
+                </button>
                 <button
                   type="button"
                   onClick={() => router.push("/app")}
@@ -3017,13 +3060,9 @@ function DashboardContent() {
                 <MediaTargetingStep recommendations={mediaTargeting} />
               ) : null}
 
-              {step.id === "versions" ? (
-                <VersionStrategiesStep versions={versionStrategies} />
-              ) : null}
-
-              {step.id === "savings" ? (
-                <SavingsROIStep savingsRoi={savingsRoi} />
-              ) : null}
+                {step.id === "versions" ? (
+                  <VersionStrategiesStep versions={versionStrategies} />
+                ) : null}
 
               {step.id === "crosspost" ? (
                 <CrosspostStep
@@ -3033,6 +3072,10 @@ function DashboardContent() {
                   onCopy={handleCopy}
                   copiedPlatform={copiedPlatform}
                 />
+              ) : null}
+
+              {step.id === "savings" ? (
+                <SavingsROIStep savingsRoi={savingsRoi} />
               ) : null}
 
               <StepFooter

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/lib/useAuth";
 
 const navSections = [
   {
@@ -23,6 +24,15 @@ const navSections = [
         icon: (
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        ),
+      },
+      {
+        href: "/personas",
+        label: "Personas",
+        icon: (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         ),
       },
@@ -49,6 +59,15 @@ const navSections = [
           </svg>
         ),
       },
+      {
+        href: "/admin/resultados",
+        label: "Resultados",
+        icon: (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        ),
+      },
     ],
   },
 ];
@@ -56,14 +75,17 @@ const navSections = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { user, signOut } = useAuth("");
+  const userEmail = user?.email || "usuario@email.com";
+  const userName = user?.user_metadata?.name || userEmail.split("@")[0] || "Usuario";
+  const userInitial = userName.charAt(0).toUpperCase();
 
   const isItemActive = (href: string) => {
     if (pathname === href) return true;
     if (pathname.startsWith(href + "/")) return true;
     // /resultado muestra un analisis, asi que Analisis deberia estar activo
     if (href === "/analisis" && pathname.startsWith("/resultado")) return true;
-    // /app es subir video, relacionado con Videos
-    if (href === "/videos" && pathname === "/app") return true;
+    if (href === "/analisis" && pathname === "/app") return true;
     return false;
   };
 
@@ -75,8 +97,19 @@ export default function Sidebar() {
         <span className="text-lg font-bold text-slate-900">NextHit</span>
       </Link>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-6 px-3 py-4">
+      <div className="px-3 pt-4 pb-2">
+        <Link
+          href="/app"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Nuevo video
+        </Link>
+      </div>
+
+      <nav className="flex-1 space-y-6 px-3 py-2">
         {navSections.map((section) => (
           <div key={section.title}>
             <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -118,20 +151,16 @@ export default function Sidebar() {
               style={{ width: "50%" }}
             />
           </div>
+          <Link
+            href="/precios"
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-600"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            Aumentar plan
+          </Link>
         </div>
-      </div>
-
-      {/* New Video Button */}
-      <div className="p-4 pt-3">
-        <Link
-          href="/app"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nuevo video
-        </Link>
       </div>
 
       {/* User Menu */}
@@ -142,11 +171,11 @@ export default function Sidebar() {
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-slate-50"
         >
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-sm font-bold text-white">
-            U
+            {userInitial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-medium text-slate-900">Usuario</p>
-            <p className="truncate text-xs text-slate-500">usuario@email.com</p>
+            <p className="truncate text-sm font-medium text-slate-900">{userName}</p>
+            <p className="truncate text-xs text-slate-500">{userEmail}</p>
           </div>
           <svg
             className={`h-4 w-4 text-slate-400 transition-transform ${userMenuOpen ? "rotate-180" : ""}`}
@@ -187,6 +216,20 @@ export default function Sidebar() {
               <p className="text-xs font-medium text-slate-500">Creditos disponibles</p>
               <p className="mt-1 text-lg font-bold text-slate-900">50 <span className="text-sm font-normal text-slate-500">videos</span></p>
             </div>
+            <div className="my-1 border-t border-slate-100" />
+            <button
+              type="button"
+              onClick={() => {
+                setUserMenuOpen(false);
+                void signOut();
+              }}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1" />
+              </svg>
+              Cerrar sesión
+            </button>
           </div>
         )}
       </div>

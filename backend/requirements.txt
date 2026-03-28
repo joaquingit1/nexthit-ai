@@ -6,3 +6,4 @@ python-dotenv
 httpx
 imageio-ffmpeg
 google-genai
+fpdf2
