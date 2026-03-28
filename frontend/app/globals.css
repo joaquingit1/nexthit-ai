@@ -45,7 +45,9 @@ textarea {
   html.custom-cursor-enabled select,
   html.custom-cursor-enabled summary,
   html.custom-cursor-enabled label,
-  html.custom-cursor-enabled [role="button"] {
+  html.custom-cursor-enabled [role="button"],
+  html.custom-cursor-enabled input::file-selector-button,
+  html.custom-cursor-enabled input::-webkit-file-upload-button {
     cursor: none !important;
   }
 }
