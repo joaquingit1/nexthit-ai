@@ -1370,7 +1370,7 @@ function ScoreSummaryStep({
     <section className="space-y-8">
       <StepIntro
         title="Puntaje total y resumen ejecutivo."
-        description="Antes de entrar a la curva, esta pantalla responde dos preguntas: que tan fuerte es el creativo y que esta pasando realmente en el video."
+        description="Evaluación general del video con puntaje de efectividad y análisis del contenido creativo."
       />
 
       <section className="grid gap-5 xl:grid-cols-[0.76fr_1.24fr]">
@@ -1575,7 +1575,7 @@ function GraphStep({
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <StepIntro
           title="Visualizacion de la curva de retencion."
-          description="Grafico interactivo basado en la simulacion de 100 personas. Cada linea representa un espectador y la curva principal muestra la retencion promedio proyectada."
+          description="Gráfico interactivo de 100 espectadores simulados con retención promedio proyectada."
         />
 
         <div className="flex flex-wrap gap-2">
@@ -1854,7 +1854,7 @@ function RawPersonasStep({
     <section className="space-y-8">
       <StepIntro
         title="Dataset completo de audiencia simulada."
-        description="Visualizacion de las 100 personas sinteticas con sus perfiles demograficos, momento de abandono y motivo de salida."
+        description="100 perfiles sintéticos con datos demográficos, momento de abandono y motivo de salida."
       />
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
@@ -2030,7 +2030,7 @@ function SegmentDropoffStep({
     <section className="space-y-8">
       <StepIntro
         title="Segmentacion de audiencia por comportamiento."
-        description="Analisis de cada segmento con sus tasas de retencion, momento de abandono y diagnostico de las causas principales."
+        description="Segmentos de audiencia con tasas de retención, momentos de abandono y causas principales."
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -2199,7 +2199,7 @@ function TimelineStep({
     <section className="space-y-8">
       <StepIntro
         title="Momentos clave del video con acciones concretas."
-        description="Cada anotacion esta vinculada a un segundo especifico del video para que la siguiente decision creativa sea evidente."
+        description="Anotaciones vinculadas a segundos específicos del video con acciones recomendadas."
       />
 
       <section className="result-panel overflow-hidden rounded-[2.2rem] px-6 py-8">
@@ -2327,7 +2327,7 @@ function ChangePlanStep({
     <section className="space-y-8">
       <StepIntro
         title="Plan de optimizacion del video."
-        description="Acciones especificas basadas en el analisis de retencion, con timestamps exactos y soluciones para cada problema detectado."
+        description="Acciones con timestamps exactos y soluciones para cada problema detectado."
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
@@ -2436,7 +2436,7 @@ function MediaTargetingStep({
     <section className="space-y-8">
       <StepIntro
         title="Configuracion de campanas publicitarias."
-        description="Recomendaciones de segmentacion y estructura de campana basadas en el rendimiento proyectado del video."
+        description="Segmentación y estructura de campaña basadas en el rendimiento proyectado."
       />
 
       <section className="result-panel rounded-[2rem] px-6 py-6">
@@ -2507,7 +2507,7 @@ function VersionStrategiesStep({
     <section className="space-y-8">
       <StepIntro
         title="Variantes creativas para testing."
-        description="Tres propuestas de iteracion con cambios estructurales especificos, optimizadas para diferentes segmentos de audiencia."
+        description="Tres propuestas de iteración con cambios estructurales para diferentes segmentos."
       />
 
       <div className="grid gap-4 xl:grid-cols-3">
@@ -2577,7 +2577,7 @@ function CrosspostStep({
     <section className="space-y-8">
       <StepIntro
         title="Genera posts para redes desde el transcript."
-        description="El paso final convierte la lectura del video en texto listo para usar en plataformas sociales, para que el analisis termine en distribucion y no solo en diagnostico."
+        description="Texto optimizado para redes sociales basado en el contenido del video."
       />
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
