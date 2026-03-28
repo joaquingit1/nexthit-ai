@@ -10,3 +10,5 @@ tmp/
 supabase/.temp/
 .env
 .env*
+.venv/
+**/venv/
