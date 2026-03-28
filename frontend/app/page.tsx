@@ -30,6 +30,7 @@ function getPointAtProgress(progress: number) {
 export default function LandingPage() {
   const [progress, setProgress] = useState(0);
   const touchStartY = useRef<number | null>(null);
+  const clickAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -74,6 +75,33 @@ export default function LandingPage() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  useEffect(() => {
+    const audio = new Audio("/sounds/click.mp3");
+    audio.preload = "auto";
+    clickAudioRef.current = audio;
+
+    return () => {
+      if (clickAudioRef.current) {
+        clickAudioRef.current.pause();
+        clickAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const playLandingClick = () => {
+    const audio = clickAudioRef.current;
+    if (!audio) {
+      return;
+    }
+
+    try {
+      audio.currentTime = 0;
+      void audio.play();
+    } catch {
+      // Ignore autoplay/playback issues and continue navigation.
+    }
+  };
 
   const arrowPoint = getPointAtProgress(progress);
   const graphShift = progress * -70;
@@ -136,6 +164,7 @@ export default function LandingPage() {
 
         <Link
           href="/app"
+          onClick={playLandingClick}
           className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
           Analizar video
@@ -262,6 +291,7 @@ export default function LandingPage() {
             >
               <Link
                 href="/app"
+                onClick={playLandingClick}
                 className="inline-flex items-center justify-center rounded-full bg-[#2563eb] px-9 py-4 text-lg font-semibold text-white shadow-[0_18px_45px_rgba(37,99,235,0.35)] transition hover:-translate-y-0.5 hover:bg-[#1d4ed8]"
               >
                 Analizar video
