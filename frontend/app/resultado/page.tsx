@@ -114,12 +114,6 @@ const ANALYSIS_STEPS = [
     eyebrow: "Paso 8",
     description: "Tres propuestas de iteracion del video optimizadas para diferentes objetivos.",
   },
-  {
-    id: "export",
-    title: "Exportar Analisis",
-    eyebrow: "Paso 9",
-    description: "Descarga el resumen ejecutivo en PDF o exporta todos los datos en formato CSV.",
-  },
 ] as const;
 
 const GRAPH_WIDTH = 1100;
@@ -1267,6 +1261,18 @@ function AnalysisStepper({
   maxReachedStep: number;
   onStepClick: (step: number) => void;
 }) {
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+
+  const handleExportPdf = () => {
+    setExportMenuOpen(false);
+    window.alert("Funcion de exportar PDF en desarrollo. Proximamente disponible.");
+  };
+
+  const handleExportCsv = () => {
+    setExportMenuOpen(false);
+    window.alert("Funcion de exportar CSV en desarrollo. Proximamente disponible.");
+  };
+
   return (
     <section className="sticky top-4 z-20 rounded-[1.8rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_50px_rgba(148,163,184,0.14)] backdrop-blur-xl">
       <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-slate-200/80">
@@ -1275,35 +1281,92 @@ function AnalysisStepper({
           style={{ width: `${((maxReachedStep + 1) / ANALYSIS_STEPS.length) * 100}%` }}
         />
       </div>
-      <div className="grid gap-2 md:grid-cols-4 xl:grid-cols-8">
-        {ANALYSIS_STEPS.map((step, index) => {
-          const active = index === currentStep;
-          const complete = index < currentStep;
-          const reachable = index <= maxReachedStep;
+      <div className="flex gap-2">
+        <div className="grid flex-1 gap-2 md:grid-cols-4 xl:grid-cols-8">
+          {ANALYSIS_STEPS.map((step, index) => {
+            const active = index === currentStep;
+            const complete = index < currentStep;
+            const reachable = index <= maxReachedStep;
 
-          return (
-            <button
-              key={step.id}
-              type="button"
-              onClick={() => reachable && onStepClick(index)}
-              disabled={!reachable}
-              className={`rounded-[1.2rem] border px-3 py-3 text-left transition ${
-                active
-                  ? "border-slate-900 bg-slate-950 text-white"
-                  : complete
-                    ? "border-cyan-200 bg-cyan-50/85 text-cyan-950 hover:border-cyan-300"
-                    : reachable
-                      ? "border-slate-200/80 bg-white/60 text-slate-600 hover:border-slate-300"
-                      : "cursor-not-allowed border-slate-100 bg-slate-50/40 text-slate-400 opacity-60"
-              }`}
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-70">
-                {step.eyebrow}
-              </p>
-              <p className="mt-2 font-semibold">{step.title}</p>
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => reachable && onStepClick(index)}
+                disabled={!reachable}
+                className={`rounded-[1.2rem] border px-3 py-3 text-left transition ${
+                  active
+                    ? "border-slate-900 bg-slate-950 text-white"
+                    : complete
+                      ? "border-cyan-200 bg-cyan-50/85 text-cyan-950 hover:border-cyan-300"
+                      : reachable
+                        ? "border-slate-200/80 bg-white/60 text-slate-600 hover:border-slate-300"
+                        : "cursor-not-allowed border-slate-100 bg-slate-50/40 text-slate-400 opacity-60"
+                }`}
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-70">
+                  {step.eyebrow}
+                </p>
+                <p className="mt-2 font-semibold">{step.title}</p>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Export Dropdown Button */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setExportMenuOpen(!exportMenuOpen)}
+            className="flex h-full items-center gap-2 rounded-[1.2rem] border border-slate-200/80 bg-white/60 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span className="hidden lg:inline">Exportar</span>
+            <svg className={`h-4 w-4 transition-transform ${exportMenuOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {exportMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setExportMenuOpen(false)} />
+              <div className="absolute right-0 top-full z-20 mt-2 w-56 rounded-xl border border-slate-200 bg-white py-2 shadow-lg">
+                <button
+                  type="button"
+                  onClick={handleExportPdf}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100">
+                    <svg className="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">Exportar PDF</p>
+                    <p className="text-xs text-slate-500">Resumen ejecutivo</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
+                    <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">Exportar CSV</p>
+                    <p className="text-xs text-slate-500">Datos completos</p>
+                  </div>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -2564,179 +2627,6 @@ function VersionStrategiesStep({
   );
 }
 
-function ExportStep({
-  analysisId,
-  fileName,
-}: {
-  analysisId: string;
-  fileName: string;
-}) {
-  const [exportingPdf, setExportingPdf] = useState(false);
-  const [exportingCsv, setExportingCsv] = useState(false);
-
-  const handleExportPdf = async () => {
-    setExportingPdf(true);
-    // TODO: Implement PDF export backend
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setExportingPdf(false);
-    window.alert("Funcion de exportar PDF en desarrollo. Proximamente disponible.");
-  };
-
-  const handleExportCsv = async () => {
-    setExportingCsv(true);
-    // TODO: Implement CSV export backend
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setExportingCsv(false);
-    window.alert("Funcion de exportar CSV en desarrollo. Proximamente disponible.");
-  };
-
-  return (
-    <section className="space-y-8">
-      <StepIntro
-        title="Exporta tu analisis."
-        description="Descarga el resumen ejecutivo en PDF o exporta todos los datos del analisis en formato CSV."
-      />
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* PDF Export Card */}
-        <article className="result-panel rounded-[1.8rem] border-2 border-red-200 bg-red-50 px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500">
-              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-600">PDF</span>
-          </div>
-          <h3 className="mt-4 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
-            Resumen Ejecutivo
-          </h3>
-          <p className="mt-2 text-sm leading-7 text-slate-600">
-            Documento PDF con el puntaje general, resumen narrativo, curva de retencion y recomendaciones principales. Ideal para presentaciones y reportes.
-          </p>
-          <div className="mt-5 space-y-2">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
-              </svg>
-              Puntaje y metricas clave
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
-              </svg>
-              Grafico de retencion
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
-              </svg>
-              Top 3 recomendaciones
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleExportPdf}
-            disabled={exportingPdf}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {exportingPdf ? (
-              <>
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Generando PDF...
-              </>
-            ) : (
-              <>
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Descargar PDF
-              </>
-            )}
-          </button>
-        </article>
-
-        {/* CSV Export Card */}
-        <article className="result-panel rounded-[1.8rem] border-2 border-emerald-200 bg-emerald-50 px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500">
-              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-600">CSV</span>
-          </div>
-          <h3 className="mt-4 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
-            Datos Completos
-          </h3>
-          <p className="mt-2 text-sm leading-7 text-slate-600">
-            Archivo CSV con todos los datos del analisis: 100 personas sinteticas, curva de retencion, segmentos y recomendaciones. Para analisis en Excel o integraciones.
-          </p>
-          <div className="mt-5 space-y-2">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
-              </svg>
-              100 personas con perfil completo
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
-              </svg>
-              Puntos de abandono por segundo
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
-              </svg>
-              Todas las recomendaciones
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            disabled={exportingCsv}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {exportingCsv ? (
-              <>
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Generando CSV...
-              </>
-            ) : (
-              <>
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Descargar CSV
-              </>
-            )}
-          </button>
-        </article>
-      </div>
-
-      {/* File Info */}
-      <div className="rounded-[1.4rem] border border-slate-200/80 bg-white/80 px-5 py-4">
-        <div className="flex items-center gap-3">
-          <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <p className="text-sm font-medium text-slate-700">Archivo analizado: <span className="font-semibold">{fileName}</span></p>
-            <p className="text-xs text-slate-500">ID: {analysisId}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function CrosspostStep({
   posts,
   selectedPlatform,
@@ -3118,13 +3008,6 @@ function DashboardContent() {
 
               {step.id === "versions" ? (
                 <VersionStrategiesStep versions={versionStrategies} />
-              ) : null}
-
-              {step.id === "export" ? (
-                <ExportStep
-                  analysisId={analysis.id}
-                  fileName={analysis.analysis.clip.fileName}
-                />
               ) : null}
 
               <StepFooter
