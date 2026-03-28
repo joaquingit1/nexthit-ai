@@ -9,7 +9,7 @@ from schemas import final_copy_schema, strategic_outputs_schema
 from services.groq_client import call_groq_chat_json, call_groq_text_completion
 from services.retention import build_platform_fit_rows
 from services.transcript_signals import derive_transcript_signals, pick_primary_moment
-from system_prompts import FINAL_COPY_SPEC, STRATEGIC_OUTPUTS_SPEC, VIDEO_SUMMARY_SPEC
+from system_prompts import FINAL_COPY_SPEC, get_strategic_outputs_spec, get_video_summary_spec
 from utils import round_value, summary_has_placeholder_text
 
 
@@ -333,7 +333,7 @@ async def synthesize_video_summary(
         return None
 
     try:
-        spec = VIDEO_SUMMARY_SPEC
+        spec = get_video_summary_spec()
         transcript_signals = derive_transcript_signals(transcript, duration_seconds)
         prompt_payload = build_compact_summary_payload(
             creative_context=creative_context,
@@ -466,7 +466,7 @@ async def synthesize_strategic_outputs(
     segment_diagnoses: list[dict[str, Any]],
 ) -> dict[str, Any]:
     """Synthesize strategic outputs using Groq LLM."""
-    spec = STRATEGIC_OUTPUTS_SPEC
+    spec = get_strategic_outputs_spec()
     fallback = {
         "change_plan": change_plan,
         "media_targeting": default_media_targeting(

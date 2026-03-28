@@ -14,8 +14,11 @@ const bodyFont = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "AXIOM//LENS",
-  description: "Futuristic video intelligence dashboard for short-form analysis demos.",
+  title: {
+    default: "NextHit",
+    template: "%s - NextHit",
+  },
+  description: "Plataforma de analisis predictivo para videos cortos de marketing.",
 };
 
 export default function RootLayout({

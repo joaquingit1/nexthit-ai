@@ -106,6 +106,42 @@ export default function LandingPage() {
         touchStartY.current = null;
       }}
     >
+      {/* Navbar */}
+      <nav className="absolute left-1/2 top-4 z-50 flex w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 items-center justify-between rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.06)] backdrop-blur-md md:px-6">
+        <Link href="/" className="flex items-center gap-2">
+          <img src="/logo.svg" alt="NextHit" className="h-8 w-auto" />
+          <span className="text-lg font-bold text-slate-900">NextHit</span>
+        </Link>
+
+        <div className="flex flex-1 items-center gap-6 pl-8">
+          <Link
+            href="/funcionalidades"
+            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
+            Funcionalidades
+          </Link>
+          <Link
+            href="/casos-de-uso"
+            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
+            Casos de Uso
+          </Link>
+          <Link
+            href="/precios"
+            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
+            Precios
+          </Link>
+        </div>
+
+        <Link
+          href="/app"
+          className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+        >
+          Analizar video
+        </Link>
+      </nav>
+
       <section className="landing-stage relative h-screen overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(52,211,153,0.12),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,247,250,0.98))]" />
 
@@ -205,16 +241,16 @@ export default function LandingPage() {
           style={{ transform: `translateY(${contentShift}px)` }}
         >
           <div className="max-w-4xl space-y-6">
-            <span className="inline-flex rounded-full border border-emerald-200 bg-white/85 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 shadow-[0_10px_30px_rgba(22,163,74,0.08)] backdrop-blur">
-              Crecimiento inteligente
+            <span className="inline-flex rounded-full border border-blue-200 bg-white/85 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-blue-700 shadow-[0_10px_30px_rgba(37,99,235,0.08)] backdrop-blur">
+              Análisis predictivo de creativo
             </span>
 
             <h1 className="font-display text-5xl font-semibold tracking-[-0.04em] text-slate-950 md:text-7xl">
-              Lleva tu empresa al siguiente nivel
+              Predecí el rendimiento de tu video antes de publicar
             </h1>
 
             <p className="mx-auto max-w-2xl text-lg leading-8 text-slate-600 md:text-2xl md:leading-10">
-              Prueba de pagina para la hackathon
+              Simulamos 100 espectadores para analizar retención, detectar puntos de abandono y optimizar tu contenido.
             </p>
 
             <div
@@ -228,14 +264,14 @@ export default function LandingPage() {
                 href="/app"
                 className="inline-flex items-center justify-center rounded-full bg-[#2563eb] px-9 py-4 text-lg font-semibold text-white shadow-[0_18px_45px_rgba(37,99,235,0.35)] transition hover:-translate-y-0.5 hover:bg-[#1d4ed8]"
               >
-                Continuar
+                Analizar video
               </Link>
             </div>
           </div>
         </div>
 
         <div className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-center text-sm text-slate-500">
-          <p>{hasReachedEnd ? "Listo para continuar" : "Desliza para impulsar la grafica"}</p>
+          <p>{hasReachedEnd ? "Listo para analizar" : "Desliza para ver más"}</p>
         </div>
       </section>
     </main>

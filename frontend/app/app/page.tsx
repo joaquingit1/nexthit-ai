@@ -13,12 +13,13 @@ import {
 } from "@/lib/analysis";
 import { buildBrowserBackendUrl, getPublicBackendBaseUrl } from "@/lib/backend";
 import { supabase } from "@/lib/supabase";
+import UserPersonaFilters, { defaultFilters, type PersonaFilters } from "@/components/UserPersonaFilters";
 
 function storeAnalysisResult(router: ReturnType<typeof useRouter>, data: AnalysisResponse) {
   const serialized = JSON.stringify(data);
   window.localStorage.setItem(ANALYSIS_STORAGE_KEY, serialized);
   window.localStorage.setItem(`${ANALYSIS_STORAGE_PREFIX}${data.id}`, serialized);
-  router.push(`/resultado?id=${encodeURIComponent(data.id)}`);
+  router.push(`/resultado?id=${encodeURIComponent(data.id)}&new=1`);
 }
 
 export default function AppMain() {
@@ -26,8 +27,44 @@ export default function AppMain() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
-  const [statusText, setStatusText] = useState("Listo para subir tu video.");
-  const [streamNote, setStreamNote] = useState("Todavia no se inicio ningun job.");
+  const [statusText, setStatusText] = useState("Listo para analizar");
+  const [streamNote, setStreamNote] = useState("Subi un video para comenzar el analisis.");
+  const [showPersonaFilters, setShowPersonaFilters] = useState(false);
+  const [personaFilters, setPersonaFilters] = useState<PersonaFilters>(defaultFilters);
+
+  const getActiveFiltersCount = () => {
+    return Object.values(personaFilters).reduce((acc, arr) => acc + arr.length, 0);
+  };
+
+  const buildPersonaPromptFromFilters = (filters: PersonaFilters): string | null => {
+    const parts: string[] = [];
+
+    if (filters.ageRanges.length > 0) {
+      parts.push(`Rango de edad: ${filters.ageRanges.join(", ")}`);
+    }
+    if (filters.genders.length > 0) {
+      parts.push(`Genero: ${filters.genders.join(", ")}`);
+    }
+    if (filters.incomeBrackets.length > 0) {
+      parts.push(`Nivel de ingresos: ${filters.incomeBrackets.join(", ")}`);
+    }
+    if (filters.purchaseIntents.length > 0) {
+      parts.push(`Intencion de compra: ${filters.purchaseIntents.join(", ")}`);
+    }
+    if (filters.socialStatuses.length > 0) {
+      parts.push(`Perfil social: ${filters.socialStatuses.join(", ")}`);
+    }
+    if (filters.interests.length > 0) {
+      parts.push(`Intereses: ${filters.interests.join(", ")}`);
+    }
+    if (filters.platforms.length > 0) {
+      parts.push(`Plataformas principales: ${filters.platforms.join(", ")}`);
+    }
+
+    if (parts.length === 0) return null;
+
+    return `Genera personas sinteticas con las siguientes caracteristicas:\n${parts.join("\n")}`;
+  };
 
   const waitForStreamedResult = async (job: AnalysisJobEnvelope) =>
     new Promise<AnalysisResponse>((resolve, reject) => {
@@ -54,10 +91,23 @@ export default function AppMain() {
         resolve((await resultResponse.json()) as AnalysisResponse);
       };
 
+      const stageLabels: Record<string, string> = {
+        "job.created": "Iniciando analisis...",
+        "upload.validated": "Video recibido",
+        "transcription.completed": "Audio transcrito",
+        "video.uploaded_to_gemini": "Subiendo video a Gemini...",
+        "multimodal_timeline.completed": "Leyendo visuales y texto en pantalla...",
+        "video_analysis.completed": "Puntuando el video...",
+        "creative_context.completed": "Evaluando contenido",
+        "persona.batch.completed": "Simulando audiencia",
+        "demographics.completed": "Procesando segmentos",
+        "analysis.completed": "Analisis completado",
+      };
+
       const handleStreamEvent = (rawEvent: MessageEvent<string>) => {
         const event = JSON.parse(rawEvent.data) as AnalysisStreamEvent;
         setProgressPercent(event.progress_percent ?? 0);
-        setStatusText(event.stage?.replace(/\./g, " ") || "Procesando analisis");
+        setStatusText(stageLabels[event.stage ?? ""] || "Procesando...");
 
         if (event.type === "persona.batch.completed") {
           const batchIndex =
@@ -68,8 +118,8 @@ export default function AppMain() {
               : null;
           setStreamNote(
             batchIndex
-              ? `Lote de personas ${batchIndex}/5 completado y emitido.`
-              : "Se completo un lote de personas.",
+              ? `Simulando grupo ${batchIndex} de 5...`
+              : "Simulando audiencia...",
           );
         }
 
@@ -105,7 +155,7 @@ export default function AppMain() {
       source.addEventListener("job.failed", handleStreamEvent as EventListener);
       source.onerror = () => {
         if (!settled) {
-          setStreamNote("Esperando que el stream del backend se reconecte...");
+          setStreamNote("Reconectando...");
         }
       };
     });
@@ -120,8 +170,8 @@ export default function AppMain() {
 
     setLoading(true);
     setProgressPercent(3);
-    setStatusText("Preparando ticket de subida...");
-    setStreamNote("El navegador subira el archivo directamente a Supabase.");
+    setStatusText("Preparando...");
+    setStreamNote("Iniciando proceso de analisis.");
 
     try {
       if (!supabase) {
@@ -151,7 +201,7 @@ export default function AppMain() {
 
       const uploadTicket = (await uploadInitResponse.json()) as UploadInitResponse;
       setProgressPercent(10);
-      setStatusText("Subiendo video directamente a Supabase...");
+      setStatusText("Subiendo video...");
 
       const { error: uploadError } = await supabase.storage
         .from(uploadTicket.bucket)
@@ -165,15 +215,18 @@ export default function AppMain() {
       }
 
       setProgressPercent(18);
-      setStatusText("Creando job de analisis en el backend...");
-      setStreamNote("El backend va a transcribir, puntuar, simular 100 personas y emitir el progreso.");
+      setStatusText("Iniciando analisis...");
+      setStreamNote("Procesando tu video.");
 
+      const personaPrompt = buildPersonaPromptFromFilters(personaFilters);
       const jobResponse = await fetch(createJobUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           video_id: uploadTicket.video_id,
           storage_path: uploadTicket.object_path,
+          persona_filters: getActiveFiltersCount() > 0 ? personaFilters : undefined,
+          persona_prompt: personaPrompt,
         }),
       });
 
@@ -183,8 +236,8 @@ export default function AppMain() {
 
       const job = (await jobResponse.json()) as AnalysisJobEnvelope;
       setProgressPercent(job.progress_percent);
-      setStatusText(job.stage);
-      setStreamNote("Escuchando los lotes de personas en vivo...");
+      setStatusText("Analizando contenido...");
+      setStreamNote("Esto puede tomar unos segundos.");
 
       const finalAnalysis = await waitForStreamedResult(job);
       storeAnalysisResult(router, finalAnalysis);
@@ -197,40 +250,39 @@ export default function AppMain() {
   };
 
   return (
-    <main className="min-h-screen px-4 py-12">
-      <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-6xl items-center">
-        <div className="grid w-full gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <section className="space-y-6">
+    <div className="grid min-h-[calc(100vh-3rem)] gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+      <section className="space-y-6">
             <span className="inline-flex rounded-full border border-cyan-200 bg-white/80 px-4 py-2 text-sm font-semibold text-cyan-950">
-              AXIOM//LENS ingreso
+              NextHit
             </span>
             <h1 className="font-display text-4xl font-bold tracking-tight md:text-5xl">
-              Subi el video, segui el analisis en vivo y aterriza en un informe completo.
+              Predeci el rendimiento de tu video antes de publicar.
             </h1>
             <p className="max-w-xl text-lg text-slate-600">
-              El navegador sube directo a Supabase, el backend usa Groq Whisper para transcripcion con timestamps, Gemini para leer el video y enriquecerlo visualmente, simula 100 personas en lotes y emite progreso hasta que el informe final esta listo.
+              Subi tu video y obtene un analisis multimodal completo con prediccion de retencion, segmentacion de audiencia y recomendaciones accionables.
             </p>
             <div className="grid gap-4">
               {[
-                "La subida directa a storage evita los limites de body de Vercel.",
-                "Gemini convierte el transcript en una linea de tiempo multimodal con lo que se dice y lo que se ve.",
-                "Los lotes de personas se emiten a medida que terminan en vez de esperar 100 requests separadas.",
-                "El payload final sigue siendo compatible con /resultado y ahora trae transcript, visuales y audiencia mas ricos.",
+                { icon: "🎯", text: "Simulacion de 100 personas con diferentes perfiles" },
+                { icon: "🎬", text: "Gemini analiza lo que se ve y lo que se dice en el video" },
+                { icon: "📊", text: "Curva de retencion proyectada segundo a segundo" },
+                { icon: "💡", text: "Recomendaciones concretas para mejorar tu contenido" },
               ].map((item) => (
                 <div
-                  key={item}
-                  className="rounded-2xl border border-white/70 bg-white/70 p-4 shadow-sm"
+                  key={item.text}
+                  className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-sm"
                 >
-                  <p className="text-slate-700">{item}</p>
+                  <span className="text-2xl">{item.icon}</span>
+                  <p className="text-slate-700">{item.text}</p>
                 </div>
               ))}
             </div>
           </section>
 
           <section className="card-surface rounded-[2rem] border border-white/70 p-8 shadow-soft">
-            <h2 className="font-display text-3xl font-bold text-ink">Subi el creativo</h2>
+            <h2 className="font-display text-3xl font-bold text-ink">Analiza tu video</h2>
             <p className="mt-2 text-slate-500">
-              Agrega el video y lo vamos a transcribir, simular contra la audiencia y convertir en informe.
+              Subi tu video y recibiras un informe detallado con metricas de rendimiento y recomendaciones.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-6">
@@ -244,6 +296,43 @@ export default function AppMain() {
                   className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-700 file:mr-4 file:rounded-full file:border-0 file:bg-sky-50 file:px-4 file:py-2 file:font-semibold file:text-sky-800 hover:file:bg-sky-100"
                   onChange={(event) => setArchivo(event.target.files?.[0] || null)}
                 />
+              </div>
+
+              {/* User Persona Config */}
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Audiencia objetivo
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPersonaFilters(true)}
+                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+                      <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">
+                        {getActiveFiltersCount() > 0
+                          ? `${getActiveFiltersCount()} filtros configurados`
+                          : "Audiencia general"
+                        }
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {getActiveFiltersCount() > 0
+                          ? "Click para modificar"
+                          : "Click para personalizar la simulacion"
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
               </div>
 
               <div className="rounded-[1.6rem] border border-slate-200/80 bg-white/80 p-4">
@@ -267,12 +356,18 @@ export default function AppMain() {
                 disabled={loading}
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-ink px-6 py-4 text-lg font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? "Ejecutando el pipeline..." : "Analizar video"}
+                {loading ? "Analizando..." : "Analizar video"}
               </button>
             </form>
-          </section>
-        </div>
-      </div>
-    </main>
+      </section>
+
+      {/* User Persona Filters Popup */}
+      <UserPersonaFilters
+        isOpen={showPersonaFilters}
+        onClose={() => setShowPersonaFilters(false)}
+        filters={personaFilters}
+        onFiltersChange={setPersonaFilters}
+      />
+    </div>
   );
 }

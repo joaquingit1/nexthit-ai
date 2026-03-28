@@ -467,7 +467,7 @@ function createDemoAnalysis() {
   return createAnalysisPayload({
     texto:
       "Este video muestra como un equipo creativo puede predecir la retencion antes de lanzar medios pagos. El sistema desarma el clip en voz, ritmo, visuales y texto en pantalla, simula 100 personas espectadoras y convierte esas senales en estrategia de plataforma y crecimiento pago.",
-    fileName: "axiom-lens-demo.mp4",
+    fileName: "nexthit-demo.mp4",
     fileType: "video/mp4",
     fileSize: 8_400_000,
     backendMessage:
@@ -2494,24 +2494,30 @@ function StepFooter({
   onBack,
   onNext,
   onReturnToStory,
+  isNewUpload,
 }: {
   currentStep: number;
   onBack: () => void;
   onNext: () => void;
   onReturnToStory: () => void;
+  isNewUpload: boolean;
 }) {
   const isFirst = currentStep === 0;
   const isLast = currentStep === ANALYSIS_STEPS.length - 1;
 
   return (
     <div className="flex flex-col gap-3 border-t border-slate-200/80 pt-6 sm:flex-row sm:items-center sm:justify-between">
-      <button
-        type="button"
-        onClick={onReturnToStory}
-        className="text-sm font-semibold text-slate-500 transition hover:text-slate-900"
-      >
-        Volver a la explicación
-      </button>
+      {isNewUpload ? (
+        <button
+          type="button"
+          onClick={onReturnToStory}
+          className="text-sm font-semibold text-slate-500 transition hover:text-slate-900"
+        >
+          Volver a la explicación
+        </button>
+      ) : (
+        <div />
+      )}
 
       <div className="flex flex-wrap gap-3">
         <button
@@ -2540,9 +2546,10 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const analysisId = searchParams.get("id");
   const demoMode = searchParams.get("demo");
+  const isNewUpload = searchParams.get("new") === "1";
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [ready, setReady] = useState(false);
-  const [screenMode, setScreenMode] = useState<ScreenMode>("story");
+  const [screenMode, setScreenMode] = useState<ScreenMode>(isNewUpload ? "story" : "analysis");
   const [currentStep, setCurrentStep] = useState(0);
   const [viewerMode, setViewerMode] = useState<ViewerMode>("all");
   const [selectedPlatform, setSelectedPlatform] = useState("LinkedIn");
@@ -2669,7 +2676,7 @@ function DashboardContent() {
   if (!ready) {
     return (
       <main className="result-shell min-h-screen px-4 py-8">
-        <div className="mx-auto max-w-7xl space-y-5">
+        <div className="space-y-5">
           <div className="placeholder-wave h-24 rounded-[2rem]" />
           <div className="placeholder-wave h-64 rounded-[2rem]" />
           <div className="placeholder-wave h-[460px] rounded-[2rem]" />
@@ -2698,7 +2705,7 @@ function DashboardContent() {
 
   return (
     <main className="result-shell min-h-screen overflow-x-hidden px-4 py-5 md:px-6 md:py-6">
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-6">
         {screenMode === "story" ? (
           <StoryScreen analysis={analysis.analysis} onProceed={() => setScreenMode("analysis")} />
         ) : (
@@ -2720,13 +2727,15 @@ function DashboardContent() {
                 >
                   Analizar otro video
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setScreenMode("story")}
-                  className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                >
-                  Volver a la explicación
-                </button>
+                {isNewUpload ? (
+                  <button
+                    type="button"
+                    onClick={() => setScreenMode("story")}
+                    className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  >
+                    Volver a la explicación
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -2787,6 +2796,7 @@ function DashboardContent() {
                   )
                 }
                 onReturnToStory={() => setScreenMode("story")}
+                isNewUpload={isNewUpload}
               />
             </section>
           </section>

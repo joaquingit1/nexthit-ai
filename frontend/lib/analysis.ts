@@ -1168,7 +1168,7 @@ export function createAnalysisPayload(input: CreateAnalysisInput): AnalysisRespo
     video_id: generatedId,
     job_id: generatedId,
     analysis: {
-      productName: "AXIOM//LENS",
+      productName: "NextHit",
       sessionLabel: `Sesion ${generatedId.replace("analysis-", "").toUpperCase()}`,
       generatedAt: new Date().toISOString(),
       transcriptText: text,
