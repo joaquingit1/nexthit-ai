@@ -244,9 +244,8 @@ export default function AppMain() {
   };
 
   return (
-    <div className="flex w-full min-h-[calc(100vh-3rem)] items-center">
-      <div className="grid w-full gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <section className="space-y-6">
+    <div className="grid min-h-[calc(100vh-3rem)] gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+      <section className="space-y-6">
             <span className="inline-flex rounded-full border border-cyan-200 bg-white/80 px-4 py-2 text-sm font-semibold text-cyan-950">
               NextHit
             </span>
@@ -353,8 +352,7 @@ export default function AppMain() {
                 {loading ? "Analizando..." : "Analizar video"}
               </button>
             </form>
-          </section>
-        </div>
+      </section>
 
       {/* User Persona Filters Popup */}
       <UserPersonaFilters

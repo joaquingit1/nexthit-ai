@@ -3015,7 +3015,7 @@ function DashboardContent() {
   if (!ready) {
     return (
       <main className="result-shell min-h-screen px-4 py-8">
-        <div className="mx-auto max-w-7xl space-y-5">
+        <div className="space-y-5">
           <div className="placeholder-wave h-24 rounded-[2rem]" />
           <div className="placeholder-wave h-64 rounded-[2rem]" />
           <div className="placeholder-wave h-[460px] rounded-[2rem]" />
@@ -3044,7 +3044,7 @@ function DashboardContent() {
 
   return (
     <main className="result-shell min-h-screen overflow-x-hidden px-4 py-5 md:px-6 md:py-6">
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-6">
         {screenMode === "story" ? (
           <StoryScreen analysis={analysis.analysis} onProceed={() => setScreenMode("analysis")} />
         ) : (
