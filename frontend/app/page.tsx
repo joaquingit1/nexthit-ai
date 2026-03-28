@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const PATH_POINTS = [
@@ -28,9 +29,12 @@ function getPointAtProgress(progress: number) {
 }
 
 export default function LandingPage() {
+  const router = useRouter();
   const [progress, setProgress] = useState(0);
   const touchStartY = useRef<number | null>(null);
   const clickAudioRef = useRef<HTMLAudioElement | null>(null);
+  const navigateTimeoutRef = useRef<number | null>(null);
+  const navigatingRef = useRef(false);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -77,11 +81,18 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+    router.prefetch("/app");
+  }, [router]);
+
+  useEffect(() => {
     const audio = new Audio("/sounds/click.mp3");
     audio.preload = "auto";
     clickAudioRef.current = audio;
 
     return () => {
+      if (navigateTimeoutRef.current !== null) {
+        window.clearTimeout(navigateTimeoutRef.current);
+      }
       if (clickAudioRef.current) {
         clickAudioRef.current.pause();
         clickAudioRef.current = null;
@@ -89,18 +100,40 @@ export default function LandingPage() {
     };
   }, []);
 
-  const playLandingClick = () => {
-    const audio = clickAudioRef.current;
-    if (!audio) {
+  const playLandingClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
       return;
     }
 
-    try {
-      audio.currentTime = 0;
-      void audio.play();
-    } catch {
-      // Ignore autoplay/playback issues and continue navigation.
+    event.preventDefault();
+
+    if (navigatingRef.current) {
+      return;
     }
+
+    navigatingRef.current = true;
+    const audio = clickAudioRef.current;
+
+    if (audio) {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+        void audio.play();
+      } catch {
+        // Ignore playback issues and continue navigation.
+      }
+    }
+
+    navigateTimeoutRef.current = window.setTimeout(() => {
+      router.push("/app");
+    }, 110);
   };
 
   const arrowPoint = getPointAtProgress(progress);
