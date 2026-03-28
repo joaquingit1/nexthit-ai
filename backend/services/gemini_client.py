@@ -31,7 +31,8 @@ async def _call_with_retries(func, *, attempts: int = 3, base_delay_seconds: flo
 def _build_http_options(timeout_seconds: float) -> types.HttpOptions:
     options: dict[str, Any] = {
         "api_version": "v1beta",
-        "timeout": int(max(timeout_seconds, 1)),
+        # google-genai expects timeout in milliseconds.
+        "timeout": int(max(timeout_seconds, 1) * 1000),
     }
     if GEMINI_BASE_URL:
         options["base_url"] = GEMINI_BASE_URL
