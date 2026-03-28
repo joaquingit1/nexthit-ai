@@ -70,55 +70,49 @@ const ANALYSIS_STEPS = [
     id: "score",
     title: "Puntaje y Resumen",
     eyebrow: "Paso 1",
-    description: "Abrimos con el puntaje total y un resumen ejecutivo completo del video.",
+    description: "Puntaje general del video con metricas clave de rendimiento y resumen ejecutivo.",
   },
   {
     id: "raw-personas",
     title: "100 Personas Sinteticas",
     eyebrow: "Paso 2",
-    description: "Mostramos primero la materia prima: nombres, atributos, momento de abandono y motivo de salida.",
+    description: "Dataset completo de audiencia simulada: perfil demografico, momento de abandono y motivo.",
   },
   {
     id: "segment-dropoff",
-    title: "Drop-Off por Segmento",
+    title: "Analisis por Segmento",
     eyebrow: "Paso 3",
-    description: "Agrupamos arquetipos y demografias para ver quien se queda mas, quien se cae y por que.",
+    description: "Segmentacion de audiencia por arquetipos con tasas de retencion y diagnostico de abandono.",
   },
   {
     id: "retention",
-    title: "Grafico de Retencion",
+    title: "Curva de Retencion",
     eyebrow: "Paso 4",
-    description: "La curva final se apoya en las 100 personas sinteticas y en el tiempo real del video.",
+    description: "Visualizacion de la retencion proyectada basada en simulacion de 100 personas.",
   },
   {
     id: "timeline",
-    title: "Momentos del Video",
+    title: "Momentos Clave",
     eyebrow: "Paso 5",
-    description: "Marcamos los momentos exactos del edit que empujan o frenan la retencion.",
+    description: "Mapa temporal de momentos criticos que impactan la retencion del video.",
   },
   {
     id: "changes",
-    title: "Que Cambiar",
+    title: "Plan de Cambios",
     eyebrow: "Paso 6",
-    description: "Traducimos transcript, curva y razones de abandono en cambios concretos al video.",
+    description: "Recomendaciones accionables basadas en el analisis de retencion y feedback de audiencia.",
   },
   {
     id: "targeting",
-    title: "Targeting de Medios",
+    title: "Estrategia de Medios",
     eyebrow: "Paso 7",
-    description: "Conectamos las debilidades creativas con una recomendacion de compra de medios.",
+    description: "Configuracion de segmentacion para campanas publicitarias basada en el analisis.",
   },
   {
     id: "versions",
-    title: "Versiones A/B/C",
+    title: "Variantes Creativas",
     eyebrow: "Paso 8",
-    description: "Proponemos tres versiones claramente distintas para iterar el creativo.",
-  },
-  {
-    id: "crosspost",
-    title: "Posts para Redes",
-    eyebrow: "Paso 9",
-    description: "Generamos posts de texto listos a partir del transcript y del analisis.",
+    description: "Tres propuestas de iteracion del video optimizadas para diferentes objetivos.",
   },
 ] as const;
 
@@ -527,8 +521,8 @@ function derivePersonaInsights(
       );
       const verdict =
         retentionPercent >= 78
-          ? `watches ${retentionPercent}%`
-          : `leaves at ${formatMoment(averageDrop)}`;
+          ? `mira ${retentionPercent}%`
+          : `abandona en ${formatMoment(averageDrop)}`;
 
       return {
         name,
@@ -537,7 +531,7 @@ function derivePersonaInsights(
         dropOffSecond: Math.round(averageDrop * 10) / 10,
         dropOffLabel: formatMoment(averageDrop),
         verdict,
-        angle: retentionPercent >= 70 ? strongestAngle : "Needs a faster value reveal",
+        angle: retentionPercent >= 70 ? strongestAngle : "Necesita revelar el valor mas rapido",
         tag: "Senal de audiencia",
       } satisfies PersonaInsight;
     })
@@ -564,8 +558,8 @@ function derivePersonaInsightsFromBackend(
       dropOffLabel: formatMoment(persona.dropoff_second),
       verdict:
         persona.retention_percent >= 78
-          ? `watches ${persona.retention_percent}%`
-          : `leaves at ${formatMoment(persona.dropoff_second)}`,
+          ? `mira ${persona.retention_percent}%`
+          : `abandona en ${formatMoment(persona.dropoff_second)}`,
       angle: strongestAngle,
       tag: index === 0 ? "Fit principal" : index === 1 ? "Fit secundario" : "Senal de audiencia",
     } satisfies PersonaInsight));
@@ -1260,38 +1254,48 @@ function StoryScreen({
 
 function AnalysisStepper({
   currentStep,
+  maxReachedStep,
+  onStepClick,
 }: {
   currentStep: number;
+  maxReachedStep: number;
+  onStepClick: (step: number) => void;
 }) {
   return (
     <section className="sticky top-4 z-20 rounded-[1.8rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_50px_rgba(148,163,184,0.14)] backdrop-blur-xl">
       <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-slate-200/80">
         <div
           className="h-full rounded-full bg-[linear-gradient(90deg,#0f172a,#06b6d4)] transition-all duration-500"
-          style={{ width: `${((currentStep + 1) / ANALYSIS_STEPS.length) * 100}%` }}
+          style={{ width: `${((maxReachedStep + 1) / ANALYSIS_STEPS.length) * 100}%` }}
         />
       </div>
-      <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-9">
+      <div className="grid gap-2 md:grid-cols-4 xl:grid-cols-8">
         {ANALYSIS_STEPS.map((step, index) => {
           const active = index === currentStep;
           const complete = index < currentStep;
+          const reachable = index <= maxReachedStep;
 
           return (
-            <div
+            <button
               key={step.id}
+              type="button"
+              onClick={() => reachable && onStepClick(index)}
+              disabled={!reachable}
               className={`rounded-[1.2rem] border px-3 py-3 text-left transition ${
                 active
                   ? "border-slate-900 bg-slate-950 text-white"
                   : complete
-                    ? "border-cyan-200 bg-cyan-50/85 text-cyan-950"
-                    : "border-slate-200/80 bg-white/60 text-slate-600"
+                    ? "border-cyan-200 bg-cyan-50/85 text-cyan-950 hover:border-cyan-300"
+                    : reachable
+                      ? "border-slate-200/80 bg-white/60 text-slate-600 hover:border-slate-300"
+                      : "cursor-not-allowed border-slate-100 bg-slate-50/40 text-slate-400 opacity-60"
               }`}
             >
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-70">
                 {step.eyebrow}
               </p>
               <p className="mt-2 font-semibold">{step.title}</p>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -1309,7 +1313,7 @@ function StepIntro({
   return (
     <div className="space-y-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
-        Analysis
+        Analisis
       </p>
       <h2 className="font-display text-4xl font-semibold tracking-[-0.05em] text-slate-950 md:text-5xl">
         {title}
@@ -1570,8 +1574,8 @@ function GraphStep({
     <section className="space-y-8">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <StepIntro
-          title="Primero, mirá la historia de retención."
-          description="Esta es la prueba central. Las personas aparecen por tandas, igual que en el demo original: cada línea fina es una persona simulada y la curva brillante se actualiza a medida que se procesan más perfiles."
+          title="Visualizacion de la curva de retencion."
+          description="Grafico interactivo basado en la simulacion de 100 personas. Cada linea representa un espectador y la curva principal muestra la retencion promedio proyectada."
         />
 
         <div className="flex flex-wrap gap-2">
@@ -1834,19 +1838,23 @@ function GraphStep({
   );
 }
 
+const PERSONAS_PER_PAGE = 6;
+
 function RawPersonasStep({
   personas,
 }: {
   personas: PersonaResult[];
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? personas : personas.slice(0, 10);
+  const [currentPage, setCurrentPage] = useState(0);
+  const totalPages = Math.ceil(personas.length / PERSONAS_PER_PAGE);
+  const startIndex = currentPage * PERSONAS_PER_PAGE;
+  const visible = personas.slice(startIndex, startIndex + PERSONAS_PER_PAGE);
 
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Las 100 personas sinteticas, sin caja negra."
-        description="Este es el USP central del producto. Antes de resumir nada, mostramos la data cruda: a quien simulamos, que atributo representa, cuando abandona y por que."
+        title="Dataset completo de audiencia simulada."
+        description="Visualizacion de las 100 personas sinteticas con sus perfiles demograficos, momento de abandono y motivo de salida."
       />
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
@@ -1856,16 +1864,37 @@ function RawPersonasStep({
               Dataset de audiencia sintetica
             </p>
             <h3 className="mt-3 font-display text-4xl font-semibold tracking-[-0.06em] text-slate-950">
-              100 viewers simulados con nombre, arquetipo y contexto.
+              {personas.length} personas simuladas
             </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Mostrando {startIndex + 1}-{Math.min(startIndex + PERSONAS_PER_PAGE, personas.length)} de {personas.length}
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setExpanded((current) => !current)}
-            className="rounded-full border border-slate-200 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white"
-          >
-            {expanded ? "Mostrar solo 10" : "Ver las 100"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+              disabled={currentPage === 0}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-700 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <span className="min-w-[80px] text-center text-sm font-semibold text-slate-700">
+              {currentPage + 1} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={currentPage >= totalPages - 1}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-700 transition hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {visible.length === 0 ? (
@@ -1928,6 +1957,23 @@ function RawPersonasStep({
             </article>
           ))}
         </div>
+
+        {totalPages > 1 && (
+          <div className="mt-6 flex justify-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setCurrentPage(i)}
+                className={`h-2 rounded-full transition-all ${
+                  i === currentPage
+                    ? "w-6 bg-slate-900"
+                    : "w-2 bg-slate-300 hover:bg-slate-400"
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </section>
     </section>
   );
@@ -1943,12 +1989,41 @@ function SegmentDropoffStep({
   const best = segments[0];
   const second = segments[1];
   const worst = segments[segments.length - 1];
+  const maxRetention = Math.max(...segments.map((s) => s.averageRetention), 1);
+
+  const getRetentionColor = (retention: number) => {
+    if (retention >= 70) return "bg-emerald-500";
+    if (retention >= 50) return "bg-amber-500";
+    return "bg-rose-500";
+  };
+
+  const getIcon = (index: number) => {
+    if (index === 0) {
+      return (
+        <svg className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+        </svg>
+      );
+    }
+    if (index === 1) {
+      return (
+        <svg className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="h-6 w-6 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+      </svg>
+    );
+  };
 
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Que segmentos se quedan y cuales se van."
-        description="Aca la simulacion se vuelve estrategica: encontramos el mejor encaje, el segundo mejor y el peor, y explicamos exactamente por que cada grupo abandona."
+        title="Segmentacion de audiencia por comportamiento."
+        description="Analisis de cada segmento con sus tasas de retencion, momento de abandono y diagnostico de las causas principales."
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -1958,41 +2033,91 @@ function SegmentDropoffStep({
           }
 
           const title =
-            index === 0 ? "Audiencia con mejor encaje" : index === 1 ? "Segundo mejor encaje" : "Peor encaje";
+            index === 0 ? "Mejor encaje" : index === 1 ? "Segundo mejor" : "Menor encaje";
+          const borderColor =
+            index === 0 ? "border-emerald-200" : index === 1 ? "border-amber-200" : "border-rose-200";
+          const bgColor =
+            index === 0 ? "bg-emerald-50/50" : index === 1 ? "bg-amber-50/50" : "bg-rose-50/50";
 
           return (
-            <article key={`${title}-${segment.label}`} className="result-panel rounded-[1.8rem] px-5 py-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                {title}
-              </p>
-              <h3 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em] text-slate-950">
+            <article key={`${title}-${segment.label}`} className={`result-panel rounded-[1.8rem] border-2 ${borderColor} ${bgColor} px-5 py-5`}>
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  {title}
+                </p>
+                {getIcon(index)}
+              </div>
+              <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
                 {segment.label}
               </h3>
-              <p className="mt-3 text-sm leading-7 text-slate-600">
-                {segment.support} personas · {segment.averageRetention}% de retencion media · abandono mediano en {formatMoment(segment.medianDropoffSecond)}
-              </p>
-              <p className="mt-4 rounded-[1.2rem] border border-slate-200/80 bg-white/80 px-4 py-4 text-sm leading-7 text-slate-700">
-                Principal fuga: {segment.dominantReasonLabel}
-              </p>
+
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600">Retencion</span>
+                  <span className="font-semibold text-slate-900">{segment.averageRetention}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className={`h-full rounded-full transition-all ${getRetentionColor(segment.averageRetention)}`}
+                    style={{ width: `${(segment.averageRetention / maxRetention) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-white/80 px-3 py-2 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Personas</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900">{segment.support}</p>
+                </div>
+                <div className="rounded-xl bg-white/80 px-3 py-2 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Abandono</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900">{formatMoment(segment.medianDropoffSecond)}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/60 px-3 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Causa principal</p>
+                <p className="mt-1 text-sm font-medium text-slate-800">{segment.dominantReasonLabel}</p>
+              </div>
             </article>
           );
         })}
       </div>
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-          Diagnostico de abandono por segmento
-        </p>
-        <div className="mt-6 space-y-4">
-          {diagnoses.map((item) => (
+        <div className="flex items-center gap-3">
+          <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+            Diagnostico detallado por segmento
+          </p>
+        </div>
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          {diagnoses.map((item, index) => (
             <article key={item.label} className="rounded-[1.5rem] border border-slate-200/80 bg-white/85 px-5 py-5">
-              <p className="font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-                {item.label}
-              </p>
-              <p className="mt-3 text-base font-semibold text-slate-900">
-                Drop at {formatMoment(item.dropoffSecond)}: {item.reasonLabel}
-              </p>
-              <p className="mt-3 text-sm leading-7 text-slate-600">{item.why}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-display text-xl font-semibold tracking-[-0.04em] text-slate-950">
+                    {item.label}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {formatMoment(item.dropoffSecond)}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-1 text-xs font-medium text-rose-700">
+                      {item.reasonLabel}
+                    </span>
+                  </div>
+                </div>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
+                  {index + 1}
+                </span>
+              </div>
+              <p className="mt-4 text-sm leading-7 text-slate-600">{item.why}</p>
             </article>
           ))}
         </div>
@@ -2016,8 +2141,8 @@ function TimelineStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Make the video timeline actionable."
-        description="This is where the product stops being a dashboard and starts behaving like a strategist. Every annotation is tied to a moment in the edit so the next creative decision is obvious."
+        title="Momentos clave del video con acciones concretas."
+        description="Cada anotacion esta vinculada a un segundo especifico del video para que la siguiente decision creativa sea evidente."
       />
 
       <section className="result-panel overflow-hidden rounded-[2.2rem] px-6 py-8">
@@ -2073,24 +2198,61 @@ function TimelineStep({
         </div>
 
         <div className="mt-10 grid gap-4 lg:grid-cols-2">
-          {timeline.map((item) => (
+          {timeline.map((item, index) => (
             <article
               key={item.id}
               className={`rounded-[1.6rem] border px-5 py-5 ${
                 item.tone === "opportunity"
                   ? "border-emerald-200 bg-emerald-50/80"
-                  : "border-slate-200 bg-white/80"
+                  : "border-rose-200 bg-rose-50/80"
               }`}
             >
-              <div className="flex items-center justify-between gap-4">
-                <p className="font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-                  {item.label}
-                </p>
-                <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {formatTimestampLabel(item.second)}
-                </span>
+              <div className="flex items-start gap-4">
+                <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
+                  item.tone === "opportunity"
+                    ? "bg-emerald-100 text-emerald-600"
+                    : "bg-rose-100 text-rose-600"
+                }`}>
+                  {item.tone === "opportunity" ? (
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-display text-xl font-semibold tracking-[-0.04em] text-slate-950">
+                      {item.label}
+                    </p>
+                    <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                      item.tone === "opportunity"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-rose-100 text-rose-700"
+                    }`}>
+                      {formatTimestampLabel(item.second)}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">{item.detail}</p>
+                  <div className={`mt-4 rounded-xl px-4 py-3 ${
+                    item.tone === "opportunity"
+                      ? "bg-emerald-100/60 text-emerald-800"
+                      : "bg-rose-100/60 text-rose-800"
+                  }`}>
+                    <p className="text-xs font-semibold uppercase tracking-wider">
+                      {item.tone === "opportunity" ? "Oportunidad" : "Punto de riesgo"}
+                    </p>
+                    <p className="mt-1 text-sm font-medium">
+                      {item.tone === "opportunity"
+                        ? "Reforzar este momento para maximizar retencion"
+                        : "Revisar y ajustar para reducir abandono"}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <p className="mt-4 text-sm leading-7 text-slate-600">{item.detail}</p>
             </article>
           ))}
         </div>
@@ -2107,58 +2269,100 @@ function ChangePlanStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Que cambiar en el video."
-        description="Cada accion nace del transcript, la curva de retencion, la llamada a la accion y las razones de abandono. No es copy generico: son cambios ubicados en el tiempo del video."
+        title="Plan de optimizacion del video."
+        description="Acciones especificas basadas en el analisis de retencion, con timestamps exactos y soluciones para cada problema detectado."
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <section className="result-panel rounded-[2rem] px-6 py-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-            Plan de cambios
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-100 text-cyan-600">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Plan de cambios
+            </p>
+          </div>
           <p className="mt-4 text-sm leading-7 text-slate-600">{plan.summary}</p>
           <div className="mt-6 space-y-4">
-            {plan.actions.map((action) => (
+            {plan.actions.map((action, index) => (
               <article key={`${action.title}-${action.timestamp ?? "none"}`} className="rounded-[1.4rem] border border-slate-200/80 bg-white/85 px-5 py-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-                    {action.title}
-                  </h3>
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    {action.timestamp == null ? "Sin timestamp" : formatMoment(action.timestamp)}
+                <div className="flex items-start gap-4">
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                    {index + 1}
                   </span>
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="font-display text-xl font-semibold tracking-[-0.04em] text-slate-950">
+                        {action.title}
+                      </h3>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {action.timestamp == null ? "General" : formatMoment(action.timestamp)}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-7 text-slate-600">{action.reason}</p>
+                    <div className="mt-4 rounded-xl border-l-4 border-cyan-500 bg-cyan-50/80 px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-cyan-700">Accion recomendada</p>
+                      <p className="mt-1 text-sm font-medium text-cyan-900">{action.fix}</p>
+                    </div>
+                  </div>
                 </div>
-                <p className="mt-3 text-sm leading-7 text-slate-600">{action.reason}</p>
-                <p className="mt-3 rounded-[1.1rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4 text-sm leading-7 text-slate-800">
-                  {action.fix}
-                </p>
               </article>
             ))}
           </div>
         </section>
 
         <section className="result-panel rounded-[2rem] px-6 py-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-            Top leaving reasons
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+              </svg>
+            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Principales motivos de abandono
+            </p>
+          </div>
           <div className="mt-5 space-y-4">
-            {plan.topLeaveReasons.map((item) => (
-              <article key={item.reasonCode} className="rounded-[1.4rem] border border-slate-200/80 bg-white/85 px-4 py-4">
-                <p className="font-semibold text-slate-950">{item.reasonLabel}</p>
-                <p className="mt-2 text-sm text-slate-500">
-                  {item.count} personas · abandono medio {formatMoment(item.averageDropoffSecond)}
-                </p>
+            {plan.topLeaveReasons.map((item, index) => (
+              <article key={item.reasonCode} className="rounded-[1.4rem] border border-rose-200/80 bg-rose-50/50 px-4 py-4">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-slate-950">{item.reasonLabel}</p>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-200 text-xs font-bold text-rose-700">
+                    {item.count}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Abandono medio: {formatMoment(item.averageDropoffSecond)}
+                </div>
                 <p className="mt-3 text-sm leading-7 text-slate-600">{item.example}</p>
               </article>
             ))}
           </div>
 
-          <div className="mt-6 space-y-3">
-            {plan.reasonFixes.map((item) => (
-              <div key={`${item.reasonCode}-fix`} className="rounded-[1.2rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4 text-sm leading-7 text-slate-700">
-                <span className="font-semibold text-slate-900">{item.reasonLabel}:</span> {item.action}
-              </div>
-            ))}
+          <div className="mt-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Soluciones rapidas</p>
+            <div className="mt-3 space-y-2">
+              {plan.reasonFixes.map((item) => (
+                <div key={`${item.reasonCode}-fix`} className="flex items-start gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-4 py-3">
+                  <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="text-sm leading-6">
+                    <span className="font-semibold text-emerald-800">{item.reasonLabel}:</span>{" "}
+                    <span className="text-emerald-700">{item.action}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       </div>
@@ -2174,23 +2378,57 @@ function MediaTargetingStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Recomendacion de medios."
-        description="Esta es la salida mas valiosa para una agencia: como transformar lo creativo en estructura de compra de medios y secuencias de pauta."
+        title="Configuracion de campanas publicitarias."
+        description="Recomendaciones de segmentacion y estructura de campana basadas en el rendimiento proyectado del video."
       />
 
       <section className="result-panel rounded-[2rem] px-6 py-6">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+            Estrategia de segmentacion
+          </p>
+        </div>
         <div className="grid gap-4 lg:grid-cols-3">
-          {recommendations.map((item) => (
-            <article key={item.recommendation} className="rounded-[1.5rem] border border-slate-200/80 bg-white/85 px-5 py-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                Recomendación
-              </p>
-              <h3 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em] text-slate-950">
-                {item.recommendation}
-              </h3>
-              <p className="mt-4 text-sm leading-7 text-slate-600">{item.implementation}</p>
-            </article>
-          ))}
+          {recommendations.map((item, index) => {
+            const icons = [
+              <svg key="target" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>,
+              <svg key="chart" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>,
+              <svg key="bolt" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>,
+            ];
+            const colors = [
+              "bg-blue-100 text-blue-600 border-blue-200",
+              "bg-purple-100 text-purple-600 border-purple-200",
+              "bg-amber-100 text-amber-600 border-amber-200",
+            ];
+            return (
+              <article key={item.recommendation} className={`rounded-[1.5rem] border-2 ${colors[index % 3]} px-5 py-5`}>
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] opacity-70">
+                    Recomendacion #{index + 1}
+                  </p>
+                  {icons[index % 3]}
+                </div>
+                <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
+                  {item.recommendation}
+                </h3>
+                <div className="mt-4 rounded-xl bg-white/60 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Implementacion</p>
+                  <p className="mt-1 text-sm leading-7 text-slate-700">{item.implementation}</p>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
     </section>
@@ -2202,36 +2440,62 @@ function VersionStrategiesStep({
 }: {
   versions: VersionStrategy[];
 }) {
+  const versionColors = [
+    { bg: "bg-emerald-50", border: "border-emerald-200", accent: "bg-emerald-500", label: "text-emerald-600" },
+    { bg: "bg-blue-50", border: "border-blue-200", accent: "bg-blue-500", label: "text-blue-600" },
+    { bg: "bg-violet-50", border: "border-violet-200", accent: "bg-violet-500", label: "text-violet-600" },
+  ];
+
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Tres versiones para iterar el creativo."
-        description="No mostramos solo analitica: proponemos tres direcciones creativas distintas para que el equipo sepa que variantes producir."
+        title="Variantes creativas para testing."
+        description="Tres propuestas de iteracion con cambios estructurales especificos, optimizadas para diferentes segmentos de audiencia."
       />
 
       <div className="grid gap-4 xl:grid-cols-3">
-        {versions.map((version) => (
-          <article key={version.id} className="result-panel rounded-[1.8rem] px-5 py-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Variante {version.id}
-            </p>
-            <h3 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em] text-slate-950">
-              {version.name}
-            </h3>
-            <p className="mt-3 text-sm font-semibold text-slate-900">
-              Audiencia objetivo: {version.targetAudience}
-            </p>
-            <p className="mt-3 text-sm leading-7 text-slate-600">{version.direction}</p>
-            <div className="mt-5 space-y-2">
-              {version.structuralChanges.map((item) => (
-                <div key={item} className="rounded-[1.1rem] border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm leading-7 text-slate-700">
-                  {item}
+        {versions.map((version, index) => {
+          const colors = versionColors[index % 3];
+          return (
+            <article key={version.id} className={`result-panel rounded-[1.8rem] border-2 ${colors.border} ${colors.bg} px-5 py-5`}>
+              <div className="flex items-center justify-between">
+                <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${colors.accent} text-sm font-bold text-white`}>
+                  {version.id}
+                </span>
+                <svg className={`h-5 w-5 ${colors.label}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                </svg>
+              </div>
+              <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
+                {version.name}
+              </h3>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1">
+                <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="text-xs font-semibold text-slate-600">{version.targetAudience}</span>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{version.direction}</p>
+              <div className="mt-5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Cambios estructurales</p>
+                <div className="mt-2 space-y-2">
+                  {version.structuralChanges.map((item, i) => (
+                    <div key={item} className="flex items-start gap-2 rounded-xl bg-white/60 px-3 py-2">
+                      <svg className={`mt-0.5 h-4 w-4 flex-shrink-0 ${colors.label}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+                      </svg>
+                      <span className="text-sm text-slate-700">{item}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <p className="mt-5 text-sm leading-7 text-slate-600">{version.whyItShouldResonate}</p>
-          </article>
-        ))}
+              </div>
+              <div className="mt-4 rounded-xl bg-white/80 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Por que funciona</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">{version.whyItShouldResonate}</p>
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -2380,6 +2644,7 @@ function DashboardContent() {
   const [ready, setReady] = useState(false);
   const [screenMode, setScreenMode] = useState<ScreenMode>("story");
   const [currentStep, setCurrentStep] = useState(0);
+  const [maxReachedStep, setMaxReachedStep] = useState(0);
   const [viewerMode, setViewerMode] = useState<ViewerMode>("all");
   const [selectedPlatform, setSelectedPlatform] = useState("LinkedIn");
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
@@ -2566,7 +2831,11 @@ function DashboardContent() {
               </div>
             </div>
 
-            <AnalysisStepper currentStep={currentStep} />
+            <AnalysisStepper
+              currentStep={currentStep}
+              maxReachedStep={maxReachedStep}
+              onStepClick={setCurrentStep}
+            />
 
             <section key={step.id} className="result-stage-enter space-y-8 rounded-[2.4rem] px-1 py-2">
               {step.id === "score" ? <ScoreSummaryStep analysis={analysis.analysis} /> : null}
@@ -2604,24 +2873,14 @@ function DashboardContent() {
                 <VersionStrategiesStep versions={versionStrategies} />
               ) : null}
 
-              {step.id === "crosspost" ? (
-                <CrosspostStep
-                  posts={socialPosts}
-                  selectedPlatform={selectedPlatform}
-                  onSelectPlatform={setSelectedPlatform}
-                  onCopy={handleCopy}
-                  copiedPlatform={copiedPlatform}
-                />
-              ) : null}
-
               <StepFooter
                 currentStep={currentStep}
                 onBack={() => setCurrentStep((current) => Math.max(current - 1, 0))}
-                onNext={() =>
-                  setCurrentStep((current) =>
-                    Math.min(current + 1, ANALYSIS_STEPS.length - 1),
-                  )
-                }
+                onNext={() => {
+                  const nextStep = Math.min(currentStep + 1, ANALYSIS_STEPS.length - 1);
+                  setCurrentStep(nextStep);
+                  setMaxReachedStep((current) => Math.max(current, nextStep));
+                }}
                 onReturnToStory={() => setScreenMode("story")}
               />
             </section>
