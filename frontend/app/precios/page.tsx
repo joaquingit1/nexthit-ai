@@ -542,7 +542,6 @@ export default function PreciosPage() {
             </div>
           </div>
 
-          <LandingFooterAscii />
         </div>
       </footer>
     </main>

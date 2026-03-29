@@ -303,7 +303,6 @@ export default function UseCasesPage() {
             </div>
           </div>
 
-          <LandingFooterAscii />
         </div>
       </footer>
     </main>

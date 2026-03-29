@@ -359,7 +359,6 @@ export default function FeaturesPage() {
             </div>
           </div>
 
-          <LandingFooterAscii />
         </div>
       </footer>
     </main>

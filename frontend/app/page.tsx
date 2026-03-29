@@ -967,45 +967,24 @@ export default function LandingPage() {
             <span className="landing-hero-pill">
               inteligencia creativa predictiva
             </span>
-            <h1 className="landing-hero-title">
-              Predecí el rendimiento de tu video antes de publicar
+            <h1 className="landing-hero-title text-3xl md:text-4xl">
+              Predecí el éxito de tu video con IA
             </h1>
-            <p className="landing-hero-copy">
-              Modelamos simulaciones con 100 espectadores artificiales, para analizar retención, detectar puntos de abandono y optimizar tu contenido a su maximo potencial.
+            <p className="landing-hero-copy text-base md:text-lg">
+              Simulamos 100 espectadores para predecir retención y optimizar tu contenido.
             </p>
-
-            <div className="landing-hero-metrics">
-              <div className="landing-hero-metric">
-                <strong><AnimatedMetricNumber value={100} active /></strong>
-                <span>personas sintéticas</span>
-              </div>
-              <div className="landing-hero-metric">
-                <strong><AnimatedMetricNumber value={240000} active duration={1650} locale="de-DE" /></strong>
-                <span>permutaciones de contextos de audiencia</span>
-              </div>
-              <div className="landing-hero-metric">
-                <strong><AnimatedCurrencyCountdown startValue={4000} endValue={0} active /></strong>
-                <span>dólares desperdiciados antes de testear</span>
-              </div>
-            </div>
 
             <div className="landing-hero-actions">
               <Link
                 href="/app"
                 onClick={playLandingClick}
-                className="landing-primary-cta"
+                className="landing-primary-cta inline-flex items-center justify-center rounded-full bg-slate-900 px-10 py-5 text-lg font-semibold text-white shadow-lg transition hover:bg-slate-800"
               >
                 Analizar video
               </Link>
             </div>
           </div>
 
-          <div className="landing-scroll-hint">
-            <span className="landing-scroll-mouse">
-              <span />
-            </span>
-            <p>Deslizá para recorrer la historia</p>
-          </div>
         </section>
       </LandingSection>
 
@@ -1154,7 +1133,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <LandingFooterAscii />
         </div>
       </footer>
     </main>
