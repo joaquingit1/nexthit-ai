@@ -67,7 +67,7 @@ const ANALYSIS_STEPS = [
   },
   {
     id: "raw-personas",
-    title: "100 Personas Sinteticas",
+    title: "AI Personas",
     eyebrow: "Paso 2",
     description: "Dataset completo de audiencia simulada: perfil demografico, momento de abandono y motivo.",
   },
@@ -84,13 +84,6 @@ const ANALYSIS_STEPS = [
     description: "Tres propuestas de iteracion del video optimizadas para diferentes objetivos.",
   },
 ] as const;
-
-const ANALYTICS_TABS = [
-  { id: "insights", title: "Insights" },
-  { id: "retention", title: "Retención" },
-] as const;
-
-type SidebarSection = "analysis" | "analytics";
 
 const GRAPH_WIDTH = 550;
 const GRAPH_HEIGHT = 200;
@@ -3410,8 +3403,6 @@ function DashboardContent() {
   const [viewerMode, setViewerMode] = useState<ViewerMode>("all");
   const [selectedPlatform, setSelectedPlatform] = useState("LinkedIn");
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<SidebarSection>("analysis");
-  const [analyticsTab, setAnalyticsTab] = useState<"insights" | "retention">("insights");
 
   useEffect(() => {
     let cancelled = false;
@@ -3675,108 +3666,35 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* Section Selector */}
-            <div className="flex gap-2 mb-4">
-              <button
-                type="button"
-                onClick={() => setActiveSection("analysis")}
-                className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
-                  activeSection === "analysis"
-                    ? "bg-slate-900 text-white"
-                    : "bg-white/80 text-slate-600 hover:bg-white border border-slate-200"
-                }`}
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                Análisis
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveSection("analytics")}
-                className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
-                  activeSection === "analytics"
-                    ? "bg-slate-900 text-white"
-                    : "bg-white/80 text-slate-600 hover:bg-white border border-slate-200"
-                }`}
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Analytics
-              </button>
-            </div>
+            <AnalysisStepper
+              currentStep={currentStep}
+              maxReachedStep={maxReachedStep}
+              onStepClick={setCurrentStep}
+            />
 
-            {activeSection === "analysis" && (
-              <>
-                <AnalysisStepper
-                  currentStep={currentStep}
-                  maxReachedStep={maxReachedStep}
-                  onStepClick={setCurrentStep}
-                />
+            <section key={step.id} className="result-stage-enter space-y-8 rounded-[2.4rem] px-1 py-2">
+              {step.id === "score" ? <ScoreSummaryStep analysis={analysis.analysis} /> : null}
 
-                <section key={step.id} className="result-stage-enter space-y-8 rounded-[2.4rem] px-1 py-2">
-                  {step.id === "score" ? <ScoreSummaryStep analysis={analysis.analysis} /> : null}
+              {step.id === "raw-personas" ? (
+                <RawPersonasStep personas={rawPersonas} />
+              ) : null}
 
-                  {step.id === "raw-personas" ? (
-                    <RawPersonasStep personas={rawPersonas} />
-                  ) : null}
+              {step.id === "changes" ? <ChangePlanStep plan={changePlan} /> : null}
 
-                  {step.id === "changes" ? <ChangePlanStep plan={changePlan} /> : null}
+              {step.id === "versions" ? (
+                <VersionStrategiesStep versions={versionStrategies} />
+              ) : null}
 
-                  {step.id === "versions" ? (
-                    <VersionStrategiesStep versions={versionStrategies} />
-                  ) : null}
-
-                  <StepFooter
-                    currentStep={currentStep}
-                    onBack={() => setCurrentStep((current) => Math.max(current - 1, 0))}
-                    onNext={() => {
-                      const nextStep = Math.min(currentStep + 1, ANALYSIS_STEPS.length - 1);
-                      setCurrentStep(nextStep);
-                      setMaxReachedStep((current) => Math.max(current, nextStep));
-                    }}
-                  />
-                </section>
-              </>
-            )}
-
-            {activeSection === "analytics" && (
-              <section className="space-y-6">
-                {/* Analytics Tabs */}
-                <div className="flex rounded-full border border-slate-200/80 bg-white/90 p-1 shadow-sm backdrop-blur-xl w-fit">
-                  {ANALYTICS_TABS.map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setAnalyticsTab(tab.id)}
-                      className={`rounded-full px-6 py-2.5 text-sm font-semibold transition ${
-                        analyticsTab === tab.id
-                          ? "bg-slate-900 text-white"
-                          : "text-slate-500 hover:text-slate-700"
-                      }`}
-                    >
-                      {tab.title}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Analytics Content */}
-                <div className="result-stage-enter space-y-8 rounded-[2.4rem] px-1 py-2">
-                  {analyticsTab === "insights" && audienceInsights ? (
-                    <AudienceInsightsStep audience={audienceInsights} />
-                  ) : null}
-
-                  {analyticsTab === "retention" ? (
-                    <GraphStep
-                      analysis={analysis.analysis}
-                      viewerMode={viewerMode}
-                      onViewerModeChange={setViewerMode}
-                    />
-                  ) : null}
-                </div>
-              </section>
-            )}
+              <StepFooter
+                currentStep={currentStep}
+                onBack={() => setCurrentStep((current) => Math.max(current - 1, 0))}
+                onNext={() => {
+                  const nextStep = Math.min(currentStep + 1, ANALYSIS_STEPS.length - 1);
+                  setCurrentStep(nextStep);
+                  setMaxReachedStep((current) => Math.max(current, nextStep));
+                }}
+              />
+            </section>
         </section>
       </div>
     </main>
