@@ -130,8 +130,8 @@ const ANALYSIS_STEPS = [
   },
 ] as const;
 
-const GRAPH_WIDTH = 1100;
-const GRAPH_HEIGHT = 460;
+const GRAPH_WIDTH = 900;
+const GRAPH_HEIGHT = 340;
 const GRAPH_PADDING = { top: 34, right: 26, bottom: 48, left: 70 };
 const STOPWORDS = new Set([
   "the",
@@ -1249,7 +1249,9 @@ function StoryScreen({
               "Estrategia de crecimiento paga adaptada a tu video",
             ].map((item) => (
               <div key={item} className="flex items-start gap-3 text-[17px] leading-7 text-slate-800">
-                <span className="mt-1 text-[#2f6fda]">✓</span>
+                <svg className="mt-1.5 h-4 w-4 flex-shrink-0 text-[#2f6fda]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
                 <span>{item}</span>
               </div>
             ))}
@@ -1268,7 +1270,9 @@ function StoryScreen({
               "generación de estrategia de crecimiento",
             ].map((item) => (
               <div key={item} className="flex items-start gap-3 text-base leading-7 text-slate-700">
-                <span className="mt-1 text-[#2f6fda]">✓</span>
+                <svg className="mt-1.5 h-4 w-4 flex-shrink-0 text-[#2f6fda]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
                 <span>{item}</span>
               </div>
             ))}
@@ -1299,7 +1303,9 @@ function StoryScreen({
               "Generando la estrategia de crecimiento...",
             ].map((item) => (
               <span key={item} className="inline-flex items-center gap-2">
-                <span className="text-[#c4d7ff]">✓</span>
+                <svg className="h-3.5 w-3.5 text-[#c4d7ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
                 {item}
               </span>
             ))}
@@ -1329,18 +1335,24 @@ function AnalysisStepper({
   maxReachedStep: number;
   onStepClick: (step: number) => void;
 }) {
+  const shortTitles: Record<string, string> = {
+    "Puntaje y Resumen": "Puntaje",
+    "100 Personas Sinteticas": "Personas",
+    "Analisis por Segmento": "Segmentos",
+    "Curva de Retencion": "Retencion",
+    "Momentos Clave": "Momentos",
+    "Plan de Cambios": "Cambios",
+    "Estrategia de Medios": "Medios",
+    "Variantes Creativas": "Variantes",
+    "Posts para Redes": "Posts",
+    "Ahorro Estimado": "Ahorro",
+  };
+
   return (
-    <section className="sticky top-4 z-20 rounded-[1.8rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_50px_rgba(148,163,184,0.14)] backdrop-blur-xl">
-      <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-slate-200/80">
-        <div
-          className="h-full rounded-full bg-[linear-gradient(90deg,#0f172a,#06b6d4)] transition-all duration-500"
-          style={{ width: `${((maxReachedStep + 1) / ANALYSIS_STEPS.length) * 100}%` }}
-        />
-      </div>
-      <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-10">
+    <section className="sticky top-4 z-20">
+      <div className="flex gap-0.5 rounded-full border border-slate-200/80 bg-white/90 p-1 shadow-sm backdrop-blur-xl">
         {ANALYSIS_STEPS.map((step, index) => {
           const active = index === currentStep;
-          const complete = index < currentStep;
           const reachable = index <= maxReachedStep;
 
           return (
@@ -1349,20 +1361,15 @@ function AnalysisStepper({
               type="button"
               onClick={() => reachable && onStepClick(index)}
               disabled={!reachable}
-              className={`rounded-[1.2rem] border px-3 py-3 text-left transition ${
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
                 active
-                  ? "border-slate-900 bg-slate-950 text-white"
-                  : complete
-                    ? "border-cyan-200 bg-cyan-50/85 text-cyan-950"
-                    : reachable
-                      ? "border-slate-200/80 bg-white/60 text-slate-600 hover:border-slate-300"
-                      : "cursor-not-allowed border-slate-100 bg-slate-50/40 text-slate-400 opacity-60"
+                  ? "bg-slate-900 text-white"
+                  : reachable
+                    ? "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    : "cursor-not-allowed text-slate-300"
               }`}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-70">
-                {step.eyebrow}
-              </p>
-              <p className="mt-2 font-semibold">{step.title}</p>
+              {shortTitles[step.title] || step.title}
             </button>
           );
         })}
@@ -1646,7 +1653,7 @@ function GraphStep({
           description="Esta es la prueba central. Las personas aparecen por tandas, igual que en el demo original: cada línea fina es una persona simulada y la curva brillante se actualiza a medida que se procesan más perfiles."
         />
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {[
             { id: "all", label: "Audiencia + promedio" },
             { id: "average", label: "Solo promedio" },
@@ -1671,6 +1678,17 @@ function GraphStep({
           >
             Repetir simulación
           </button>
+          {!simulationComplete && (
+            <div className="flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5">
+              <svg className="h-3.5 w-3.5 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span className="text-xs font-medium text-blue-700">
+                {simulatedViewerCount}/{analysis.graph.audienceSize}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1692,40 +1710,18 @@ function GraphStep({
         ))}
       </div>
 
-      <section className="result-panel rounded-[1.7rem] px-5 py-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Estado de la simulación
-            </p>
-            <p className="mt-2 text-sm leading-7 text-slate-700">
-              {simulationComplete
-                ? `Simulación completa. Ya procesamos las ${analysis.graph.audienceSize} personas.`
-                : `Simulando el comportamiento de la audiencia: ${simulatedViewerCount} de ${analysis.graph.audienceSize} personas cargadas.`}
-            </p>
-          </div>
-          <p className="font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
-            {Math.round((simulatedViewerCount / analysis.graph.audienceSize) * 100)}%
-          </p>
-        </div>
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200/80">
-          <div
-            className="h-full rounded-full bg-[linear-gradient(90deg,#2f6fda,#0f172a)] transition-all duration-500"
-            style={{ width: `${(simulatedViewerCount / analysis.graph.audienceSize) * 100}%` }}
-          />
-        </div>
-      </section>
-
-      <section className="relative overflow-hidden rounded-[2.3rem] border border-white/60 bg-[linear-gradient(180deg,rgba(247,250,252,0.95),rgba(239,244,248,0.88))] px-3 py-4 md:px-6 md:py-6">
-        <div className="analysis-grid absolute inset-0 opacity-40" />
-        <div className="relative">
-          <svg
-            viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
-            className="w-full"
-            aria-hidden="true"
-            onMouseMove={handleGraphPointerMove}
-            onMouseLeave={() => setHoveredSecond(null)}
-          >
+      <div className="grid gap-6 lg:grid-cols-[1fr,280px]">
+        {/* Chart */}
+        <section className="relative overflow-hidden rounded-[2.3rem] border border-white/60 bg-[linear-gradient(180deg,rgba(247,250,252,0.95),rgba(239,244,248,0.88))] px-3 py-4 md:px-6 md:py-6">
+          <div className="analysis-grid absolute inset-0 opacity-40" />
+          <div className="relative">
+            <svg
+              viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
+              className="w-full"
+              aria-hidden="true"
+              onMouseMove={handleGraphPointerMove}
+              onMouseLeave={() => setHoveredSecond(null)}
+            >
             <defs>
               <linearGradient id="retentionAverage" x1="0%" x2="100%" y1="0%" y2="0%">
                 <stop offset="0%" stopColor="#0f172a" />
@@ -1851,76 +1847,82 @@ function GraphStep({
               height={GRAPH_HEIGHT - GRAPH_PADDING.top - GRAPH_PADDING.bottom}
               fill="transparent"
             />
-          </svg>
-        </div>
-        <div className="mt-5 grid gap-3 border-t border-slate-200/80 pt-4 lg:grid-cols-[minmax(0,180px),minmax(0,1fr),minmax(0,140px)] lg:items-start">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Transcript en
+            </svg>
+          </div>
+        </section>
+
+        {/* Sidebar derecho - métricas compactas */}
+        <div className="flex flex-col gap-2">
+          <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              Segundo
             </p>
-            <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
+            <p className="mt-1 font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
               {formatMoment(activeSecond)}
             </p>
-            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
-              {formatTimestampLabel(activeTranscriptSegment.start)} -{" "}
-              {formatTimestampLabel(activeTranscriptSegment.end)}
+          </div>
+          <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              Retención
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
+              {Math.round(activeAveragePoint.retention)}%
             </p>
           </div>
-          <div className="rounded-[1.5rem] border border-slate-200/80 bg-white/70 px-4 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Fragmento hablado
-            </p>
-            <p className="mt-3 text-base leading-8 text-slate-700">
-              {activeTranscriptSegment.text}
-            </p>
-            {activeTranscriptSegment.visual_description ? (
-              <>
-                <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Lo que se ve
-                </p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">
-                  {activeTranscriptSegment.visual_description}
-                </p>
-              </>
-            ) : null}
+          {(simulationComplete ? analysis.graph.markers : analysis.graph.markers.slice(0, 1)).map((marker) => (
+            <div key={marker.label} className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                {formatTimestampLabel(marker.second)}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-950">{marker.label}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600 line-clamp-2">{marker.detail}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Fragmento hablado - abajo */}
+      <div className="rounded-[1.5rem] border border-slate-200/80 bg-white/90 px-5 py-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+          Fragmento hablado
+        </p>
+        <p className="mt-3 text-base leading-8 text-slate-700">
+          {activeTranscriptSegment.text}
+        </p>
+        {activeTranscriptSegment.visual_description ? (
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                Lo que se ve
+              </p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                {activeTranscriptSegment.visual_description}
+              </p>
+            </div>
             {activeTranscriptSegment.on_screen_text?.length ? (
-              <>
-                <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
                   Texto en pantalla
                 </p>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
                   {activeTranscriptSegment.on_screen_text.join(" / ")}
                 </p>
-              </>
+              </div>
             ) : null}
-            <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-400">
-              Pasá por la línea de tiempo del gráfico para ver qué están escuchando las personas en cada segundo.
-            </p>
           </div>
-          <div className="rounded-[1.5rem] border border-slate-200/80 bg-white/70 px-4 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Retención predicha
-            </p>
-            <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
-              {Math.round(activeAveragePoint.retention)}%
+        ) : activeTranscriptSegment.on_screen_text?.length ? (
+          <>
+            <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Texto en pantalla
             </p>
             <p className="mt-2 text-sm leading-7 text-slate-600">
-              Esto conecta el transcript con el segundo exacto dentro de la línea de tiempo real del video.
+              {activeTranscriptSegment.on_screen_text.join(" / ")}
             </p>
-          </div>
-        </div>
-      </section>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        {(simulationComplete ? analysis.graph.markers : analysis.graph.markers.slice(0, 1)).map((marker) => (
-          <div key={marker.label} className="border-b border-slate-200/80 pb-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              {formatTimestampLabel(marker.second)}
-            </p>
-            <p className="mt-2 font-semibold text-slate-950">{marker.label}</p>
-            <p className="mt-2 text-sm leading-7 text-slate-600">{marker.detail}</p>
-          </div>
-        ))}
+          </>
+        ) : null}
+        <p className="mt-4 text-xs uppercase tracking-[0.16em] text-slate-400">
+          Pasá el mouse por el gráfico para ver qué están escuchando en cada segundo.
+        </p>
       </div>
     </section>
   );
@@ -3099,7 +3101,7 @@ function DashboardContent() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
-                <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
+                <h1 className="text-2xl font-bold text-black md:text-3xl">
                   {analysis.analysis.clip.fileName}
                 </h1>
               </div>

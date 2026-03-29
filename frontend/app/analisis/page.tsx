@@ -65,7 +65,7 @@ export default function AnalisisPage() {
         </div>
         <Link
           href="/app"
-          className="flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+          className="flex items-center gap-2 rounded-xl bg-blue-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-600"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -83,7 +83,7 @@ export default function AnalisisPage() {
           <p className="mt-1 text-slate-500">Subi tu primer video para comenzar</p>
           <Link
             href="/app"
-            className="mt-6 flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="mt-6 flex items-center gap-2 rounded-xl bg-blue-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-600"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -108,7 +108,7 @@ export default function AnalisisPage() {
 
               <div className="mt-4">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-slate-900 line-clamp-1 group-hover:text-blue-600">
+                  <h3 className="font-bold text-black truncate">
                     {item.analysis.clip.fileName}
                   </h3>
                   <span className={`shrink-0 rounded-lg px-2 py-1 text-sm font-bold ${getScoreColor(item.analysis.summary.overallScore)}`}>
