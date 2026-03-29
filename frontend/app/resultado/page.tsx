@@ -18,12 +18,10 @@ import {
   type AnalysisResponse,
   type AudienceDistributionItem,
   type ChangePlan,
-  type CreativeScript,
   type MediaTargetingRecommendation,
   type PersonaResult,
   type PersonaSegment,
   type SavingsROI,
-  type ScriptSection,
   type SegmentDiagnosis,
   type TargetAudience,
   type TimelineInsightItem,
@@ -92,10 +90,10 @@ const ANALYSIS_STEPS = [
     description: "Lista de tareas concretas para mejorar el rendimiento del video.",
   },
   {
-    id: "scripts",
-    title: "Generar Guiones",
+    id: "versions",
+    title: "Variantes Creativas",
     eyebrow: "Paso 6",
-    description: "Tres guiones completos y accionables basados en el analisis del creativo original.",
+    description: "Tres propuestas de iteracion del video optimizadas para diferentes objetivos.",
   },
 ] as const;
 
@@ -1023,114 +1021,6 @@ function buildVersionStrategiesFallback(
   ];
 }
 
-function buildCreativeScriptsFallback(
-  analysis: AnalysisResponse["analysis"],
-  _plan: ChangePlan,
-): CreativeScript[] {
-  const primary = analysis.targetAudience?.primaryAudience ?? analysis.graph.bestFitAudience;
-  const secondary = analysis.targetAudience?.secondaryAudience ?? "Audiencia secundaria";
-  const transcriptPreview = (analysis.transcriptText || "tu producto o servicio").slice(0, 100);
-
-  return [
-    {
-      id: "A",
-      name: "Guion A: Hook Directo",
-      targetAudience: primary,
-      strategy: "Abre con el resultado o beneficio principal desde el primer segundo. Sin introducciones, directo al grano.",
-      script: {
-        hook: {
-          text: `Esto es lo que nadie te dice sobre ${transcriptPreview}...`,
-          visualCue: "Primer plano del resultado o transformacion",
-          duration: "0s - 3s",
-        },
-        development: {
-          text: "En solo 3 pasos podes lograr lo mismo que el resto tarda semanas en conseguir",
-          visualCue: "Transicion rapida mostrando el proceso",
-          duration: "3s - 10s",
-        },
-        proof: {
-          text: "Mira los resultados de quienes ya lo probaron",
-          visualCue: "Screenshots o testimonios visuales",
-          duration: "10s - 14s",
-        },
-        cta: {
-          text: "Guarda este video y empeza hoy",
-          visualCue: "Call to action en pantalla con gesto de guardar",
-          duration: "14s - 17s",
-        },
-      },
-      fullScript: "Esto es lo que nadie te dice... En solo 3 pasos podes lograr lo mismo. Mira los resultados. Guarda este video y empeza hoy.",
-      expectedRetention: "Mejor retencion en primeros 3 segundos por hook directo",
-      whyItWorks: "El beneficio aparece inmediatamente, capturando atencion antes del primer swipe.",
-      addressedIssues: ["intro_too_slow", "hook_weak"],
-    },
-    {
-      id: "B",
-      name: "Guion B: Proof-Led",
-      targetAudience: secondary,
-      strategy: "Abre con evidencia o prueba concreta. Construye credibilidad desde el inicio.",
-      script: {
-        hook: {
-          text: "Este es el resultado despues de solo 7 dias",
-          visualCue: "Resultado tangible en pantalla",
-          duration: "0s - 3s",
-        },
-        development: {
-          text: "Te muestro exactamente como lo logre paso a paso",
-          visualCue: "Demostracion del proceso en accion",
-          duration: "3s - 10s",
-        },
-        proof: {
-          text: "Aca tenes los numeros que comprueban que funciona",
-          visualCue: "Metricas o datos en pantalla",
-          duration: "10s - 14s",
-        },
-        cta: {
-          text: "Segui para el tutorial completo",
-          visualCue: "Boton de seguir con animacion",
-          duration: "14s - 17s",
-        },
-      },
-      fullScript: "Este es el resultado despues de 7 dias. Te muestro como lo logre. Aca tenes los numeros. Segui para el tutorial completo.",
-      expectedRetention: "Mayor credibilidad inmediata reduce abandono por escepticismo",
-      whyItWorks: "La prueba temprana elimina objeciones antes de que el espectador decida irse.",
-      addressedIssues: ["claim_lacks_proof", "message_unclear"],
-    },
-    {
-      id: "C",
-      name: "Guion C: Story-Driven",
-      targetAudience: "Audiencias orientadas a storytelling",
-      strategy: "Estructura narrativa con tension y resolucion. Conecta emocionalmente.",
-      script: {
-        hook: {
-          text: "Estaba a punto de rendirme cuando descubri esto",
-          visualCue: "Expresion facial de frustracion seguida de sorpresa",
-          duration: "0s - 3s",
-        },
-        development: {
-          text: "Durante meses intente de todo sin resultados, hasta que encontre este metodo",
-          visualCue: "Montaje de intentos fallidos y el momento del descubrimiento",
-          duration: "3s - 10s",
-        },
-        proof: {
-          text: "Ahora ayudo a otros a evitar los mismos errores",
-          visualCue: "Comunidad o testimonios de otros usuarios",
-          duration: "10s - 14s",
-        },
-        cta: {
-          text: "Comenta 'quiero' y te cuento como empezar",
-          visualCue: "Texto de engagement con animacion",
-          duration: "14s - 17s",
-        },
-      },
-      fullScript: "Estaba a punto de rendirme cuando descubri esto. Durante meses intente de todo. Ahora ayudo a otros. Comenta 'quiero' y te cuento como.",
-      expectedRetention: "Conexion emocional sostiene atencion durante todo el video",
-      whyItWorks: "La estructura narrativa genera curiosidad por saber como termina la historia.",
-      addressedIssues: ["pacing_uneven", "no_emotional_hook"],
-    },
-  ];
-}
-
 function buildSavingsRoiFallback(
   analysis: AnalysisResponse["analysis"],
   plan: ChangePlan,
@@ -1605,7 +1495,7 @@ function AnalysisStepper({
     "Analisis por Segmento": "Segmentos",
     "Curva de Retencion": "Retencion",
     "Acciones": "Acciones",
-    "Generar Guiones": "Guiones",
+    "Variantes Creativas": "Variantes",
   };
 
   const stepIcons: Record<string, React.ReactNode> = {
@@ -1614,7 +1504,7 @@ function AnalysisStepper({
     audience: <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 6h9m-9 6h9m-9 6h5.25M5.25 3.75h13.5A1.5 1.5 0 0120.25 5.25v13.5a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5V5.25a1.5 1.5 0 011.5-1.5z" />,
     retention: <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />,
     changes: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
-    scripts: <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />,
+    versions: <path strokeLinecap="round" strokeLinejoin="round" d="M6 13.5V3.75m0 9.75a1.5 1.5 0 010 3m0-3a1.5 1.5 0 000 3m0 3.75V16.5m12-3V3.75m0 9.75a1.5 1.5 0 010 3m0-3a1.5 1.5 0 000 3m0 3.75V16.5m-6-9V3.75m0 3.75a1.5 1.5 0 010 3m0-3a1.5 1.5 0 000 3m0 9.75V10.5" />,
   };
 
   return (
@@ -3208,233 +3098,65 @@ function MediaTargetingStep({
   );
 }
 
-function ScriptSectionCard({
-  title,
-  section,
-  accentColor,
+function VersionStrategiesStep({
+  versions,
 }: {
-  title: string;
-  section: ScriptSection;
-  accentColor: string;
+  versions: VersionStrategy[];
 }) {
-  return (
-    <div className="rounded-xl border border-slate-200/80 bg-white/60 px-4 py-3">
-      <div className="flex items-center justify-between">
-        <p className={`text-xs font-bold uppercase tracking-wider ${accentColor}`}>{title}</p>
-        <span className="text-[10px] font-semibold text-slate-400">{section.duration}</span>
-      </div>
-      <p className="mt-2 text-sm font-medium leading-6 text-slate-900">&ldquo;{section.text}&rdquo;</p>
-      <p className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-        </svg>
-        {section.visualCue}
-      </p>
-    </div>
-  );
-}
-
-function CreativeScriptsStep({
-  scripts,
-  onCopyScript,
-  copiedScriptId,
-}: {
-  scripts: CreativeScript[];
-  onCopyScript: (id: string, fullScript: string) => void;
-  copiedScriptId: string | null;
-}) {
-  const [selectedScript, setSelectedScript] = useState<CreativeScript | null>(null);
-  const selectedIndex = selectedScript ? scripts.findIndex((s) => s.id === selectedScript.id) : -1;
-
-  const scriptColors = [
-    { bg: "bg-emerald-50", border: "border-emerald-200", accent: "bg-emerald-500", label: "text-emerald-600", ring: "ring-emerald-500/20" },
-    { bg: "bg-blue-50", border: "border-blue-200", accent: "bg-blue-500", label: "text-blue-600", ring: "ring-blue-500/20" },
-    { bg: "bg-violet-50", border: "border-violet-200", accent: "bg-violet-500", label: "text-violet-600", ring: "ring-violet-500/20" },
+  const versionColors = [
+    { bg: "bg-emerald-50", border: "border-emerald-200", accent: "bg-emerald-500", label: "text-emerald-600" },
+    { bg: "bg-blue-50", border: "border-blue-200", accent: "bg-blue-500", label: "text-blue-600" },
+    { bg: "bg-violet-50", border: "border-violet-200", accent: "bg-violet-500", label: "text-violet-600" },
   ];
 
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Guiones creativos"
-        description="Tres guiones completos y listos para grabar basados en el analisis."
+        title="Variantes creativas"
+        description="Tres versiones alternativas del video para testear."
       />
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        {scripts.map((script, index) => {
-          const colors = scriptColors[index % 3];
-
+      <div className="grid gap-4 xl:grid-cols-3">
+        {versions.map((version, index) => {
+          const colors = versionColors[index % 3];
           return (
-            <article
-              key={script.id}
-              onClick={() => setSelectedScript(script)}
-              className={`result-panel cursor-pointer rounded-[1.8rem] border-2 ${colors.border} ${colors.bg} px-5 py-5 transition-all hover:scale-[1.02] hover:shadow-lg`}
-            >
-              <div className="flex items-center gap-3">
-                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full ${colors.accent} text-lg font-bold text-white shadow-lg`}>
-                  {script.id}
+            <article key={version.id} className={`result-panel rounded-[1.8rem] border-2 ${colors.border} ${colors.bg} px-5 py-5`}>
+              <div className="flex items-center justify-between">
+                <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${colors.accent} text-sm font-bold text-white`}>
+                  {version.id}
                 </span>
-                <div className="flex-1">
-                  <h3 className="font-display text-lg font-semibold tracking-[-0.04em] text-slate-950">
-                    {script.name}
-                  </h3>
-                </div>
-              </div>
-
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5">
-                <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                <svg className={`h-5 w-5 ${colors.label}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
                 </svg>
-                <span className="text-xs font-semibold text-slate-600">{script.targetAudience}</span>
               </div>
-
-              <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{script.strategy}</p>
-
-              <div className="mt-4 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {script.script.hook.duration} - {script.script.cta.duration.split(" - ")[1]}
+              <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
+                {version.name}
+              </h3>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1">
+                <span className="text-xs font-semibold text-slate-600">{version.targetAudience}</span>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{version.direction}</p>
+              <div className="mt-5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Cambios estructurales</p>
+                <div className="mt-2 space-y-2">
+                  {version.structuralChanges.map((item) => (
+                    <div key={item} className="flex items-start gap-2 rounded-xl bg-white/60 px-3 py-2">
+                      <svg className={`mt-0.5 h-4 w-4 flex-shrink-0 ${colors.label}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+                      </svg>
+                      <span className="text-sm text-slate-700">{item}</span>
+                    </div>
+                  ))}
                 </div>
-                <span className={`flex items-center gap-1 text-xs font-semibold ${colors.label}`}>
-                  Ver detalle
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </span>
+              </div>
+              <div className="mt-4 rounded-xl bg-white/80 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Por que funciona</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">{version.whyItShouldResonate}</p>
               </div>
             </article>
           );
         })}
       </div>
-
-      {/* Modal de detalle del guion */}
-      {selectedScript && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm"
-          onClick={() => setSelectedScript(null)}
-        >
-          <div
-            className="relative mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setSelectedScript(null)}
-              className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            {(() => {
-              const colors = scriptColors[selectedIndex % 3];
-              const isCopied = copiedScriptId === selectedScript.id;
-
-              return (
-                <>
-                  <div className="flex items-center gap-4">
-                    <span className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${colors.accent} text-xl font-bold text-white shadow-lg`}>
-                      {selectedScript.id}
-                    </span>
-                    <div>
-                      <h3 className="font-display text-2xl font-bold tracking-[-0.04em] text-slate-950">
-                        {selectedScript.name}
-                      </h3>
-                      <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1">
-                        <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        <span className="text-xs font-semibold text-slate-600">{selectedScript.targetAudience}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="mt-4 text-sm leading-6 text-slate-600">{selectedScript.strategy}</p>
-
-                  {/* Secciones del guion */}
-                  <div className="mt-6 space-y-4">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Estructura del guion</h4>
-                    <div className="space-y-3">
-                      <ScriptSectionCard title="Hook" section={selectedScript.script.hook} accentColor={colors.label} />
-                      <ScriptSectionCard title="Desarrollo" section={selectedScript.script.development} accentColor={colors.label} />
-                      <ScriptSectionCard title="Prueba" section={selectedScript.script.proof} accentColor={colors.label} />
-                      <ScriptSectionCard title="CTA" section={selectedScript.script.cta} accentColor={colors.label} />
-                    </div>
-                  </div>
-
-                  {/* Guion completo */}
-                  <div className="mt-6 rounded-xl bg-slate-50 p-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Guion completo</h4>
-                      <button
-                        type="button"
-                        onClick={() => onCopyScript(selectedScript.id, selectedScript.fullScript)}
-                        className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                          isCopied
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-white text-slate-600 hover:bg-slate-200 hover:text-slate-900"
-                        }`}
-                      >
-                        {isCopied ? (
-                          <>
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            Copiado
-                          </>
-                        ) : (
-                          <>
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            Copiar
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    <p className="mt-3 text-sm italic leading-6 text-slate-700">&ldquo;{selectedScript.fullScript}&rdquo;</p>
-                  </div>
-
-                  {/* Problemas que resuelve */}
-                  {selectedScript.addressedIssues.length > 0 && (
-                    <div className="mt-6">
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Problemas que resuelve</h4>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {selectedScript.addressedIssues.map((issue) => (
-                          <span
-                            key={issue}
-                            className={`rounded-full px-3 py-1 text-xs font-medium ${colors.bg} ${colors.label} ring-1 ${colors.ring}`}
-                          >
-                            {issue.replace(/_/g, " ")}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Por que funciona y retencion esperada */}
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Por que funciona</h4>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{selectedScript.whyItWorks}</p>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Retencion esperada</h4>
-                      <p className="mt-2 flex items-center gap-2 text-sm leading-6 text-slate-600">
-                        <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                        </svg>
-                        {selectedScript.expectedRetention}
-                      </p>
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
     </section>
   );
 }
@@ -3816,22 +3538,13 @@ function DashboardContent() {
     return analysis.analysis.mediaTargeting ?? buildMediaTargetingFallback(analysis.analysis, changePlan);
   }, [analysis, changePlan]);
 
-  const creativeScripts = useMemo(() => {
+  const versionStrategies = useMemo(() => {
     if (!analysis || !changePlan) {
-      return [] as CreativeScript[];
+      return [] as VersionStrategy[];
     }
 
-    return analysis.analysis.creativeScripts ?? buildCreativeScriptsFallback(analysis.analysis, changePlan);
+    return analysis.analysis.versionStrategies ?? buildVersionStrategiesFallback(analysis.analysis, changePlan);
   }, [analysis, changePlan]);
-
-  const [copiedScriptId, setCopiedScriptId] = useState<string | null>(null);
-
-  const handleCopyScript = (id: string, fullScript: string) => {
-    navigator.clipboard.writeText(fullScript).then(() => {
-      setCopiedScriptId(id);
-      setTimeout(() => setCopiedScriptId(null), 2000);
-    });
-  };
 
   const savingsRoi = useMemo(() => {
     if (!analysis || !changePlan) {
@@ -3999,12 +3712,8 @@ function DashboardContent() {
                 <MediaTargetingStep recommendations={mediaTargeting} />
               ) : null}
 
-                {step.id === "scripts" ? (
-                  <CreativeScriptsStep
-                    scripts={creativeScripts}
-                    onCopyScript={handleCopyScript}
-                    copiedScriptId={copiedScriptId}
-                  />
+                {step.id === "versions" ? (
+                  <VersionStrategiesStep versions={versionStrategies} />
                 ) : null}
 
               {step.id === "savings" ? (
