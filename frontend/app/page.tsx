@@ -587,17 +587,140 @@ function ProcessGraphVisual() {
 }
 
 function LandingFooterAscii() {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [frame, setFrame] = useState("");
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) {
+      return;
+    }
+
+    const palette = [" ", ".", "·", ":", "+", "*", "#", "o", "@"];
+    let frameId = 0;
+    let intervalId = 0;
+
+    const buildFrame = (time: number) => {
+      const rect = node.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+
+      if (!width || !height) {
+        return;
+      }
+
+      const cols = Math.max(42, Math.floor(width / 10));
+      const rows = Math.max(18, Math.floor(height / 16));
+      const grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => " "));
+
+      const points = [
+        [0.08, 0.82],
+        [0.16, 0.76],
+        [0.22, 0.68],
+        [0.31, 0.56],
+        [0.4, 0.44],
+        [0.5, 0.34],
+        [0.62, 0.26],
+        [0.74, 0.24],
+        [0.84, 0.31],
+        [0.91, 0.45],
+        [0.88, 0.63],
+        [0.77, 0.73],
+        [0.64, 0.76],
+        [0.52, 0.7],
+        [0.4, 0.62],
+        [0.28, 0.72],
+      ].map(([x, y], index) => {
+        const drift = Math.sin(time / 900 + index * 0.8) * 0.015;
+        const lift = Math.cos(time / 1100 + index * 0.65) * 0.02;
+        return {
+          x: (x + drift) * cols,
+          y: (y + lift) * rows,
+        };
+      });
+
+      const segments = points.map((point, index) => [point, points[(index + 1) % points.length]] as const);
+      for (let index = 0; index < points.length - 4; index += 2) {
+        segments.push([points[index], points[index + 4]] as const);
+      }
+
+      const reveal = ((Math.sin(time / 1200) + 1) / 2) * cols;
+
+      const distanceToSegment = (
+        px: number,
+        py: number,
+        ax: number,
+        ay: number,
+        bx: number,
+        by: number,
+      ) => {
+        const abx = bx - ax;
+        const aby = by - ay;
+        const apx = px - ax;
+        const apy = py - ay;
+        const ab2 = abx * abx + aby * aby || 1;
+        const t = Math.max(0, Math.min(1, (apx * abx + apy * aby) / ab2));
+        const cx = ax + abx * t;
+        const cy = ay + aby * t;
+        return Math.hypot(px - cx, py - cy);
+      };
+
+      for (let row = 0; row < rows; row += 1) {
+        for (let col = 0; col < cols; col += 1) {
+          const x = col + 0.5;
+          const y = row + 0.5;
+
+          let nodeScore = 0;
+          for (const point of points) {
+            const dist = Math.hypot(point.x - x, point.y - y);
+            nodeScore = Math.max(nodeScore, 1 - dist / 3.6);
+          }
+
+          let edgeScore = 0;
+          for (const [start, end] of segments) {
+            const dist = distanceToSegment(x, y, start.x, start.y, end.x, end.y);
+            edgeScore = Math.max(edgeScore, 1 - dist / 1.25);
+          }
+
+          const wave = Math.sin(time / 280 + col * 0.32 + row * 0.18) * 0.08 + 0.08;
+          const revealFactor = col < reveal ? 1 : Math.max(0, 1 - (col - reveal) / 8);
+          const intensity = Math.max(nodeScore * 1.18, edgeScore * 0.86, wave * 0.22) * revealFactor;
+
+          if (intensity < 0.08) {
+            continue;
+          }
+
+          const paletteIndex = Math.min(
+            palette.length - 1,
+            Math.max(0, Math.floor(intensity * (palette.length + 1))),
+          );
+          grid[row]![col] = palette[paletteIndex]!;
+        }
+      }
+
+      setFrame(grid.map((line) => line.join("")).join("\n"));
+    };
+
+    const render = () => {
+      frameId = window.requestAnimationFrame((time) => buildFrame(time));
+    };
+
+    render();
+    intervalId = window.setInterval(render, 120);
+
+    const observer = new ResizeObserver(render);
+    observer.observe(node);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearInterval(intervalId);
+      observer.disconnect();
+    };
+  }, []);
+
   return (
-    <div className="landing-footer-ascii" aria-hidden="true">
-      {FOOTER_ASCII_FRAMES.map((frame, index) => (
-        <pre
-          key={index}
-          className="landing-footer-ascii-frame"
-          style={{ animationDelay: `${index * 1.6}s` }}
-        >
-          {frame}
-        </pre>
-      ))}
+    <div ref={containerRef} className="landing-footer-ascii" aria-hidden="true">
+      <pre className="landing-footer-ascii-frame">{frame}</pre>
     </div>
   );
 }

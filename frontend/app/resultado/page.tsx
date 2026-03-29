@@ -117,15 +117,9 @@ const ANALYSIS_STEPS = [
     description: "Tres propuestas de iteracion del video optimizadas para diferentes objetivos.",
   },
   {
-    id: "crosspost",
-    title: "Crossposting",
-    eyebrow: "Paso 9",
-    description: "Copys adaptados por plataforma para reutilizar el contenido con el angulo correcto.",
-  },
-  {
     id: "savings",
     title: "Ahorro Estimado",
-    eyebrow: "Paso 10",
+    eyebrow: "Paso 9",
     description: "Calculo del ahorro monetario y de tiempo al aplicar los cambios sugeridos vs re-grabar el video.",
   },
 ] as const;
@@ -3574,16 +3568,6 @@ function DashboardContent() {
                 {step.id === "versions" ? (
                   <VersionStrategiesStep versions={versionStrategies} />
                 ) : null}
-
-              {step.id === "crosspost" ? (
-                <CrosspostStep
-                  posts={socialPosts}
-                  selectedPlatform={selectedPlatform}
-                  onSelectPlatform={setSelectedPlatform}
-                  onCopy={handleCopy}
-                  copiedPlatform={copiedPlatform}
-                />
-              ) : null}
 
               {step.id === "savings" ? (
                 <SavingsROIStep savingsRoi={savingsRoi} />

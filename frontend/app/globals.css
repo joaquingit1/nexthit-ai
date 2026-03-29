@@ -953,24 +953,22 @@ textarea {
 }
 
 .landing-footer-ascii-frame {
+  margin: 0;
   position: absolute;
   inset: 0;
-  margin: 0;
-  display: flex;
-  align-items: end;
-  justify-content: end;
-  padding: 1rem 1rem 0.8rem;
-  color: rgba(37, 99, 235, 0.78);
+  padding: 1rem 1.2rem;
+  color: rgba(37, 99, 235, 0.74);
   font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
-  font-size: clamp(6px, 0.9vw, 11px);
-  line-height: 0.88;
-  letter-spacing: -0.04em;
+  font-size: clamp(5px, 0.72vw, 10px);
+  line-height: 0.92;
+  letter-spacing: -0.03em;
   white-space: pre;
-  opacity: 0;
+  opacity: 1;
   text-shadow:
-    0 0 10px rgba(59, 130, 246, 0.12),
-    0 0 20px rgba(96, 165, 250, 0.1);
-  animation: landingAsciiBuild 6.4s ease-in-out infinite;
+    0 0 8px rgba(59, 130, 246, 0.12),
+    0 0 18px rgba(96, 165, 250, 0.08);
+  user-select: none;
+  pointer-events: none;
 }
 
 .analysis-shell::before {
@@ -1330,18 +1328,39 @@ textarea {
   display: block;
 }
 
+.app-point-grid-node {
+  transition: transform 180ms ease-out;
+}
+
 .app-point-grid-dot {
   fill: rgba(37, 99, 235, 0.22);
   transition:
-    cx 150ms ease-out,
-    cy 150ms ease-out,
     r 150ms ease-out,
     fill 150ms ease-out,
     opacity 150ms ease-out;
 }
 
 .app-point-grid-dot-active {
-  fill: rgba(37, 99, 235, 0.5);
+  fill: rgba(37, 99, 235, 0.56);
+}
+
+.app-point-grid-cluster {
+  fill: none;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.app-point-grid-cluster-inner {
+  stroke: rgba(56, 189, 248, 0.22);
+  stroke-width: 1.15;
+  animation: appPointClusterPulse 2.2s ease-out infinite;
+}
+
+.app-point-grid-cluster-outer {
+  stroke: rgba(37, 99, 235, 0.14);
+  stroke-width: 1.2;
+  stroke-dasharray: 5 7;
+  animation: appPointClusterPulseOuter 2.6s ease-out infinite;
 }
 
 .app-point-grid-glow {
@@ -1767,22 +1786,29 @@ textarea {
   }
 }
 
-@keyframes landingAsciiBuild {
+@keyframes appPointClusterPulse {
   0%,
-  18% {
-    opacity: 0;
-    transform: translateY(10px) scale(0.985);
-  }
-
-  30%,
-  72% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-
   100% {
-    opacity: 0;
-    transform: translateY(-8px) scale(1.01);
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes appPointClusterPulseOuter {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.88);
+  }
+
+  50% {
+    opacity: 0.64;
+    transform: scale(1.08);
   }
 }
 
@@ -1890,10 +1916,8 @@ textarea {
   }
 
   .landing-footer-ascii-frame {
-    justify-content: center;
-    align-items: center;
     padding: 0.8rem;
-    font-size: clamp(4px, 1.25vw, 7px);
+    font-size: clamp(4px, 1.05vw, 6px);
     line-height: 0.9;
   }
 

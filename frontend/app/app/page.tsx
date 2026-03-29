@@ -69,6 +69,7 @@ function InteractivePointField() {
   }, [size]);
 
   const radius = size.width < 640 ? 78 : 118;
+  const clusterRadius = radius * 0.62;
 
   return (
     <div
@@ -88,16 +89,49 @@ function InteractivePointField() {
       <div className="app-point-grid-glow app-point-grid-glow-one" />
       <div className="app-point-grid-glow app-point-grid-glow-two" />
       <svg className="app-point-grid-svg" viewBox={`0 0 ${Math.max(size.width, 1)} ${Math.max(size.height, 1)}`}>
+        {pointer.active ? (
+          <>
+            <circle
+              cx={pointer.x}
+              cy={pointer.y}
+              r={clusterRadius * 0.72}
+              className="app-point-grid-cluster app-point-grid-cluster-inner"
+            />
+            <circle
+              cx={pointer.x}
+              cy={pointer.y}
+              r={clusterRadius}
+              className="app-point-grid-cluster app-point-grid-cluster-outer"
+            />
+          </>
+        ) : null}
         {dots.map((dot) => {
+          const baseCircle = (
+            <circle
+              cx={dot.x}
+              cy={dot.y}
+              r="1.3"
+              className="app-point-grid-dot"
+            />
+          );
+
           if (!pointer.active) {
-            return <circle key={dot.id} cx={dot.x} cy={dot.y} r="1.3" className="app-point-grid-dot" />;
+            return (
+              <g key={dot.id} className="app-point-grid-node">
+                {baseCircle}
+              </g>
+            );
           }
 
           const dx = dot.x - pointer.x;
           const dy = dot.y - pointer.y;
           const distance = Math.hypot(dx, dy);
           if (distance >= radius || distance === 0) {
-            return <circle key={dot.id} cx={dot.x} cy={dot.y} r="1.3" className="app-point-grid-dot" />;
+            return (
+              <g key={dot.id} className="app-point-grid-node">
+                {baseCircle}
+              </g>
+            );
           }
 
           const force = (1 - distance / radius) * 11;
@@ -105,15 +139,24 @@ function InteractivePointField() {
           const translateY = (dy / distance) * force;
           const intensity = 1 - distance / radius;
           const extraRadius = intensity * 1.5;
+          const scale = 1 + intensity * 0.5;
 
           return (
-            <circle
+            <g
               key={dot.id}
-              cx={dot.x + translateX}
-              cy={dot.y + translateY}
-              r={1.3 + extraRadius}
-              className="app-point-grid-dot app-point-grid-dot-active"
-            />
+              className="app-point-grid-node"
+              style={{
+                transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+                transformOrigin: `${dot.x}px ${dot.y}px`,
+              }}
+            >
+              <circle
+                cx={dot.x}
+                cy={dot.y}
+                r={1.3 + extraRadius}
+                className="app-point-grid-dot app-point-grid-dot-active"
+              />
+            </g>
           );
         })}
       </svg>
@@ -327,9 +370,9 @@ export default function AppMain() {
   };
 
   return (
-    <div className="app-upload-shell relative overflow-hidden rounded-[2.25rem] border border-white/70 px-6 py-8 shadow-[0_30px_90px_rgba(15,23,42,0.08)] sm:px-8">
+    <div className="app-upload-shell relative min-h-[calc(100vh-3rem)] overflow-hidden rounded-[2.25rem] border border-white/70 px-6 py-8 shadow-[0_30px_90px_rgba(15,23,42,0.08)] sm:px-8">
       <InteractivePointField />
-      <div className="app-upload-surface relative z-10 grid min-h-[calc(100vh-3rem)] gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+      <div className="app-upload-surface relative z-10 grid h-full min-h-0 gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
       <section className="space-y-6">
             <span className="inline-flex rounded-full border border-cyan-200 bg-white/80 px-4 py-2 text-sm font-semibold text-cyan-950">
               NextHit
