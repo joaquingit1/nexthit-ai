@@ -100,9 +100,9 @@ const ANALYSIS_STEPS = [
   },
   {
     id: "changes",
-    title: "Plan de Cambios",
+    title: "Acciones",
     eyebrow: "Paso 6",
-    description: "Recomendaciones accionables basadas en el analisis de retencion y feedback de audiencia.",
+    description: "Lista de tareas concretas para mejorar el rendimiento del video.",
   },
   {
     id: "targeting",
@@ -117,15 +117,9 @@ const ANALYSIS_STEPS = [
     description: "Tres propuestas de iteracion del video optimizadas para diferentes objetivos.",
   },
   {
-    id: "crosspost",
-    title: "Posts para Redes",
-    eyebrow: "Paso 9",
-    description: "Generamos posts de texto listos a partir del transcript y del analisis.",
-  },
-  {
     id: "savings",
     title: "Ahorro Estimado",
-    eyebrow: "Paso 10",
+    eyebrow: "Paso 9",
     description: "Calculo del ahorro monetario y de tiempo al aplicar los cambios sugeridos vs re-grabar el video.",
   },
 ] as const;
@@ -954,6 +948,13 @@ function buildSavingsRoiFallback(
   const changeCount = Math.max(plan.actions.length, 1);
   const complexityLevel: SavingsROI["complexity_level"] =
     changeCount >= 6 ? "high" : changeCount >= 4 ? "medium" : "low";
+
+  // Multiplicador base: por cada $1 en edicion, ahorrarias $X vs regrabar
+  // Basado en la complejidad y duracion del video
+  const baseMultiplier = complexityLevel === "high" ? 2.2 : complexityLevel === "medium" ? 2.8 : 3.5;
+  const durationFactor = Math.min(1 + (duration / 60) * 0.3, 1.5);
+  const savingsMultiplier = Math.round(baseMultiplier * durationFactor * 10) / 10;
+
   const estimatedReshootCost = Math.round(duration * 18 + changeCount * 45 + 180);
   const estimatedEditCost = Math.round(duration * 6 + changeCount * 20 + 60);
   const savingsAmount = Math.max(estimatedReshootCost - estimatedEditCost, 0);
@@ -967,12 +968,13 @@ function buildSavingsRoiFallback(
     estimated_edit_cost: estimatedEditCost,
     savings_amount: savingsAmount,
     savings_percent: savingsPercent,
+    savings_multiplier: savingsMultiplier,
     time_saved_hours: timeSavedHours,
     complexity_level: complexityLevel,
     recommendation:
       complexityLevel === "high"
-        ? "Conviene iterar sobre el corte actual: el volumen de cambios es alto, pero sigue siendo mas eficiente que re-grabar desde cero."
-        : "Conviene aplicar los cambios sugeridos sobre la edicion actual antes de considerar una re-grabacion completa.",
+        ? "El volumen de cambios es alto, pero sigue siendo mas eficiente que regrabar."
+        : "Aplica los cambios sobre la edicion actual antes de considerar regrabar.",
   };
 }
 
@@ -1412,16 +1414,27 @@ function AnalysisStepper({
     "Analisis por Segmento": "Segmentos",
     "Curva de Retencion": "Retencion",
     "Momentos Clave": "Momentos",
-    "Plan de Cambios": "Cambios",
+    "Acciones": "Acciones",
     "Estrategia de Medios": "Medios",
     "Variantes Creativas": "Variantes",
-    "Posts para Redes": "Posts",
     "Ahorro Estimado": "Ahorro",
+  };
+
+  const stepIcons: Record<string, React.ReactNode> = {
+    score: <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />,
+    "raw-personas": <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />,
+    "segment-dropoff": <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />,
+    retention: <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />,
+    timeline: <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />,
+    changes: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
+    targeting: <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />,
+    versions: <path strokeLinecap="round" strokeLinejoin="round" d="M6 13.5V3.75m0 9.75a1.5 1.5 0 010 3m0-3a1.5 1.5 0 000 3m0 3.75V16.5m12-3V3.75m0 9.75a1.5 1.5 0 010 3m0-3a1.5 1.5 0 000 3m0 3.75V16.5m-6-9V3.75m0 3.75a1.5 1.5 0 010 3m0-3a1.5 1.5 0 000 3m0 9.75V10.5" />,
+    savings: <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />,
   };
 
   return (
     <section className="sticky top-4 z-20">
-      <div className="flex gap-0.5 rounded-full border border-slate-200/80 bg-white/90 p-1 shadow-sm backdrop-blur-xl">
+      <div className="flex rounded-full border border-slate-200/80 bg-white/90 p-1 shadow-sm backdrop-blur-xl">
         {ANALYSIS_STEPS.map((step, index) => {
           const active = index === currentStep;
           const reachable = index <= maxReachedStep;
@@ -1432,7 +1445,7 @@ function AnalysisStepper({
               type="button"
               onClick={() => reachable && onStepClick(index)}
               disabled={!reachable}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium transition ${
                 active
                   ? "bg-slate-900 text-white"
                   : reachable
@@ -1440,6 +1453,9 @@ function AnalysisStepper({
                     : "cursor-not-allowed text-slate-300"
               }`}
             >
+              <svg className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                {stepIcons[step.id]}
+              </svg>
               {shortTitles[step.title] || step.title}
             </button>
           );
@@ -1458,9 +1474,6 @@ function StepIntro({
 }) {
   return (
     <div className="space-y-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
-        Analisis
-      </p>
       <h2 className="font-display text-4xl font-semibold tracking-[-0.05em] text-slate-950 md:text-5xl">
         {title}
       </h2>
@@ -1516,8 +1529,8 @@ function ScoreSummaryStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Puntaje total y resumen ejecutivo."
-        description="Antes de entrar a la curva, esta pantalla responde dos preguntas: que tan fuerte es el creativo y que esta pasando realmente en el video."
+        title="Puntaje y resumen"
+        description="Que tan fuerte es el video y que esta pasando en cada momento."
       />
 
       <section className="grid gap-5 xl:grid-cols-[0.76fr_1.24fr]">
@@ -1721,8 +1734,8 @@ function GraphStep({
     <section className="space-y-8">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <StepIntro
-          title="Primero, mirá la historia de retención."
-          description="Esta es la prueba central. Las personas aparecen por tandas, igual que en el demo original: cada línea fina es una persona simulada y la curva brillante se actualiza a medida que se procesan más perfiles."
+          title="Curva de retencion"
+          description="Cada linea es una persona simulada. La curva brillante muestra el promedio de retencion en cada segundo."
         />
 
         <div className="flex flex-wrap items-center gap-2">
@@ -1871,10 +1884,11 @@ function GraphStep({
               d={averagePath}
               fill="none"
               stroke="url(#retentionAverage)"
-              strokeWidth="5"
+              strokeWidth="2.5"
               strokeLinecap="round"
               className="result-draw-line"
             />
+
 
             {(simulationComplete ? analysis.graph.markers : []).map((marker) => {
               const { x, y } = getGraphCoordinates(marker, duration);
@@ -1886,11 +1900,11 @@ function GraphStep({
                     y1={GRAPH_PADDING.top}
                     x2={x}
                     y2={GRAPH_HEIGHT - GRAPH_PADDING.bottom}
-                    stroke="rgba(15,23,42,0.18)"
-                    strokeWidth="1"
-                    strokeDasharray="2 8"
+                    stroke="rgba(15,23,42,0.12)"
+                    strokeWidth="0.5"
+                    strokeDasharray="2 6"
                   />
-                  <circle cx={x} cy={y} r="7" fill="#f8fafc" stroke="#0f172a" strokeWidth="2.5" />
+                  <circle cx={x} cy={y} r="3.5" fill="#f8fafc" stroke="#0f172a" strokeWidth="1.5" />
                 </g>
               );
             })}
@@ -1907,10 +1921,10 @@ function GraphStep({
             <circle
               cx={activeCoordinates.x}
               cy={activeCoordinates.y}
-              r="8"
+              r="4"
               fill="#ffffff"
               stroke="#2f6fda"
-              strokeWidth="3"
+              strokeWidth="1.5"
             />
             <rect
               x={GRAPH_PADDING.left}
@@ -2110,8 +2124,8 @@ function RawPersonasStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Dataset completo de audiencia simulada."
-        description="100 perfiles sintéticos con datos demográficos, momento de abandono, evidencia y motivo de salida."
+        title="100 personas sinteticas"
+        description="Perfiles simulados con datos demograficos, momento de abandono y motivo de salida."
       />
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
@@ -2388,8 +2402,8 @@ function SegmentDropoffStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Segmentacion de audiencia por comportamiento."
-        description="Segmentos de audiencia con tasas de retención, momentos de abandono y causas principales."
+        title="Segmentos de audiencia"
+        description="Grupos de audiencia con tasas de retencion y causas de abandono."
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -2562,29 +2576,47 @@ function TimelineStep({
 }) {
   const duration = Math.max(analysis.graph.durationSeconds, 1);
   const laidOutTimeline = useMemo(() => layoutTimelineInsights(timeline, duration), [timeline, duration]);
+  const [selectedId, setSelectedId] = useState<string | null>(laidOutTimeline[0]?.id ?? null);
+  const selectedItem = timeline.find((t) => t.id === selectedId) ?? timeline[0];
   const laneOffsets = [8, 50, 92];
   const lineTop = 166;
 
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Momentos clave del video con acciones concretas."
-        description="Anotaciones vinculadas a segundos específicos del video con acciones recomendadas."
+        title="Momentos clave"
+        description="Puntos importantes del video con recomendaciones para cada uno."
       />
 
       <section className="result-panel overflow-hidden rounded-[2.2rem] px-6 py-8">
         <div className="md:hidden">
           <div className="space-y-3">
-            {laidOutTimeline.map((item) => (
-              <div key={item.id} className="rounded-[1.2rem] border border-slate-200 bg-white/80 px-4 py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold text-slate-900">{item.label}</p>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    {formatMoment(item.second)}
-                  </span>
-                </div>
-              </div>
-            ))}
+            {laidOutTimeline.map((item) => {
+              const isSelected = item.id === selectedId;
+              const fullItem = timeline.find((t) => t.id === item.id);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSelectedId(item.id)}
+                  className={`w-full rounded-[1.2rem] border px-4 py-4 text-left transition ${
+                    isSelected
+                      ? "border-slate-900 bg-slate-50"
+                      : "border-slate-200 bg-white/80 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-slate-900">{item.label}</p>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      {formatMoment(item.second)}
+                    </span>
+                  </div>
+                  {isSelected && fullItem && (
+                    <p className="mt-3 text-sm leading-7 text-slate-600">{fullItem.detail}</p>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -2598,54 +2630,69 @@ function TimelineStep({
             const left = `${item.leftPercent}%`;
             const top = laneOffsets[item.lane] ?? laneOffsets[laneOffsets.length - 1];
             const connectorHeight = Math.max(lineTop - top - 70, 22);
+            const isSelected = item.id === selectedId;
             const dotClasses =
               item.tone === "opportunity"
-                ? "border-emerald-200 bg-emerald-500"
-                : "border-slate-900 bg-slate-950";
+                ? isSelected
+                  ? "border-emerald-400 bg-emerald-500 ring-4 ring-emerald-100"
+                  : "border-emerald-200 bg-emerald-500"
+                : isSelected
+                  ? "border-slate-700 bg-slate-950 ring-4 ring-slate-200"
+                  : "border-slate-900 bg-slate-950";
 
             return (
-              <div
+              <button
+                type="button"
                 key={item.id}
-                className="absolute w-40 -translate-x-1/2"
+                onClick={() => setSelectedId(item.id)}
+                className="absolute w-40 -translate-x-1/2 cursor-pointer"
                 style={{ left, top: `${top}px` }}
               >
                 <div className="flex flex-col items-center text-center">
-                  <div className="rounded-[1.1rem] border border-slate-200 bg-white/92 px-3 py-3 shadow-[0_10px_24px_rgba(148,163,184,0.14)]">
+                  <div
+                    className={`rounded-[1.1rem] border bg-white/92 px-3 py-3 transition ${
+                      isSelected
+                        ? "border-slate-400 shadow-[0_10px_28px_rgba(15,23,42,0.18)]"
+                        : "border-slate-200 shadow-[0_10px_24px_rgba(148,163,184,0.14)] hover:border-slate-300"
+                    }`}
+                  >
                     <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
                       {formatMoment(item.second)}
                     </p>
                     <p className="mt-1 font-semibold text-slate-900">{item.label}</p>
                   </div>
                   <div className="w-px bg-slate-300" style={{ height: `${connectorHeight}px` }} />
-                  <span className={`block h-4 w-4 rounded-full border-4 ${dotClasses}`} />
+                  <span className={`block h-4 w-4 rounded-full border-4 transition ${dotClasses}`} />
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
 
-        <div className="mt-10 grid gap-4 lg:grid-cols-2">
-          {timeline.map((item) => (
-            <article
-              key={item.id}
-              className={`rounded-[1.6rem] border px-5 py-5 ${
-                item.tone === "opportunity"
-                  ? "border-emerald-200 bg-emerald-50/80"
-                  : "border-slate-200 bg-white/80"
-              }`}
-            >
-              <div className="flex items-center justify-between gap-4">
-                <p className="font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-                  {item.label}
-                </p>
-                <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {formatTimestampLabel(item.second)}
-                </span>
-              </div>
-              <p className="mt-4 text-sm leading-7 text-slate-600">{item.detail}</p>
-            </article>
-          ))}
-        </div>
+        {selectedItem && (
+          <div
+            className={`mt-8 hidden rounded-[1.4rem] border px-5 py-5 md:block ${
+              selectedItem.tone === "opportunity"
+                ? "border-emerald-200 bg-emerald-50/60"
+                : "border-slate-200 bg-slate-50/60"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${
+                  selectedItem.tone === "opportunity" ? "bg-emerald-500" : "bg-slate-900"
+                }`}
+              />
+              <p className="font-display text-lg font-semibold tracking-[-0.03em] text-slate-950">
+                {selectedItem.label}
+              </p>
+              <span className="ml-auto text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                {formatMoment(selectedItem.second)}
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-7 text-slate-600">{selectedItem.detail}</p>
+          </div>
+        )}
       </section>
     </section>
   );
@@ -2656,64 +2703,176 @@ function ChangePlanStep({
 }: {
   plan: ChangePlan;
 }) {
+  const [completedActions, setCompletedActions] = useState<Set<string>>(new Set());
+  const [completedFixes, setCompletedFixes] = useState<Set<string>>(new Set());
+
+  const toggleAction = (key: string) => {
+    setCompletedActions((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleFix = (key: string) => {
+    setCompletedFixes((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const totalTasks = plan.actions.length + plan.reasonFixes.length;
+  const completedCount = completedActions.size + completedFixes.size;
+  const progressPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Que cambiar en el video."
-        description="Cada accion nace del transcript, la curva de retencion, la llamada a la accion y las razones de abandono. No es copy generico: son cambios ubicados en el tiempo del video."
+        title="Acciones"
+        description="Lista de cambios para mejorar el video. Marca cada uno como completado."
       />
 
-      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-        <section className="result-panel rounded-[2rem] px-6 py-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-            Plan de cambios
+      <section className="result-panel rounded-[2.2rem] px-6 py-7">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Progreso
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
+              {completedCount} de {totalTasks} completadas
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <span className="text-sm font-semibold text-slate-600">{progressPercent}%</span>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm leading-7 text-slate-600">{plan.summary}</p>
+
+        <div className="mt-8 space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+            Cambios en el video
           </p>
-          <p className="mt-4 text-sm leading-7 text-slate-600">{plan.summary}</p>
-          <div className="mt-6 space-y-4">
-            {plan.actions.map((action) => (
-              <article key={`${action.title}-${action.timestamp ?? "none"}`} className="rounded-[1.4rem] border border-slate-200/80 bg-white/85 px-5 py-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-                    {action.title}
-                  </h3>
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    {action.timestamp == null ? "Sin timestamp" : formatMoment(action.timestamp)}
-                  </span>
+          {plan.actions.map((action) => {
+            const key = `${action.title}-${action.timestamp ?? "none"}`;
+            const isComplete = completedActions.has(key);
+
+            return (
+              <button
+                type="button"
+                key={key}
+                onClick={() => toggleAction(key)}
+                className={`group w-full rounded-[1.2rem] border px-5 py-4 text-left transition ${
+                  isComplete
+                    ? "border-emerald-200 bg-emerald-50/60"
+                    : "border-slate-200/80 bg-white/85 hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition ${
+                      isComplete
+                        ? "border-emerald-500 bg-emerald-500"
+                        : "border-slate-300 bg-white group-hover:border-slate-400"
+                    }`}
+                  >
+                    {isComplete && (
+                      <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3
+                        className={`font-semibold transition ${
+                          isComplete ? "text-slate-400 line-through" : "text-slate-900"
+                        }`}
+                      >
+                        {action.title}
+                      </h3>
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        {action.timestamp == null ? "General" : formatMoment(action.timestamp)}
+                      </span>
+                    </div>
+                    <p
+                      className={`mt-2 text-sm leading-6 transition ${
+                        isComplete ? "text-slate-400" : "text-slate-600"
+                      }`}
+                    >
+                      {action.fix}
+                    </p>
+                  </div>
                 </div>
-                <p className="mt-3 text-sm leading-7 text-slate-600">{action.reason}</p>
-                <p className="mt-3 rounded-[1.1rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4 text-sm leading-7 text-slate-800">
-                  {action.fix}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
+              </button>
+            );
+          })}
+        </div>
 
-        <section className="result-panel rounded-[2rem] px-6 py-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-            Top leaving reasons
+        <div className="mt-8 space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+            Resolver razones de abandono
           </p>
-          <div className="mt-5 space-y-4">
-            {plan.topLeaveReasons.map((item) => (
-              <article key={item.reasonCode} className="rounded-[1.4rem] border border-slate-200/80 bg-white/85 px-4 py-4">
-                <p className="font-semibold text-slate-950">{item.reasonLabel}</p>
-                <p className="mt-2 text-sm text-slate-500">
-                  {item.count} personas · abandono medio {formatMoment(item.averageDropoffSecond)}
-                </p>
-                <p className="mt-3 text-sm leading-7 text-slate-600">{item.example}</p>
-              </article>
-            ))}
-          </div>
+          {plan.reasonFixes.map((item) => {
+            const key = `${item.reasonCode}-fix`;
+            const isComplete = completedFixes.has(key);
 
-          <div className="mt-6 space-y-3">
-            {plan.reasonFixes.map((item) => (
-              <div key={`${item.reasonCode}-fix`} className="rounded-[1.2rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4 text-sm leading-7 text-slate-700">
-                <span className="font-semibold text-slate-900">{item.reasonLabel}:</span> {item.action}
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
+            return (
+              <button
+                type="button"
+                key={key}
+                onClick={() => toggleFix(key)}
+                className={`group w-full rounded-[1.2rem] border px-5 py-4 text-left transition ${
+                  isComplete
+                    ? "border-emerald-200 bg-emerald-50/60"
+                    : "border-slate-200/80 bg-white/85 hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition ${
+                      isComplete
+                        ? "border-emerald-500 bg-emerald-500"
+                        : "border-slate-300 bg-white group-hover:border-slate-400"
+                    }`}
+                  >
+                    {isComplete && (
+                      <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p
+                      className={`font-semibold transition ${
+                        isComplete ? "text-slate-400 line-through" : "text-slate-900"
+                      }`}
+                    >
+                      {item.reasonLabel}
+                    </p>
+                    <p
+                      className={`mt-1 text-sm leading-6 transition ${
+                        isComplete ? "text-slate-400" : "text-slate-600"
+                      }`}
+                    >
+                      {item.action}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
     </section>
   );
 }
@@ -2726,42 +2885,32 @@ function MediaTargetingStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Configuracion de campanas publicitarias."
-        description="Segmentación y estructura de campaña basadas en el rendimiento proyectado."
+        title="Estrategia de medios"
+        description="Recomendaciones para campanas publicitarias."
       />
 
-      <section className="result-panel rounded-[2rem] px-6 py-6">
-        <div className="grid gap-4 lg:grid-cols-3">
-          {recommendations.map((item, index) => {
-            const colors = [
-              "bg-blue-100 text-blue-600 border-blue-200",
-              "bg-purple-100 text-purple-600 border-purple-200",
-              "bg-amber-100 text-amber-600 border-amber-200",
-            ];
-            const icons = [
-              <svg key="target" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
-              <svg key="chart" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
-              <svg key="bolt" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
-            ];
-
-            return (
-              <article key={item.recommendation} className={`rounded-[1.5rem] border-2 ${colors[index % 3]} px-5 py-5`}>
-                <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] opacity-70">
-                    Recomendacion #{index + 1}
+      <section className="result-panel rounded-[2.2rem] px-6 py-7">
+        <div className="space-y-4">
+          {recommendations.map((item, index) => (
+            <article
+              key={item.recommendation}
+              className="rounded-[1.4rem] border border-slate-200/80 bg-white/85 px-5 py-5"
+            >
+              <div className="flex items-start gap-4">
+                <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+                  {index + 1}
+                </span>
+                <div className="flex-1">
+                  <h3 className="font-display text-lg font-semibold tracking-[-0.03em] text-slate-950">
+                    {item.recommendation}
+                  </h3>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">
+                    {item.implementation}
                   </p>
-                  {icons[index % 3]}
                 </div>
-                <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
-                  {item.recommendation}
-                </h3>
-                <div className="mt-4 rounded-xl bg-white/60 px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Implementacion</p>
-                  <p className="mt-1 text-sm leading-7 text-slate-700">{item.implementation}</p>
-                </div>
-              </article>
-            );
-          })}
+              </div>
+            </article>
+          ))}
         </div>
       </section>
     </section>
@@ -2782,8 +2931,8 @@ function VersionStrategiesStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Variantes creativas para testing."
-        description="Tres propuestas de iteración con cambios estructurales para diferentes segmentos."
+        title="Variantes creativas"
+        description="Tres versiones alternativas del video para testear."
       />
 
       <div className="grid gap-4 xl:grid-cols-3">
@@ -2836,6 +2985,12 @@ function SavingsROIStep({
 }: {
   savingsRoi: SavingsROI | undefined;
 }) {
+  const [budget, setBudget] = useState(1000);
+  const multiplier = savingsRoi?.savings_multiplier ?? 3;
+  const savingsFromBudget = Math.round(budget * (multiplier - 1));
+  const editCost = Math.round(budget);
+  const reshootCost = Math.round(budget * multiplier);
+
   const complexityLabels = {
     low: "Baja",
     medium: "Media",
@@ -2843,7 +2998,7 @@ function SavingsROIStep({
   };
 
   const complexityColors = {
-    low: "bg-green-100 text-green-700",
+    low: "bg-emerald-100 text-emerald-700",
     medium: "bg-amber-100 text-amber-700",
     high: "bg-red-100 text-red-700",
   };
@@ -2851,49 +3006,92 @@ function SavingsROIStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Ahorro estimado vs re-grabacion."
-        description="Comparativa de costos entre aplicar los cambios sugeridos y re-grabar el video desde cero."
+        title="Ahorro estimado"
+        description="Calcula cuanto ahorrarias aplicando cambios en vez de regrabar."
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="result-panel rounded-[1.8rem] p-6 text-center">
-          <div className="text-3xl font-bold text-green-500">${savingsRoi?.savings_amount ?? 0}</div>
-          <div className="mt-1 text-sm text-slate-500">Ahorro total</div>
-        </div>
-        <div className="result-panel rounded-[1.8rem] p-6 text-center">
-          <div className="text-3xl font-bold text-teal-500">{savingsRoi?.savings_percent ?? 0}%</div>
-          <div className="mt-1 text-sm text-slate-500">Porcentaje de ahorro</div>
-        </div>
-        <div className="result-panel rounded-[1.8rem] p-6 text-center">
-          <div className="text-3xl font-bold text-blue-500">{savingsRoi?.time_saved_hours ?? 0}h</div>
-          <div className="mt-1 text-sm text-slate-500">Tiempo ahorrado</div>
-        </div>
-      </div>
-
-      <div className="result-panel rounded-[1.8rem] p-6">
-        <h4 className="mb-4 font-display text-lg font-semibold text-slate-950">Comparativa de costos</h4>
-        <div className="flex items-center gap-4">
-          <div className="flex-1 rounded-xl bg-red-50 p-4 text-center">
-            <div className="text-sm text-slate-500">Re-grabar video</div>
-            <div className="mt-1 text-2xl font-bold text-red-500">${savingsRoi?.estimated_reshoot_cost ?? 0}</div>
-          </div>
-          <div className="text-2xl text-slate-300">vs</div>
-          <div className="flex-1 rounded-xl bg-green-50 p-4 text-center">
-            <div className="text-sm text-slate-500">Aplicar cambios</div>
-            <div className="mt-1 text-2xl font-bold text-green-500">${savingsRoi?.estimated_edit_cost ?? 0}</div>
+      <section className="result-panel rounded-[2.2rem] px-6 py-7">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-lg font-bold text-white">
+            {multiplier}x
+          </span>
+          <div>
+            <p className="font-display text-lg font-semibold text-slate-950">Multiplo de ahorro</p>
+            <p className="text-sm text-slate-500">Por cada $1 en edicion, ahorrarias ${multiplier - 1} vs regrabar</p>
           </div>
         </div>
-      </div>
 
-      <div className="result-panel rounded-[1.8rem] p-6">
-        <p className="text-slate-700">{savingsRoi?.recommendation ?? "Aplica los cambios sugeridos para ahorrar dinero y tiempo."}</p>
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Complejidad:</span>
-          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${complexityColors[savingsRoi?.complexity_level ?? "low"]}`}>
+        <div className="mt-8">
+          <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+            Tu presupuesto de edicion
+          </label>
+          <div className="mt-3 flex items-center gap-4">
+            <span className="text-lg font-semibold text-slate-400">$</span>
+            <input
+              type="range"
+              min={100}
+              max={10000}
+              step={100}
+              value={budget}
+              onChange={(e) => setBudget(Number(e.target.value))}
+              className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-slate-900"
+            />
+            <input
+              type="number"
+              min={100}
+              max={50000}
+              value={budget}
+              onChange={(e) => setBudget(Math.max(100, Number(e.target.value) || 100))}
+              className="w-24 rounded-xl border border-slate-200 bg-white px-3 py-2 text-right font-semibold text-slate-900 focus:border-slate-400 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-[1.2rem] border border-slate-200 bg-white px-4 py-4 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              Costo de edicion
+            </p>
+            <p className="mt-2 font-display text-2xl font-semibold text-slate-900">
+              ${editCost.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-[1.2rem] border border-red-200 bg-red-50 px-4 py-4 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-red-400">
+              Costo de regrabar
+            </p>
+            <p className="mt-2 font-display text-2xl font-semibold text-red-600">
+              ${reshootCost.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-500">
+              Tu ahorro
+            </p>
+            <p className="mt-2 font-display text-2xl font-semibold text-emerald-600">
+              ${savingsFromBudget.toLocaleString()}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-center justify-between rounded-[1.2rem] border border-slate-200 bg-slate-50 px-5 py-4">
+          <p className="text-sm text-slate-600">{savingsRoi?.recommendation ?? "Aplica los cambios sobre la edicion actual."}</p>
+          <span className={`ml-4 flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${complexityColors[savingsRoi?.complexity_level ?? "low"]}`}>
             {complexityLabels[savingsRoi?.complexity_level ?? "low"]}
           </span>
         </div>
-      </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-[1rem] border border-slate-200 bg-white px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tiempo ahorrado</p>
+            <p className="mt-1 font-display text-xl font-semibold text-slate-900">{savingsRoi?.time_saved_hours ?? 2}h</p>
+          </div>
+          <div className="rounded-[1rem] border border-slate-200 bg-white px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Ahorro porcentual</p>
+            <p className="mt-1 font-display text-xl font-semibold text-slate-900">{Math.round(((multiplier - 1) / multiplier) * 100)}%</p>
+          </div>
+        </div>
+      </section>
     </section>
   );
 }
@@ -2916,8 +3114,8 @@ function CrosspostStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Genera posts para redes desde el transcript."
-        description="Texto optimizado para redes sociales basado en el contenido del video."
+        title="Posts para redes"
+        description="Texto listo para publicar en redes sociales."
       />
 
       <section className="result-panel rounded-[2.2rem] px-6 py-8">
@@ -3297,7 +3495,7 @@ function DashboardContent() {
                   </svg>
                 </button>
                 <h1 className="text-2xl font-bold text-black md:text-3xl">
-                  {analysis.analysis.clip.fileName}
+                  {analysis.analysis.clip.generatedTitle || analysis.analysis.clip.fileName}
                 </h1>
               </div>
               <div className="flex flex-wrap gap-3">

@@ -68,6 +68,8 @@ CREATIVE_ANALYSIS_SPEC = JsonPromptSpec(
         "Analiza solo transcript y duracion. "
         "Devuelve un JSON estricto con scores enteros entre 0 y 100. "
         "timeline_insights debe usar exactamente los ids: hook, energy, overload, loop. "
+        "Cada timeline_insight.detail debe tener 2-3 oraciones: que pasa en ese momento, por que afecta la retencion, y que accion concreta tomar. "
+        "Se especifico basandote en el transcript, no uses frases genericas. "
         "No inventes campos fuera del schema. "
         "Escribe los textos de salida en espanol claro, especifico y util para marketers."
     ),
@@ -141,6 +143,11 @@ VIDEO_CREATIVE_ANALYSIS_SPEC = JsonPromptSpec(
         "Los scores deben ser enteros de 0 a 100. "
         "El overall_score debe priorizar lectura visual, hook, claridad, ritmo y encaje de plataforma por encima del audio. "
         "timeline_insights debe usar exactamente los ids: hook, energy, overload, loop. "
+        "Cada timeline_insight debe tener un detail de 2-3 oraciones especificas al video: "
+        "explica QUE esta pasando en ese segundo exacto del video (que se ve, que se dice), "
+        "POR QUE eso afecta la retencion (psicologia del viewer), "
+        "y QUE accion concreta tomar para mejorarlo (ser especifico, no generico). "
+        "No uses frases genericas como 'mejorar el hook' - di exactamente que cambiar basado en lo que viste en el video. "
         "No inventes campos fuera del schema."
     ),
     temperature=0.2,

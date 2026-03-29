@@ -178,6 +178,7 @@ export type SavingsROI = {
   estimated_edit_cost: number;
   savings_amount: number;
   savings_percent: number;
+  savings_multiplier: number;
   recommendation: string;
   time_saved_hours: number;
   complexity_level: "low" | "medium" | "high";
@@ -1083,6 +1084,27 @@ function isAnalysisResponse(payload: unknown): payload is AnalysisResponse {
   );
 }
 
+function generateVideoTitle(text: string, overallLabel: string, fileName: string): string {
+  // Try to extract a meaningful title from the text
+  if (text && text.length > 10) {
+    const firstSentence = text.split(".")[0].trim();
+    if (firstSentence.length > 60) {
+      const words = firstSentence.slice(0, 60).split(" ").slice(0, -1).join(" ");
+      return words + "...";
+    }
+    if (firstSentence.length > 15) {
+      return firstSentence;
+    }
+  }
+  // Fallback to overall label
+  if (overallLabel && overallLabel.length > 5) {
+    return overallLabel;
+  }
+  // Final fallback: clean the filename
+  const cleanName = fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+  return cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+}
+
 export function createAnalysisPayload(input: CreateAnalysisInput): AnalysisResponse {
   const text = input.texto.trim();
   const seed = hashString(
@@ -1311,6 +1333,7 @@ export function createAnalysisPayload(input: CreateAnalysisInput): AnalysisRespo
       statusSteps: STATUS_STEPS,
       clip: {
         fileName: previewName,
+        generatedTitle: generateVideoTitle(text, overallLabel, previewName),
         mediaType: fileTypeLabel(input.fileType),
         sizeLabel: formatBytes(input.fileSize),
         durationLabel: formatDuration(durationSeconds),

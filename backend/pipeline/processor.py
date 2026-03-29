@@ -40,6 +40,29 @@ def build_public_backend_url() -> str:
     return PUBLIC_BACKEND_URL or "http://localhost:8000"
 
 
+def generate_video_title(video_summary: str, overall_label: str, original_filename: str) -> str:
+    """Generate a descriptive title from the video summary."""
+    # Try to extract a meaningful title from the summary
+    if video_summary and len(video_summary) > 10:
+        # Take the first sentence or first ~50 chars
+        first_sentence = video_summary.split(".")[0].strip()
+        if len(first_sentence) > 60:
+            # Truncate at word boundary
+            words = first_sentence[:60].rsplit(" ", 1)[0]
+            return words + "..."
+        if len(first_sentence) > 15:
+            return first_sentence
+
+    # Fallback to overall_label if available
+    if overall_label and len(overall_label) > 5:
+        return overall_label
+
+    # Final fallback: clean the filename
+    clean_name = original_filename.rsplit(".", 1)[0]  # Remove extension
+    clean_name = clean_name.replace("-", " ").replace("_", " ")
+    return clean_name.title()
+
+
 def build_job_urls(job_id: str) -> tuple[str, str]:
     """Build job events and result URLs."""
     base = build_public_backend_url()
@@ -106,6 +129,11 @@ def build_final_analysis_payload(
             "statusSteps": STATUS_STEPS,
             "clip": {
                 "fileName": video["original_filename"],
+                "generatedTitle": generate_video_title(
+                    final_copy.get("video_summary", ""),
+                    creative_context.get("overall_label", ""),
+                    video["original_filename"],
+                ),
                 "mediaType": file_type_label(video.get("mime_type")),
                 "sizeLabel": format_bytes(video.get("size_bytes")),
                 "durationLabel": format_duration(duration_seconds),
