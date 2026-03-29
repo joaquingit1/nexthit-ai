@@ -1401,8 +1401,9 @@ function StepIntro({
 }
 
 function getScoreColor(score: number) {
-  const hue = (Math.max(0, Math.min(score, 100)) / 100) * 120;
-  return `hsl(${hue} 72% 46%)`;
+  // Blue (220) to Cyan (185) based on score
+  const hue = 220 - (Math.max(0, Math.min(score, 100)) / 100) * 35;
+  return `hsl(${hue} 72% 52%)`;
 }
 
 function ScoreSummaryStep({
@@ -1493,7 +1494,7 @@ function ScoreSummaryStep({
                 >
                   {displayScore}
                 </p>
-                <p className="mt-3 max-w-[11rem] text-[13px] font-medium leading-6 text-slate-600 md:text-sm">
+                <p className="mt-2 max-w-[9rem] text-[11px] font-medium leading-4 text-slate-500">
                   {analysis.summary.overallLabel}
                 </p>
               </div>
@@ -2104,87 +2105,45 @@ function RawPersonasStep({
           </div>
         ) : null}
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <div className="mt-6 space-y-3">
           {visible.map((persona) => (
-            <article key={persona.persona_id} className="rounded-[1.6rem] border border-slate-200/80 bg-white/85 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className="inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                      style={{ backgroundColor: `${persona.color}22`, color: persona.color }}
-                    >
-                      {persona.archetype ?? "Persona"}
+            <article key={persona.persona_id} className="rounded-xl border border-slate-200/80 bg-white/85 px-5 py-4">
+              <div className="flex items-start gap-4">
+                {/* Bullet indicator */}
+                <div
+                  className="mt-1.5 h-3 w-3 flex-shrink-0 rounded-full"
+                  style={{ backgroundColor: persona.color }}
+                />
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <h4 className="font-semibold text-slate-950">
+                      {cleanPersonaName(persona.name)}
+                    </h4>
+                    <span className="text-sm text-slate-500">
+                      {persona.archetype ?? "Persona"} · {persona.demographic_profile_label ?? persona.age_range}
                     </span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {persona.demographic_profile_label ?? persona.demographic_cluster ?? persona.age_range}
+                    <span className="ml-auto text-sm font-medium text-slate-700">
+                      Abandono: {formatMoment(persona.dropoff_second)} ({persona.retention_percent}%)
                     </span>
                   </div>
-                  <h4 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-                    {cleanPersonaName(persona.name)}
-                  </h4>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">
-                    {[persona.age_range, persona.country, persona.income_bracket, persona.social_status].filter(Boolean).join(" / ")}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    Abandono
-                  </p>
-                  <p className="mt-2 font-display text-4xl font-semibold tracking-[-0.05em] text-slate-950">
-                    {formatMoment(persona.dropoff_second)}
-                  </p>
-                  <p className="mt-2 text-sm text-slate-500">{persona.retention_percent}% retencion</p>
-                </div>
-              </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[1.2rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Motivo principal
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    {persona.reason_label ?? "Sin clasificar"}
-                  </p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">{persona.why_they_left}</p>
-                </div>
-                <div className="rounded-[1.2rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Resumen de interaccion
-                  </p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">{persona.summary_of_interacion}</p>
-                </div>
-              </div>
+                  <div className="mt-2 text-sm text-slate-600">
+                    <span className="font-medium text-slate-700">{persona.reason_label ?? "Sin clasificar"}:</span>{" "}
+                    {persona.why_they_left}
+                  </div>
 
-              <div className="mt-3 grid gap-3 lg:grid-cols-3">
-                <div className="rounded-[1.2rem] border border-emerald-100 bg-emerald-50/70 px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                    Que le gusto
-                  </p>
-                  <p className="mt-2 text-sm leading-7 text-slate-700">
-                    {persona.liked_moment ?? "Conecta cuando la promesa se vuelve mas concreta."}
-                  </p>
-                </div>
-                <div className="rounded-[1.2rem] border border-rose-100 bg-rose-50/70 px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-700">
-                    Que la hizo irse
-                  </p>
-                  <p className="mt-2 text-sm leading-7 text-slate-700">
-                    {persona.disliked_moment ?? persona.why_they_left}
-                  </p>
-                </div>
-                <div className="rounded-[1.2rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Evidencia del video
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    {persona.evidence_start_second !== undefined
-                      ? `${formatMoment(persona.evidence_start_second)} - ${formatMoment(persona.evidence_end_second ?? persona.evidence_start_second)}`
-                      : formatMoment(persona.dropoff_second)}
-                  </p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">
-                    {persona.evidence_excerpt ?? "Todavia no hay extracto puntual de evidencia para esta persona."}
-                  </p>
+                  <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                    <div>
+                      <span className="text-emerald-600">+</span>{" "}
+                      <span className="text-slate-600">{persona.liked_moment ?? "Conecta con la promesa"}</span>
+                    </div>
+                    <div>
+                      <span className="text-rose-500">−</span>{" "}
+                      <span className="text-slate-600">{persona.disliked_moment ?? persona.why_they_left}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </article>
