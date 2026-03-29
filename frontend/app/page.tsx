@@ -805,6 +805,18 @@ export default function LandingPage() {
       <LandingSection id="landing-final" sectionRef={finalSectionSnapRef} className="landing-final-panel">
         <section ref={finalRef} className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-24">
           <div className={`landing-final-shell ${finalVisible ? "is-visible" : ""}`}>
+            <div className="landing-final-video" aria-hidden="true">
+              <video
+                className="landing-final-video-media"
+                src="https://maxewvuutnlqdnrrwdol.supabase.co/storage/v1/object/public/Videos/VideoFondo.mp4"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+              />
+              <div className="landing-final-video-overlay" />
+            </div>
             <span className="landing-section-kicker">por qué importa</span>
             <h2 className="landing-final-title">
               Saber qué tan bien le va a ir a tu contenido, antes de gastar un centavo.
