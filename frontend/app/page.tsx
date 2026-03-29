@@ -21,6 +21,8 @@ const FINAL_PATTERNS = [
   "generación de estrategia de crecimiento",
 ];
 
+const HERO_SCROLL_CAPTURE_THRESHOLD = 24;
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -557,14 +559,13 @@ export default function LandingPage() {
       }
 
       const currentScroll = shell.scrollTop;
-      const heroHeight = heroSectionRef.current?.offsetHeight ?? window.innerHeight;
       const currentIndex = sections.reduce((bestIndex, section, index) => {
         const distance = Math.abs(section.offsetTop - currentScroll);
         const bestDistance = Math.abs(sections[bestIndex]!.offsetTop - currentScroll);
         return distance < bestDistance ? index : bestIndex;
       }, 0);
 
-      const heroIsPinned = currentIndex === 0 && currentScroll < heroHeight * 0.8;
+      const heroIsPinned = currentIndex === 0 && currentScroll <= HERO_SCROLL_CAPTURE_THRESHOLD;
       const currentGraphProgress = heroGraphProgressRef.current;
       const graphIsLocked = currentGraphProgress < 0.995;
       if (
@@ -573,7 +574,7 @@ export default function LandingPage() {
           (event.deltaY < 0 && currentGraphProgress > 0.001))
       ) {
         event.preventDefault();
-        if (currentScroll !== 0) {
+        if (currentScroll > 0) {
           shell.scrollTop = 0;
         }
         setHeroGraphProgress((current) => {
