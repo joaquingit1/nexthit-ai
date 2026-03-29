@@ -2153,7 +2153,7 @@ function RawPersonasStep({
         {/* Modal */}
         {selectedPersona && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px]"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/10 backdrop-blur-md"
             onClick={() => setSelectedPersona(null)}
           >
             <div
