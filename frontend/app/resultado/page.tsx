@@ -1853,7 +1853,7 @@ function GraphStep({
         </section>
 
         {/* Sidebar derecho - métricas compactas */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 self-start">
           <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
               Segundo
