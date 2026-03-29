@@ -1711,7 +1711,7 @@ function GraphStep({
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[620px,1fr]">
+      <div className="grid gap-4 lg:grid-cols-[1fr,240px]">
         {/* Chart */}
         <section className="relative overflow-hidden rounded-[2.3rem] border border-white/60 bg-[linear-gradient(180deg,rgba(247,250,252,0.95),rgba(239,244,248,0.88))] px-3 py-4 md:px-6 md:py-6 max-h-[340px]">
           <div className="analysis-grid absolute inset-0 opacity-40" />
