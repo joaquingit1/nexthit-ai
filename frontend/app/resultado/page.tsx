@@ -3635,157 +3635,151 @@ function DashboardContent() {
   };
 
   return (
-    <div className="result-shell min-h-screen flex">
-      {/* Sidebar */}
-      <aside className="w-64 shrink-0 border-r border-slate-200/80 bg-white/50 backdrop-blur-sm p-4 sticky top-0 h-screen">
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => router.push("/analisis")}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-500 hover:text-slate-700 transition"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Volver
-          </button>
-        </div>
-
-        <nav className="mt-8 space-y-1">
-          <button
-            type="button"
-            onClick={() => setActiveSection("analysis")}
-            className={`flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-medium transition ${
-              activeSection === "analysis"
-                ? "bg-slate-900 text-white"
-                : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-            </svg>
-            Creatives
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSection("analytics")}
-            className={`flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-medium transition ${
-              activeSection === "analytics"
-                ? "bg-slate-900 text-white"
-                : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Analytics
-          </button>
-        </nav>
-
-        <div className="mt-8 pt-8 border-t border-slate-200/80 space-y-2">
-          <button
-            type="button"
-            onClick={() => void handleExportPDF()}
-            className="flex items-center gap-2 w-full rounded-xl px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 transition"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Exportar PDF
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push("/app")}
-            className="flex items-center gap-2 w-full rounded-xl px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 transition"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Nuevo análisis
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-x-hidden px-6 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-black md:text-3xl">
-            {analysis.analysis.clip.generatedTitle || analysis.analysis.clip.fileName}
-          </h1>
-        </div>
-
-        {activeSection === "analysis" && (
-          <div className="space-y-6">
-            <AnalysisStepper
-              currentStep={currentStep}
-              maxReachedStep={maxReachedStep}
-              onStepClick={setCurrentStep}
-            />
-
-            <section key={step.id} className="result-stage-enter space-y-8 rounded-[2.4rem] px-1 py-2">
-              {step.id === "score" ? <ScoreSummaryStep analysis={analysis.analysis} /> : null}
-
-              {step.id === "raw-personas" ? (
-                <RawPersonasStep personas={rawPersonas} />
-              ) : null}
-
-              {step.id === "changes" ? <ChangePlanStep plan={changePlan} /> : null}
-
-              {step.id === "versions" ? (
-                <VersionStrategiesStep versions={versionStrategies} />
-              ) : null}
-
-              <StepFooter
-                currentStep={currentStep}
-                onBack={() => setCurrentStep((current) => Math.max(current - 1, 0))}
-                onNext={() => {
-                  const nextStep = Math.min(currentStep + 1, ANALYSIS_STEPS.length - 1);
-                  setCurrentStep(nextStep);
-                  setMaxReachedStep((current) => Math.max(current, nextStep));
-                }}
-              />
-            </section>
-          </div>
-        )}
-
-        {activeSection === "analytics" && (
-          <div className="space-y-6">
-            {/* Analytics Tabs */}
-            <div className="flex rounded-full border border-slate-200/80 bg-white/90 p-1 shadow-sm backdrop-blur-xl w-fit">
-              {ANALYTICS_TABS.map((tab) => (
+    <main className="result-shell min-h-screen overflow-x-hidden px-4 py-5 md:px-6 md:py-6">
+      <div className="space-y-6">
+        <section className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
                 <button
-                  key={tab.id}
                   type="button"
-                  onClick={() => setAnalyticsTab(tab.id)}
-                  className={`rounded-full px-6 py-2.5 text-sm font-semibold transition ${
-                    analyticsTab === tab.id
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
+                  onClick={() => router.push("/analisis")}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-500 transition hover:border-slate-300 hover:bg-white hover:text-slate-700"
+                  title="Volver"
                 >
-                  {tab.title}
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
                 </button>
-              ))}
+                <h1 className="text-2xl font-bold text-black md:text-3xl">
+                  {analysis.analysis.clip.generatedTitle || analysis.analysis.clip.fileName}
+                </h1>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleExportPDF()}
+                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Exportar PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/app")}
+                  className="rounded-full border border-slate-200 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                >
+                  Analizar otro video
+                </button>
+              </div>
             </div>
 
-            {/* Analytics Content */}
-            <div className="result-stage-enter space-y-8 rounded-[2.4rem] px-1 py-2">
-              {analyticsTab === "insights" && audienceInsights ? (
-                <AudienceInsightsStep audience={audienceInsights} />
-              ) : null}
+            {/* Section Selector */}
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setActiveSection("analysis")}
+                className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+                  activeSection === "analysis"
+                    ? "bg-slate-900 text-white"
+                    : "bg-white/80 text-slate-600 hover:bg-white border border-slate-200"
+                }`}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Análisis
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSection("analytics")}
+                className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+                  activeSection === "analytics"
+                    ? "bg-slate-900 text-white"
+                    : "bg-white/80 text-slate-600 hover:bg-white border border-slate-200"
+                }`}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Analytics
+              </button>
+            </div>
 
-              {analyticsTab === "retention" ? (
-                <GraphStep
-                  analysis={analysis.analysis}
-                  viewerMode={viewerMode}
-                  onViewerModeChange={setViewerMode}
+            {activeSection === "analysis" && (
+              <>
+                <AnalysisStepper
+                  currentStep={currentStep}
+                  maxReachedStep={maxReachedStep}
+                  onStepClick={setCurrentStep}
                 />
-              ) : null}
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
+
+                <section key={step.id} className="result-stage-enter space-y-8 rounded-[2.4rem] px-1 py-2">
+                  {step.id === "score" ? <ScoreSummaryStep analysis={analysis.analysis} /> : null}
+
+                  {step.id === "raw-personas" ? (
+                    <RawPersonasStep personas={rawPersonas} />
+                  ) : null}
+
+                  {step.id === "changes" ? <ChangePlanStep plan={changePlan} /> : null}
+
+                  {step.id === "versions" ? (
+                    <VersionStrategiesStep versions={versionStrategies} />
+                  ) : null}
+
+                  <StepFooter
+                    currentStep={currentStep}
+                    onBack={() => setCurrentStep((current) => Math.max(current - 1, 0))}
+                    onNext={() => {
+                      const nextStep = Math.min(currentStep + 1, ANALYSIS_STEPS.length - 1);
+                      setCurrentStep(nextStep);
+                      setMaxReachedStep((current) => Math.max(current, nextStep));
+                    }}
+                  />
+                </section>
+              </>
+            )}
+
+            {activeSection === "analytics" && (
+              <section className="space-y-6">
+                {/* Analytics Tabs */}
+                <div className="flex rounded-full border border-slate-200/80 bg-white/90 p-1 shadow-sm backdrop-blur-xl w-fit">
+                  {ANALYTICS_TABS.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setAnalyticsTab(tab.id)}
+                      className={`rounded-full px-6 py-2.5 text-sm font-semibold transition ${
+                        analyticsTab === tab.id
+                          ? "bg-slate-900 text-white"
+                          : "text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      {tab.title}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Analytics Content */}
+                <div className="result-stage-enter space-y-8 rounded-[2.4rem] px-1 py-2">
+                  {analyticsTab === "insights" && audienceInsights ? (
+                    <AudienceInsightsStep audience={audienceInsights} />
+                  ) : null}
+
+                  {analyticsTab === "retention" ? (
+                    <GraphStep
+                      analysis={analysis.analysis}
+                      viewerMode={viewerMode}
+                      onViewerModeChange={setViewerMode}
+                    />
+                  ) : null}
+                </div>
+              </section>
+            )}
+        </section>
+      </div>
+    </main>
   );
 }
 
