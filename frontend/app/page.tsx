@@ -66,7 +66,7 @@ function useSectionInView<T extends HTMLElement>(threshold = 0.4) {
   return [ref, isInView] as const;
 }
 
-function useHeroProgress(ref: React.RefObject<HTMLElement>) {
+function useHeroProgress(ref: React.RefObject<HTMLElement>, scrollRootRef: React.RefObject<HTMLElement>) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -91,17 +91,19 @@ function useHeroProgress(ref: React.RefObject<HTMLElement>) {
     };
 
     update();
-    window.addEventListener("scroll", requestUpdate, { passive: true });
+    const scrollRoot = scrollRootRef.current;
+    const target = scrollRoot ?? window;
+    target.addEventListener("scroll", requestUpdate, { passive: true });
     window.addEventListener("resize", requestUpdate);
 
     return () => {
       if (frame) {
         window.cancelAnimationFrame(frame);
       }
-      window.removeEventListener("scroll", requestUpdate);
+      target.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", requestUpdate);
     };
-  }, [ref]);
+  }, [ref, scrollRootRef]);
 
   return progress;
 }
@@ -177,21 +179,59 @@ function LandingUploadDemoAnimation() {
 
 function LandingSection({
   id,
+  sectionRef,
   className,
   children,
 }: {
   id: string;
+  sectionRef?: React.RefObject<HTMLElement>;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <section
+      ref={sectionRef}
       id={id}
       className={`landing-snap-panel relative flex min-h-screen snap-start items-center ${className ?? ""}`}
     >
       {children}
     </section>
   );
+}
+
+function AnimatedMetricNumber({
+  value,
+  active,
+}: {
+  value: number;
+  active: boolean;
+}) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (!active) {
+      setDisplayValue(0);
+      return;
+    }
+
+    let frame = 0;
+    const duration = 1500;
+    const startedAt = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = clamp((now - startedAt) / duration, 0, 1);
+      const eased = elapsed * elapsed;
+      setDisplayValue(Math.round(value * eased));
+      if (elapsed < 1) {
+        frame = window.requestAnimationFrame(tick);
+      }
+    };
+
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [active, value]);
+
+  return <>{displayValue}</>;
 }
 
 function ProcessCard({
@@ -418,14 +458,81 @@ function ProcessGraphVisual() {
 
 export default function LandingPage() {
   const router = useRouter();
+  const shellRef = useRef<HTMLElement | null>(null);
   const clickAudioRef = useRef<HTMLAudioElement | null>(null);
   const navigateTimeoutRef = useRef<number | null>(null);
   const navigatingRef = useRef(false);
   const heroSectionRef = useRef<HTMLElement | null>(null);
-  const heroProgress = useHeroProgress(heroSectionRef);
+  const processSectionSnapRef = useRef<HTMLElement | null>(null);
+  const benefitsSectionSnapRef = useRef<HTMLElement | null>(null);
+  const finalSectionSnapRef = useRef<HTMLElement | null>(null);
+  const scrollLockRef = useRef(false);
+  const heroProgress = useHeroProgress(heroSectionRef, shellRef);
   const [processRef, processVisible] = useSectionInView<HTMLElement>(0.35);
   const [benefitsRef, benefitsVisible] = useSectionInView<HTMLElement>(0.32);
   const [finalRef, finalVisible] = useSectionInView<HTMLElement>(0.45);
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) {
+      return;
+    }
+
+    const handleWheel = (event: WheelEvent) => {
+      if (window.innerWidth < 768) {
+        return;
+      }
+
+      if (Math.abs(event.deltaY) < 10) {
+        return;
+      }
+
+      if (scrollLockRef.current) {
+        event.preventDefault();
+        return;
+      }
+
+      const sections = [
+        heroSectionRef.current,
+        processSectionSnapRef.current,
+        benefitsSectionSnapRef.current,
+        finalSectionSnapRef.current,
+      ].filter((section): section is HTMLElement => Boolean(section));
+
+      if (!sections.length) {
+        return;
+      }
+
+      const currentScroll = shell.scrollTop;
+      const currentIndex = sections.reduce((bestIndex, section, index) => {
+        const distance = Math.abs(section.offsetTop - currentScroll);
+        const bestDistance = Math.abs(sections[bestIndex]!.offsetTop - currentScroll);
+        return distance < bestDistance ? index : bestIndex;
+      }, 0);
+
+      const direction = event.deltaY > 0 ? 1 : -1;
+      const targetIndex = clamp(currentIndex + direction, 0, sections.length - 1);
+      const targetSection = sections[targetIndex];
+
+      if (!targetSection) {
+        return;
+      }
+
+      event.preventDefault();
+      scrollLockRef.current = true;
+      shell.scrollTo({
+        top: targetSection.offsetTop,
+        behavior: "smooth",
+      });
+
+      window.setTimeout(() => {
+        scrollLockRef.current = false;
+      }, 720);
+    };
+
+    shell.addEventListener("wheel", handleWheel, { passive: false });
+    return () => shell.removeEventListener("wheel", handleWheel);
+  }, []);
 
   useEffect(() => {
     router.prefetch("/app");
@@ -484,7 +591,7 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="landing-snap-shell bg-white text-slate-950">
+    <main ref={shellRef} className="landing-snap-shell bg-white text-slate-950">
       <nav className="landing-nav pointer-events-none fixed left-1/2 top-4 z-50 flex w-[calc(100%-1.5rem)] max-w-6xl -translate-x-1/2 items-center justify-between rounded-[1.4rem] border border-slate-200/70 bg-white/78 px-4 py-3 shadow-[0_18px_42px_rgba(15,23,42,0.08)] backdrop-blur-xl md:px-6">
         <Link href="/" className="pointer-events-auto flex items-center gap-2">
           <img src="/logo.svg" alt="NextHit" className="h-8 w-auto" />
@@ -512,8 +619,8 @@ export default function LandingPage() {
         </Link>
       </nav>
 
-      <LandingSection id="landing-hero" className="landing-hero-panel" >
-        <section ref={heroSectionRef} className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-6 pb-16 pt-32">
+      <LandingSection id="landing-hero" sectionRef={heroSectionRef} className="landing-hero-panel" >
+        <section className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-6 pb-16 pt-32">
           <div className="landing-hero-surface absolute inset-0" aria-hidden="true" />
           <LandingBlueGraph progress={heroProgress} />
           <div className="landing-hero-rings" aria-hidden="true">
@@ -527,23 +634,23 @@ export default function LandingPage() {
               inteligencia creativa predictiva
             </span>
             <h1 className="landing-hero-title">
-              Entendé cómo le va a ir a tu video antes de ponerle pauta
+              Predecí el rendimiento de tu video antes de publicar
             </h1>
             <p className="landing-hero-copy">
-              Desarmamos voz, visuales, ritmo y texto en pantalla, simulamos 100 personas sintéticas y convertimos esa lectura en retención, crecimiento y media strategy.
+              Simulamos 100 espectadores para analizar retención, detectar puntos de abandono y optimizar tu contenido.
             </p>
 
             <div className="landing-hero-metrics">
               <div className="landing-hero-metric">
-                <strong>100</strong>
+                <strong><AnimatedMetricNumber value={100} active /></strong>
                 <span>personas sintéticas</span>
               </div>
               <div className="landing-hero-metric">
-                <strong>1</strong>
+                <strong><AnimatedMetricNumber value={1} active /></strong>
                 <span>curva predictiva de retención</span>
               </div>
               <div className="landing-hero-metric">
-                <strong>0</strong>
+                <strong><AnimatedMetricNumber value={0} active /></strong>
                 <span>dólares desperdiciados antes de testear</span>
               </div>
             </div>
@@ -568,7 +675,7 @@ export default function LandingPage() {
         </section>
       </LandingSection>
 
-      <LandingSection id="landing-process" className="landing-process-panel">
+      <LandingSection id="landing-process" sectionRef={processSectionSnapRef} className="landing-process-panel">
         <section ref={processRef} className="mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center px-6 py-24">
           <div className="landing-section-heading">
             <span className="landing-section-kicker">cómo funciona</span>
@@ -611,7 +718,7 @@ export default function LandingPage() {
         </section>
       </LandingSection>
 
-      <LandingSection id="landing-benefits" className="landing-benefits-panel">
+      <LandingSection id="landing-benefits" sectionRef={benefitsSectionSnapRef} className="landing-benefits-panel">
         <section ref={benefitsRef} className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-24">
           <div className={`landing-benefits-shell ${benefitsVisible ? "is-visible" : ""}`}>
             <div className="landing-benefits-copy">
@@ -633,7 +740,7 @@ export default function LandingPage() {
         </section>
       </LandingSection>
 
-      <LandingSection id="landing-final" className="landing-final-panel">
+      <LandingSection id="landing-final" sectionRef={finalSectionSnapRef} className="landing-final-panel">
         <section ref={finalRef} className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-24">
           <div className={`landing-final-shell ${finalVisible ? "is-visible" : ""}`}>
             <span className="landing-section-kicker">por qué importa</span>
