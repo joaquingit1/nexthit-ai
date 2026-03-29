@@ -1131,24 +1131,22 @@ export default function LandingPage() {
 
             <div className="landing-footer-links">
               <div className="landing-footer-column">
-                <span className="landing-footer-heading">Landing</span>
-                <Link href="#landing-hero" onClick={(event) => scrollToLandingSection(event, "#landing-hero")}>Inicio</Link>
-                <Link href="#landing-process" onClick={(event) => scrollToLandingSection(event, "#landing-process")}>Cómo funciona</Link>
-                <Link href="#landing-benefits" onClick={(event) => scrollToLandingSection(event, "#landing-benefits")}>Qué vas a obtener</Link>
+                <span className="landing-footer-heading">Producto</span>
+                <Link href="/casos-de-uso">Casos de uso</Link>
+                <Link href="/funcionalidades">Features</Link>
+                <Link href="/precios">Precios</Link>
               </div>
 
               <div className="landing-footer-column">
-                <span className="landing-footer-heading">Secciones</span>
-                <Link href="#landing-final" onClick={(event) => scrollToLandingSection(event, "#landing-final")}>Por qué importa</Link>
-                <Link href="#landing-hero" onClick={(event) => scrollToLandingSection(event, "#landing-hero")}>Personas sintéticas</Link>
-                <Link href="#landing-benefits" onClick={(event) => scrollToLandingSection(event, "#landing-benefits")}>Curva predictiva</Link>
+                <span className="landing-footer-heading">Legal</span>
+                <Link href="/privacidad">Política de privacidad</Link>
+                <Link href="/terminos">Términos y condiciones</Link>
               </div>
 
               <div className="landing-footer-column">
-                <span className="landing-footer-heading">Navegar</span>
-                <Link href="#landing-hero" onClick={(event) => scrollToLandingSection(event, "#landing-hero")}>Volver arriba</Link>
-                <Link href="#landing-process" onClick={(event) => scrollToLandingSection(event, "#landing-process")}>Proceso</Link>
-                <Link href="#landing-final" onClick={(event) => scrollToLandingSection(event, "#landing-final")}>CTA final</Link>
+                <span className="landing-footer-heading">Empezar</span>
+                <Link href="/app">Análisis</Link>
+                <Link href="/app">User persona</Link>
               </div>
             </div>
           </div>
