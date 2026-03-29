@@ -1711,7 +1711,7 @@ function GraphStep({
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr,240px]">
+      <div className="grid gap-4 lg:grid-cols-[580px,280px]">
         {/* Chart */}
         <section className="relative overflow-hidden rounded-[2.3rem] border border-white/60 bg-[linear-gradient(180deg,rgba(247,250,252,0.95),rgba(239,244,248,0.88))] px-3 py-4 md:px-6 md:py-6 max-h-[340px]">
           <div className="analysis-grid absolute inset-0 opacity-40" />
@@ -1854,21 +1854,23 @@ function GraphStep({
 
         {/* Sidebar derecho - métricas compactas */}
         <div className="flex flex-col gap-2 self-start">
-          <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Segundo
-            </p>
-            <p className="mt-1 font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-              {formatMoment(activeSecond)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Retención
-            </p>
-            <p className="mt-1 font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-              {Math.round(activeAveragePoint.retention)}%
-            </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Segundo
+              </p>
+              <p className="mt-1 font-display text-xl font-semibold tracking-[-0.04em] text-slate-950">
+                {formatMoment(activeSecond)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Retención
+              </p>
+              <p className="mt-1 font-display text-xl font-semibold tracking-[-0.04em] text-slate-950">
+                {Math.round(activeAveragePoint.retention)}%
+              </p>
+            </div>
           </div>
           {(simulationComplete ? analysis.graph.markers : analysis.graph.markers.slice(0, 1)).map((marker) => (
             <div key={marker.label} className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-3">
