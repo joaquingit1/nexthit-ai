@@ -30,6 +30,7 @@ from services.retention import (
     build_viewers_from_personas,
     find_major_drop_second,
 )
+from services.script_generation import generate_creative_scripts
 from services.strategy import synthesize_final_copy, synthesize_strategic_outputs
 from services.transcription import transcribe_video_with_whisper
 from utils import file_type_label, format_bytes, format_duration, format_timestamp, round_value, utc_now_iso
@@ -82,7 +83,7 @@ def build_final_analysis_payload(
     audience_diagnoses: list[dict[str, Any]],
     change_plan: dict[str, Any],
     media_targeting: list[dict[str, Any]],
-    version_strategies: list[dict[str, Any]],
+    creative_scripts: list[dict[str, Any]],
 ) -> dict[str, Any]:
     """Build the final analysis payload for the result."""
     duration_seconds = int(video["duration_seconds"])
@@ -123,7 +124,7 @@ def build_final_analysis_payload(
             "timelineInsights": creative_context["timeline_insights"],
             "changePlan": change_plan,
             "mediaTargeting": media_targeting,
-            "versionStrategies": version_strategies,
+            "creativeScripts": creative_scripts,
             "videoAnalysis": video_analysis,
             "scoreSummary": score_summary,
             "statusSteps": STATUS_STEPS,
@@ -392,6 +393,15 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
             change_plan=change_plan,
             segment_diagnoses=audience_diagnoses,
         )
+        creative_scripts = await generate_creative_scripts(
+            creative_context=creative_context,
+            target_audience=target_audience,
+            transcript=transcript,
+            duration_seconds=duration_seconds,
+            average_line=average_line,
+            segment_diagnoses=audience_diagnoses,
+            change_plan=strategic_outputs["change_plan"],
+        )
         latest_video = await repository.get_video(video_id) or video
         payload = build_final_analysis_payload(
             job_id=job_id,
@@ -405,7 +415,7 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
             audience_diagnoses=audience_diagnoses,
             change_plan=strategic_outputs["change_plan"],
             media_targeting=strategic_outputs["media_targeting"],
-            version_strategies=strategic_outputs["version_strategies"],
+            creative_scripts=creative_scripts,
         )
         await repository.save_result(payload, payload["analysis"]["scoreSummary"])
         await repository.update_job(job_id, {"status": "completed", "stage": "analysis.completed", "progress_percent": 100, "completed_at": utc_now_iso()})

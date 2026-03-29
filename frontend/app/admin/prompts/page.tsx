@@ -15,7 +15,7 @@ interface SystemPrompts {
 const promptFields = [
   {
     key: "user_persona_batch_prompt" as const,
-    label: "User Persona Batch Prompt",
+    label: "AI Persona Batch Prompt",
     description: "Prompt para generar el batch de 100 personas sinteticas con sus perfiles demograficos.",
   },
   {

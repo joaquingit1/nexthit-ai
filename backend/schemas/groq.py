@@ -380,3 +380,65 @@ def strategy_outputs_schema() -> dict[str, Any]:
             },
         },
     }
+
+
+def script_generation_schema() -> dict[str, Any]:
+    script_section = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["text", "visualCue", "duration"],
+        "properties": {
+            "text": {"type": "string"},
+            "visualCue": {"type": "string"},
+            "duration": {"type": "string"},
+        },
+    }
+    creative_script = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "id",
+            "name",
+            "targetAudience",
+            "strategy",
+            "script",
+            "fullScript",
+            "expectedRetention",
+            "whyItWorks",
+            "addressedIssues",
+        ],
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string"},
+            "targetAudience": {"type": "string"},
+            "strategy": {"type": "string"},
+            "script": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["hook", "development", "proof", "cta"],
+                "properties": {
+                    "hook": script_section,
+                    "development": script_section,
+                    "proof": script_section,
+                    "cta": script_section,
+                },
+            },
+            "fullScript": {"type": "string"},
+            "expectedRetention": {"type": "string"},
+            "whyItWorks": {"type": "string"},
+            "addressedIssues": {"type": "array", "items": {"type": "string"}},
+        },
+    }
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["scripts"],
+        "properties": {
+            "scripts": {
+                "type": "array",
+                "items": creative_script,
+                "minItems": 3,
+                "maxItems": 3,
+            },
+        },
+    }

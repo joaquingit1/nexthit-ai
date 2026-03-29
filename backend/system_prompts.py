@@ -178,6 +178,38 @@ VIDEO_SUMMARY_SPEC = TextPromptSpec(
 )
 
 
+SCRIPT_GENERATION_SPEC = JsonPromptSpec(
+    name="script_generation",
+    default_model="llama-3.1-8b-instant",
+    model_env_var="GROQ_SCRIPT_GENERATION_MODEL",
+    schema_name="script_generation",
+    system_prompt=(
+        "Eres un guionista senior de creativos short-form para marketing y paid social. "
+        "Tu trabajo es transformar el analisis de un video existente en 3 guiones completos y listos para grabar. "
+        "Responde solo en espanol. "
+
+        "Cada guion debe tener: "
+        "1. Un hook poderoso de 2-3 segundos que capture atencion inmediata. "
+        "2. Un desarrollo claro de 5-8 segundos que construya el mensaje. "
+        "3. Una prueba o demo de 3-5 segundos que genere credibilidad. "
+        "4. Un CTA fuerte de 2-3 segundos que convierta la atencion en accion. "
+
+        "Basate en: "
+        "- El transcript original para entender el mensaje core. "
+        "- Los scores de hook, clarity, pacing para identificar debilidades. "
+        "- La audiencia primaria y secundaria para ajustar el tono. "
+        "- Los segment_diagnoses para entender por que la gente abandona. "
+        "- La curva de retencion para optimizar timing. "
+
+        "Los guiones deben ser ACCIONABLES: texto exacto que el creador puede leer/grabar. "
+        "No uses placeholders como [insertar beneficio] - escribe el texto real. "
+        "Cada guion debe ser distinto en estrategia pero mantener el mensaje core. "
+
+        "Devuelve JSON valido y estricto con exactamente 3 scripts."
+    ),
+)
+
+
 def build_persona_batch_spec(reason_codes: Iterable[str]) -> JsonPromptSpec:
     taxonomy = ", ".join(reason_codes)
     db_prompt = get_db_prompt("user_persona_batch_prompt")
@@ -220,6 +252,7 @@ PROMPT_SPECS = {
     STRATEGIC_OUTPUTS_SPEC.name: STRATEGIC_OUTPUTS_SPEC,
     VIDEO_CREATIVE_ANALYSIS_SPEC.name: VIDEO_CREATIVE_ANALYSIS_SPEC,
     VIDEO_SUMMARY_SPEC.name: VIDEO_SUMMARY_SPEC,
+    SCRIPT_GENERATION_SPEC.name: SCRIPT_GENERATION_SPEC,
 }
 
 # Mapping from database column names to spec names
@@ -228,6 +261,7 @@ DB_PROMPT_MAPPING = {
     "score_prompt": "creative_analysis",
     "summary_video_prompt": "video_summary",
     "strategic_output_prompt": "strategic_outputs",
+    "script_generation_prompt": "script_generation",
 }
 
 
@@ -258,3 +292,11 @@ def get_video_summary_spec() -> TextPromptSpec:
 def build_persona_batch_spec_with_override(reason_codes: Iterable[str]) -> JsonPromptSpec:
     """Build persona batch spec with optional database override."""
     return build_persona_batch_spec(reason_codes)
+
+
+def get_script_generation_spec() -> JsonPromptSpec:
+    """Get script generation spec with optional database override."""
+    db_prompt = get_db_prompt("script_generation_prompt")
+    if db_prompt:
+        return replace(SCRIPT_GENERATION_SPEC, system_prompt=db_prompt)
+    return SCRIPT_GENERATION_SPEC

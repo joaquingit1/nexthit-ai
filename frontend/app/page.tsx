@@ -967,18 +967,18 @@ export default function LandingPage() {
             <span className="landing-hero-pill">
               inteligencia creativa predictiva
             </span>
-            <h1 className="landing-hero-title text-3xl md:text-4xl">
+            <h1 className="landing-hero-title text-4xl md:text-5xl lg:text-6xl">
               Predecí el éxito de tu video con IA
             </h1>
-            <p className="landing-hero-copy text-base md:text-lg">
-              Simulamos 100 espectadores para predecir retención y optimizar tu contenido.
+            <p className="landing-hero-copy text-lg md:text-xl lg:text-2xl">
+              Simulamos 100 ai personas para predecir retención y optimizar tu contenido.
             </p>
 
             <div className="landing-hero-actions">
               <Link
                 href="/app"
                 onClick={playLandingClick}
-                className="landing-primary-cta inline-flex items-center justify-center rounded-full bg-slate-900 px-10 py-5 text-lg font-semibold text-white shadow-lg transition hover:bg-slate-800"
+                className="landing-primary-cta inline-flex items-center justify-center rounded-full bg-slate-900 px-12 py-6 text-xl font-semibold text-white shadow-lg transition hover:bg-slate-800"
               >
                 Analizar video
               </Link>
@@ -1128,7 +1128,7 @@ export default function LandingPage() {
               <div className="landing-footer-column">
                 <span className="landing-footer-heading">Empezar</span>
                 <Link href="/app">Análisis</Link>
-                <Link href="/app">User persona</Link>
+                <Link href="/app">AI persona</Link>
               </div>
             </div>
           </div>

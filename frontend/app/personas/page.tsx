@@ -17,10 +17,12 @@ interface PersonaResult {
   income_bracket: string;
   social_status: string;
   interests: string[];
+  niche_tags: string[];
   segment_label: string;
   color: string;
   dropoff_second: number;
   retention_percent: number;
+  reason_label: string;
   why_they_left: string;
 }
 
@@ -248,14 +250,6 @@ export default function PersonasPage() {
                 </p>
               </div>
               <div className="rounded-xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase text-slate-400">Ingresos</p>
-                <p className="mt-1 font-medium text-slate-900">{selectedPersona.income_bracket}</p>
-              </div>
-              <div className="rounded-xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase text-slate-400">Status social</p>
-                <p className="mt-1 font-medium text-slate-900">{selectedPersona.social_status}</p>
-              </div>
-              <div className="rounded-xl bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase text-slate-400">Retención</p>
                 <p className={`mt-1 font-bold ${getRetentionColor(selectedPersona.retention_percent)}`}>
                   {selectedPersona.retention_percent}% (abandona en {selectedPersona.dropoff_second}s)
@@ -263,20 +257,29 @@ export default function PersonasPage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase text-slate-400">Intereses</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(selectedPersona.interests || []).map((interest, index) => (
-                  <span key={index} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700">
-                    {interest}
-                  </span>
-                ))}
+            {(selectedPersona.niche_tags?.length > 0) && (
+              <div className="mt-4 rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase text-slate-400">Nicho</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {selectedPersona.niche_tags.map((tag, index) => (
+                    <span key={index} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-xs font-semibold uppercase text-amber-600">Por qué abandona</p>
-              <p className="mt-1 text-sm text-amber-900">{selectedPersona.why_they_left}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase text-amber-600">Por qué abandona</p>
+                {selectedPersona.reason_label && (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                    {selectedPersona.reason_label}
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-sm text-amber-900">{selectedPersona.why_they_left}</p>
             </div>
 
             <div className="mt-6 flex justify-end gap-3">

@@ -2,6 +2,13 @@
 
 Plataforma de analisis predictivo para videos cortos de marketing. Sube un video, lo transcribe, lo enriquece con analisis multimodal, simula 100 personas sinteticas y convierte todo eso en retencion, segmentacion y estrategia.
 
+## Principios de UI
+
+- **Minimalismo**: Solo mostramos informacion esencial y accionable
+- **Claridad**: Cada dato en pantalla tiene un proposito claro
+- **Sin ruido**: Evitamos tags, badges y elementos decorativos innecesarios
+- **Foco en insights**: Priorizamos el "que hacer" sobre el "que paso"
+
 ## Estado actual
 
 - [x] Upload directo del navegador a Supabase Storage
@@ -33,15 +40,19 @@ Plataforma de analisis predictivo para videos cortos de marketing. Sube un video
 
 ## Resultado `/resultado`
 
-1. Puntaje y resumen
-2. 100 personas sinteticas
-3. Drop-off por segmento
-4. Grafico de retencion
-5. Momentos del video
-6. Que cambiar
-7. Targeting de medios
-8. Versiones A/B/C
-9. Posts para redes
+Pantalla de resultados con enfoque minimalista:
+
+1. **Puntaje y resumen** - Score general y resumen ejecutivo
+2. **Personas sinteticas** - Perfil compacto (ocupacion, ingresos, estatus) + motivo de abandono
+3. **Drop-off por segmento** - Diagnostico por audiencia
+4. **Grafico de retencion** - Curva proyectada interactiva
+5. **Momentos clave** - Solo los puntos de decision importantes
+6. **Que cambiar** - Acciones concretas priorizadas
+7. **Targeting** - Recomendaciones de medios
+8. **Versiones A/B/C** - Variantes sugeridas
+9. **Posts** - Contenido listo para publicar
+
+Cada seccion muestra solo lo necesario para tomar decisiones.
 
 ## Stack
 

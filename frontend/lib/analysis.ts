@@ -186,6 +186,29 @@ export type VersionStrategy = {
   whyItShouldResonate: string;
 };
 
+export type ScriptSection = {
+  text: string;
+  visualCue: string;
+  duration: string;
+};
+
+export type CreativeScript = {
+  id: string;
+  name: string;
+  targetAudience: string;
+  strategy: string;
+  script: {
+    hook: ScriptSection;
+    development: ScriptSection;
+    proof: ScriptSection;
+    cta: ScriptSection;
+  };
+  fullScript: string;
+  expectedRetention: string;
+  whyItWorks: string;
+  addressedIssues: string[];
+};
+
 export type SavingsROI = {
   estimated_reshoot_cost: number;
   estimated_edit_cost: number;
@@ -329,6 +352,7 @@ export type AnalysisResponse = {
     changePlan?: ChangePlan;
     mediaTargeting?: MediaTargetingRecommendation[];
     versionStrategies?: VersionStrategy[];
+    creativeScripts?: CreativeScript[];
     savingsRoi?: SavingsROI;
     videoAnalysis?: VideoAnalysisResult | null;
     scoreSummary?: VideoScoreSummary;

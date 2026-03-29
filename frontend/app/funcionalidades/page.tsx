@@ -354,7 +354,7 @@ export default function FeaturesPage() {
               <div className="landing-footer-column">
                 <span className="landing-footer-heading">Empezar</span>
                 <Link href="/app">Análisis</Link>
-                <Link href="/app">User persona</Link>
+                <Link href="/app">AI persona</Link>
               </div>
             </div>
           </div>

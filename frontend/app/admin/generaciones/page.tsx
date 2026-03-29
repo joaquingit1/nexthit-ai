@@ -13,7 +13,7 @@ interface Generation {
 const generationTables = [
   {
     key: "generation_user_persona_batch",
-    label: "User Persona Batch",
+    label: "AI Persona Batch",
     description: "Generaciones de batches de personas sinteticas",
     color: "blue",
   },

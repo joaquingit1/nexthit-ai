@@ -157,7 +157,7 @@ export default function UserPersonaFilters({
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div>
             <h2 className="font-display text-xl font-bold text-slate-900">
-              Configurar User Persona
+              Configurar AI Persona
             </h2>
             <p className="mt-1 text-sm text-slate-500">
               Define el perfil de audiencia para la simulacion
