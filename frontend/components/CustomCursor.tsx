@@ -4,6 +4,11 @@ import { useEffect, useRef, useState } from "react";
 
 type CursorMode = "default" | "pointer";
 
+const CURSOR_HOTSPOTS: Record<CursorMode, { x: number; y: number }> = {
+  default: { x: 8, y: 5 },
+  pointer: { x: 18, y: 8 },
+};
+
 function ArrowCursor() {
   return (
     <svg
@@ -133,8 +138,10 @@ export default function CustomCursor() {
         currentPosition.current.y +=
           (targetPosition.current.y - currentPosition.current.y) * smoothing;
 
+        const hotspot = CURSOR_HOTSPOTS[modeRef.current];
         const scale = pressedRef.current ? 0.92 : modeRef.current === "pointer" ? 1.06 : 1;
-        node.style.transform = `translate3d(${currentPosition.current.x}px, ${currentPosition.current.y}px, 0) translate(-50%, -50%) scale(${scale})`;
+        node.style.transformOrigin = `${hotspot.x}px ${hotspot.y}px`;
+        node.style.transform = `translate3d(${currentPosition.current.x - hotspot.x}px, ${currentPosition.current.y - hotspot.y}px, 0) scale(${scale})`;
       }
 
       animationFrame.current = window.requestAnimationFrame(tick);
