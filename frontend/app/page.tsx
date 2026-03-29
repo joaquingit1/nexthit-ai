@@ -259,18 +259,24 @@ function ProcessCard({
   );
 }
 
-function LandingBlueGraph({ progress }: { progress: number }) {
-  const point = getPointAtProgress(progress);
-  const lineReveal = `${Math.max(progress * 100, 8)} 100`;
-  const yShift = progress * -68;
-  const opacity = 1 - progress * 0.88;
+function LandingBlueGraph({
+  lineProgress,
+  exitProgress,
+}: {
+  lineProgress: number;
+  exitProgress: number;
+}) {
+  const point = getPointAtProgress(lineProgress);
+  const lineReveal = `${Math.max(lineProgress * 100, 8)} 100`;
+  const yShift = exitProgress * -68;
+  const opacity = Math.max(0, 1 - exitProgress * 1.35);
 
   return (
     <div
       className="landing-hero-graph"
       style={{
         opacity,
-        transform: `translateY(${yShift}px) scale(${1 + progress * 0.04})`,
+        transform: `translateY(${yShift}px) scale(${1 + lineProgress * 0.04})`,
       }}
       aria-hidden="true"
     >
@@ -344,7 +350,7 @@ function LandingBlueGraph({ progress }: { progress: number }) {
             cy={HERO_PATH_POINTS[index + 1]?.y ?? 20}
             r={index % 2 === 0 ? "0.58" : "0.72"}
             fill={index % 2 === 0 ? "#60a5fa" : "#0ea5e9"}
-            opacity={0.26 + progress * 0.74}
+            opacity={0.26 + lineProgress * 0.74}
           />
         ))}
 
@@ -467,10 +473,16 @@ export default function LandingPage() {
   const benefitsSectionSnapRef = useRef<HTMLElement | null>(null);
   const finalSectionSnapRef = useRef<HTMLElement | null>(null);
   const scrollLockRef = useRef(false);
-  const heroProgress = useHeroProgress(heroSectionRef, shellRef);
+  const [heroGraphProgress, setHeroGraphProgress] = useState(0);
+  const heroGraphProgressRef = useRef(0);
+  const heroExitProgress = useHeroProgress(heroSectionRef, shellRef);
   const [processRef, processVisible] = useSectionInView<HTMLElement>(0.35);
   const [benefitsRef, benefitsVisible] = useSectionInView<HTMLElement>(0.32);
   const [finalRef, finalVisible] = useSectionInView<HTMLElement>(0.45);
+
+  useEffect(() => {
+    heroGraphProgressRef.current = heroGraphProgress;
+  }, [heroGraphProgress]);
 
   useEffect(() => {
     const shell = shellRef.current;
@@ -509,6 +521,20 @@ export default function LandingPage() {
         const bestDistance = Math.abs(sections[bestIndex]!.offsetTop - currentScroll);
         return distance < bestDistance ? index : bestIndex;
       }, 0);
+
+      const heroIsPinned = currentIndex === 0 && currentScroll < 16;
+      const currentGraphProgress = heroGraphProgressRef.current;
+      if (
+        heroIsPinned &&
+        ((event.deltaY > 0 && currentGraphProgress < 0.999) ||
+          (event.deltaY < 0 && currentGraphProgress > 0.001))
+      ) {
+        event.preventDefault();
+        setHeroGraphProgress((current) =>
+          clamp(current + event.deltaY / 900, 0, 1),
+        );
+        return;
+      }
 
       const direction = event.deltaY > 0 ? 1 : -1;
       const targetIndex = clamp(currentIndex + direction, 0, sections.length - 1);
@@ -622,7 +648,7 @@ export default function LandingPage() {
       <LandingSection id="landing-hero" sectionRef={heroSectionRef} className="landing-hero-panel" >
         <section className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-6 pb-16 pt-32">
           <div className="landing-hero-surface absolute inset-0" aria-hidden="true" />
-          <LandingBlueGraph progress={heroProgress} />
+          <LandingBlueGraph lineProgress={heroGraphProgress} exitProgress={heroExitProgress} />
           <div className="landing-hero-rings" aria-hidden="true">
             <span />
             <span />
