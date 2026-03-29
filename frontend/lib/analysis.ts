@@ -322,6 +322,7 @@ export type AnalysisResponse = {
     statusSteps: string[];
     clip: {
       fileName: string;
+      generatedTitle?: string;
       mediaType: string;
       sizeLabel: string;
       durationLabel: string;

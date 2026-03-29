@@ -117,9 +117,15 @@ const ANALYSIS_STEPS = [
     description: "Tres propuestas de iteracion del video optimizadas para diferentes objetivos.",
   },
   {
+    id: "crosspost",
+    title: "Crossposting",
+    eyebrow: "Paso 9",
+    description: "Copys adaptados por plataforma para reutilizar el contenido con el angulo correcto.",
+  },
+  {
     id: "savings",
     title: "Ahorro Estimado",
-    eyebrow: "Paso 9",
+    eyebrow: "Paso 10",
     description: "Calculo del ahorro monetario y de tiempo al aplicar los cambios sugeridos vs re-grabar el video.",
   },
 ] as const;
