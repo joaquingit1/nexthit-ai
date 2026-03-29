@@ -244,6 +244,65 @@ function cleanPersonaName(name: string) {
   return name.replace(/\s+\d+\s*$/, "").trim();
 }
 
+function hashPersonaSeed(value: string) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function createPersonaRandom(seed: number) {
+  let state = seed >>> 0;
+
+  return () => {
+    state += 0x6d2b79f5;
+    let temp = Math.imul(state ^ (state >>> 15), 1 | state);
+    temp ^= temp + Math.imul(temp ^ (temp >>> 7), 61 | temp);
+    return ((temp ^ (temp >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function normalizeHandleToken(token: string) {
+  return token
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function buildPersonaIdentity(name: string, personaId: string) {
+  const cleanName = cleanPersonaName(name);
+  const parts = cleanName.split(/\s+/).filter(Boolean);
+  const first = normalizeHandleToken(parts[0] ?? "user");
+  const last = normalizeHandleToken(parts[parts.length - 1] ?? "viewer");
+  const f = first.slice(0, 1) || "u";
+  const l = last.slice(0, 1) || "v";
+  const random = createPersonaRandom(hashPersonaSeed(`${cleanName}:${personaId}`));
+  const random4 = String(1000 + Math.floor(random() * 9000));
+  const random2to4 = String(10 + Math.floor(random() * 9990));
+  const words = ["nova", "pixel", "loop", "signal", "tempo", "glow", "orbit", "frame", "spark", "wave", "scope", "story"];
+  const randomWord = words[Math.floor(random() * words.length)] ?? "signal";
+  const patterns = [
+    `@${first}_${last}`,
+    `@${f}${last}`,
+    `@${f}${last}${random4}`,
+    `@${first}${random2to4}`,
+    `@${randomWord}_${first}_${random4}`,
+    `@${first}.${last}`,
+    `@${first}${l}${random4}`,
+    `@${randomWord}.${first}`,
+  ];
+
+  return {
+    handle: patterns[Math.floor(random() * patterns.length)] ?? `@${first}_${last}`,
+    initials: `${(parts[0]?.[0] ?? "U").toUpperCase()}${(parts[parts.length - 1]?.[0] ?? "P").toUpperCase()}`,
+  };
+}
+
 function hasPlaceholderSummary(text: string | undefined) {
   const normalized = (text ?? "").toLowerCase();
   return (
@@ -2044,6 +2103,9 @@ function RawPersonasStep({
   const totalPages = Math.ceil(activePersonas.length / PERSONAS_PER_PAGE);
   const startIndex = currentPage * PERSONAS_PER_PAGE;
   const visible = activePersonas.slice(startIndex, startIndex + PERSONAS_PER_PAGE);
+  const selectedPersonaIdentity = selectedPersona
+    ? buildPersonaIdentity(selectedPersona.name, selectedPersona.persona_id)
+    : null;
 
   return (
     <section className="space-y-8">
@@ -2121,22 +2183,38 @@ function RawPersonasStep({
         ) : null}
 
         <div className="mt-6 space-y-2">
-          {visible.map((persona) => (
+          {visible.map((persona) => {
+            const identity = buildPersonaIdentity(persona.name, persona.persona_id);
+
+            return (
             <article
               key={persona.persona_id}
               onClick={() => setSelectedPersona(persona)}
-              className="rounded-xl border border-slate-200/80 bg-white/85 px-5 py-4 cursor-pointer transition-all hover:border-slate-300 hover:shadow-sm"
+              className="cursor-pointer rounded-xl border border-slate-200/80 bg-white/85 px-5 py-4 transition-all hover:border-slate-300 hover:shadow-sm"
             >
               <div className="flex items-start gap-4">
+                <div
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm"
+                  style={{
+                    background: `linear-gradient(135deg, ${persona.color}, rgba(15, 23, 42, 0.92))`,
+                  }}
+                >
+                  {identity.initials}
+                </div>
                 <div
                   className="mt-1.5 h-3 w-3 flex-shrink-0 rounded-full"
                   style={{ backgroundColor: persona.color }}
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <h4 className="font-semibold text-slate-950">
-                      {cleanPersonaName(persona.name)}
-                    </h4>
+                  <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-slate-950">
+                        {cleanPersonaName(persona.name)}
+                      </h4>
+                      <p className="mt-0.5 text-sm font-medium text-slate-400">
+                        {identity.handle}
+                      </p>
+                    </div>
                     <span className="text-sm text-slate-500">
                       {persona.archetype ?? "Persona"} · {persona.demographic_profile_label ?? persona.age_range}
                     </span>
@@ -2161,7 +2239,8 @@ function RawPersonasStep({
                 </div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
 
         {/* Modal */}
@@ -2185,6 +2264,14 @@ function RawPersonasStep({
 
               <div className="flex items-center gap-3">
                 <div
+                  className="flex h-12 w-12 items-center justify-center rounded-full text-base font-bold text-white shadow-sm"
+                  style={{
+                    background: `linear-gradient(135deg, ${selectedPersona.color}, rgba(15, 23, 42, 0.92))`,
+                  }}
+                >
+                  {selectedPersonaIdentity?.initials}
+                </div>
+                <div
                   className="h-4 w-4 rounded-full"
                   style={{ backgroundColor: selectedPersona.color }}
                 />
@@ -2199,6 +2286,9 @@ function RawPersonasStep({
               <h3 className="mt-3 text-2xl font-bold text-slate-900">
                 {cleanPersonaName(selectedPersona.name)}
               </h3>
+              <p className="mt-1 text-sm font-medium text-slate-400">
+                {selectedPersonaIdentity?.handle}
+              </p>
 
               <p className="mt-1 text-sm text-slate-500">
                 {[selectedPersona.age_range, selectedPersona.country, selectedPersona.income_bracket, selectedPersona.social_status].filter(Boolean).join(" · ")}
