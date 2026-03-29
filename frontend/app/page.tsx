@@ -515,7 +515,6 @@ export default function LandingPage() {
   const processSectionSnapRef = useRef<HTMLElement | null>(null);
   const benefitsSectionSnapRef = useRef<HTMLElement | null>(null);
   const finalSectionSnapRef = useRef<HTMLElement | null>(null);
-  const scrollLockRef = useRef(false);
   const [heroGraphProgress, setHeroGraphProgress] = useState(0);
   const heroGraphProgressRef = useRef(0);
   const heroExitProgress = useHeroProgress(heroSectionRef, shellRef);
@@ -539,11 +538,6 @@ export default function LandingPage() {
       }
 
       if (Math.abs(event.deltaY) < 10) {
-        return;
-      }
-
-      if (scrollLockRef.current) {
-        event.preventDefault();
         return;
       }
 
@@ -581,25 +575,6 @@ export default function LandingPage() {
         });
         return;
       }
-
-      const direction = event.deltaY > 0 ? 1 : -1;
-      const targetIndex = clamp(currentIndex + direction, 0, sections.length - 1);
-      const targetSection = sections[targetIndex];
-
-      if (!targetSection) {
-        return;
-      }
-
-      event.preventDefault();
-      scrollLockRef.current = true;
-      shell.scrollTo({
-        top: targetSection.offsetTop,
-        behavior: "smooth",
-      });
-
-      window.setTimeout(() => {
-        scrollLockRef.current = false;
-      }, 720);
     };
 
     shell.addEventListener("wheel", handleWheel, { passive: false });

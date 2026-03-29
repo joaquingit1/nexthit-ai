@@ -133,7 +133,6 @@ textarea {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior-y: contain;
-  scroll-behavior: smooth;
   background:
     radial-gradient(circle at top left, rgba(125, 211, 252, 0.14), transparent 26%),
     radial-gradient(circle at bottom right, rgba(96, 165, 250, 0.12), transparent 24%),
