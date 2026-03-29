@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 from collections import Counter
@@ -27,18 +28,105 @@ from system_prompts import build_persona_batch_spec
 from utils import clamp, round_value
 
 
-def build_persona_library() -> list[dict[str, Any]]:
-    """Build the library of 100 synthetic personas."""
+def normalize_seed_text(text: str) -> str:
+    return " ".join(text.lower().split()).strip()
+
+
+def build_video_seed(video_id: str, transcript_text: str, duration_seconds: int) -> int:
+    """Build a deterministic seed for persona identities from video content."""
+    normalized_transcript = normalize_seed_text(transcript_text)
+    seed_basis = normalized_transcript
+    if len(seed_basis) < 32:
+        # If the transcript is too short, add the video id only as fallback entropy.
+        seed_basis = f"{seed_basis}::{video_id}".strip(":")
+    digest = hashlib.sha256(f"{seed_basis}::{int(round(duration_seconds))}".encode("utf-8")).hexdigest()
+    return int(digest[:16], 16)
+
+
+def max_surname_streak(names: list[str]) -> int:
+    longest = 0
+    current = 0
+    previous_surname = ""
+    for name in names:
+        surname = name.rsplit(" ", 1)[-1]
+        if surname == previous_surname:
+            current += 1
+        else:
+            current = 1
+            previous_surname = surname
+        longest = max(longest, current)
+    return longest
+
+
+def build_seeded_full_names(count: int, seed: int) -> list[str]:
+    """Build a deterministic but video-specific pool of unique full names."""
+    candidate_pairs = [
+        (first_name, last_name)
+        for first_name in PERSONA_NAME_SEEDS
+        for last_name in PERSONA_LAST_NAME_SEEDS
+    ]
+    if count > len(candidate_pairs):
+        raise ValueError("Not enough unique full names configured for persona generation.")
+
+    for offset in range(6):
+        rng = random.Random(seed + (offset * 7919))
+        pool = candidate_pairs[:]
+        rng.shuffle(pool)
+        selected: list[tuple[str, str]] = []
+        used_full_names: set[str] = set()
+        recent_first_names: list[str] = []
+        recent_last_names: list[str] = []
+
+        while len(selected) < count and pool:
+            chosen_index = None
+            fallback_index = None
+            for index, (first_name, last_name) in enumerate(pool):
+                full_name = f"{first_name} {last_name}"
+                if full_name in used_full_names:
+                    continue
+                first_name_recent = first_name in recent_first_names[-4:]
+                last_name_recent = last_name in recent_last_names[-2:]
+                if not first_name_recent and not last_name_recent:
+                    chosen_index = index
+                    break
+                if fallback_index is None and not last_name_recent:
+                    fallback_index = index
+            if chosen_index is None:
+                chosen_index = fallback_index if fallback_index is not None else 0
+            first_name, last_name = pool.pop(chosen_index)
+            full_name = f"{first_name} {last_name}"
+            selected.append((first_name, last_name))
+            used_full_names.add(full_name)
+            recent_first_names.append(first_name)
+            recent_last_names.append(last_name)
+
+        names = [f"{first_name} {last_name}" for first_name, last_name in selected]
+        if len(names) == count and len(set(names)) == count and max_surname_streak(names) <= 2:
+            return names
+
+    raise RuntimeError("Could not build a valid seeded persona name set without visible clustering.")
+
+
+def build_persona_library_for_video(
+    *,
+    video_id: str,
+    transcript_text: str,
+    duration_seconds: int,
+) -> list[dict[str, Any]]:
+    """Build the canonical 100 synthetic personas for one video deterministically."""
     personas: list[dict[str, Any]] = []
+    video_seed = build_video_seed(video_id, transcript_text, duration_seconds)
+    seeded_names = build_seeded_full_names(
+        len(PERSONA_ARCHETYPES) * len(PERSONA_DEMOGRAPHIC_PROFILES),
+        video_seed,
+    )
     for archetype_index, archetype in enumerate(PERSONA_ARCHETYPES):
         for profile_index, profile in enumerate(PERSONA_DEMOGRAPHIC_PROFILES):
             index = archetype_index * len(PERSONA_DEMOGRAPHIC_PROFILES) + profile_index
-            first_name = PERSONA_NAME_SEEDS[index % len(PERSONA_NAME_SEEDS)]
-            last_name = PERSONA_LAST_NAME_SEEDS[(index // len(PERSONA_NAME_SEEDS)) % len(PERSONA_LAST_NAME_SEEDS)]
             personas.append(
                 {
-                    "persona_id": f"persona-{index + 1}",
-                    "name": f"{first_name} {last_name}",
+                    "persona_id": f"persona-{archetype_index + 1:02d}-{profile_index + 1:02d}",
+                    "name": seeded_names[index],
                     "archetype": archetype,
                     "demographic_profile_id": profile["id"],
                     "demographic_profile_label": profile["label"],
@@ -48,20 +136,17 @@ def build_persona_library() -> list[dict[str, Any]]:
                     "occupation": PERSONA_OCCUPATIONS[(archetype_index + profile_index) % len(PERSONA_OCCUPATIONS)],
                     "income_bracket": profile["income_bracket"],
                     "social_status": profile["social_status"],
-                    "interests": PERSONA_INTERESTS[(archetype_index + profile_index) % len(PERSONA_INTERESTS)],
-                    "hobbies": PERSONA_HOBBIES[(archetype_index + profile_index) % len(PERSONA_HOBBIES)],
+                    "interests": PERSONA_INTERESTS[(archetype_index + profile_index + (video_seed % len(PERSONA_INTERESTS))) % len(PERSONA_INTERESTS)],
+                    "hobbies": PERSONA_HOBBIES[(archetype_index + profile_index + (video_seed % len(PERSONA_HOBBIES))) % len(PERSONA_HOBBIES)],
                     "life_story": f"{archetype}. Consume short-form y decide en segundos si el video merece atencion.",
                     "platform_habits": "Principalmente consume Instagram Reels y TikTok en pausas cortas del dia.",
-                    "motivations": PERSONA_MOTIVATIONS[archetype_index % len(PERSONA_MOTIVATIONS)],
-                    "frustrations": PERSONA_FRUSTRATIONS[profile_index % len(PERSONA_FRUSTRATIONS)],
+                    "motivations": PERSONA_MOTIVATIONS[(archetype_index + (video_seed % len(PERSONA_MOTIVATIONS))) % len(PERSONA_MOTIVATIONS)],
+                    "frustrations": PERSONA_FRUSTRATIONS[(profile_index + (video_seed % len(PERSONA_FRUSTRATIONS))) % len(PERSONA_FRUSTRATIONS)],
                     "segment_label": f"{profile['cluster']} {archetype}",
                     "color": PERSONA_COLOR_PALETTE[archetype_index % len(PERSONA_COLOR_PALETTE)],
                 }
             )
     return personas
-
-
-PERSONA_LIBRARY = build_persona_library()
 
 
 def persona_seed(persona: dict[str, Any]) -> int:
@@ -466,6 +551,52 @@ def normalize_persona_result(
         "evidence_excerpt": evidence_excerpt,
         "decision_stage": decision_stage,
     }
+
+
+def order_personas_for_display(personas: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return personas in a video-specific presentation order driven by retention and diversity."""
+    if not personas:
+        return []
+
+    remaining = [dict(persona) for persona in personas]
+    ordered: list[dict[str, Any]] = []
+    used_reasons: set[str] = set()
+    used_archetypes: set[str] = set()
+    used_profiles: set[str] = set()
+
+    while remaining:
+        best_index = 0
+        best_score = float("-inf")
+        for index, persona in enumerate(remaining):
+            score = float(persona.get("retention_percent", 0)) * 3.2
+            score += float(persona.get("dropoff_second", 0)) * 0.45
+            if str(persona.get("reason_code", "")) not in used_reasons:
+                score += 18
+            if str(persona.get("archetype", "")) not in used_archetypes:
+                score += 12
+            if str(persona.get("demographic_profile_id", "")) not in used_profiles:
+                score += 10
+            if ordered:
+                previous = ordered[-1]
+                if str(previous.get("reason_code", "")) == str(persona.get("reason_code", "")):
+                    score -= 7
+                if str(previous.get("archetype", "")) == str(persona.get("archetype", "")):
+                    score -= 5
+                previous_surname = str(previous.get("name", "")).rsplit(" ", 1)[-1]
+                current_surname = str(persona.get("name", "")).rsplit(" ", 1)[-1]
+                if previous_surname == current_surname:
+                    score -= 8
+            if score > best_score:
+                best_score = score
+                best_index = index
+
+        selected = remaining.pop(best_index)
+        ordered.append(selected)
+        used_reasons.add(str(selected.get("reason_code", "")))
+        used_archetypes.add(str(selected.get("archetype", "")))
+        used_profiles.add(str(selected.get("demographic_profile_id", "")))
+
+    return [{**persona, "presentation_order": index} for index, persona in enumerate(ordered)]
 
 
 def batch_needs_retry(personas: list[dict[str, Any]]) -> bool:

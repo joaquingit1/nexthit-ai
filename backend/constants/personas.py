@@ -3,19 +3,17 @@ from __future__ import annotations
 PERSONA_NAME_SEEDS = [
     "Mia", "Jordan", "Sofia", "Liam", "Ava", "Noah", "Zoe", "Lucas", "Emma", "Leo",
     "Grace", "Mateo", "Olivia", "Ethan", "Nina", "Theo", "Isla", "Julian", "Aria", "Mason",
+    "Elena", "Bruno", "Camila", "Dylan", "Valentina", "Gael", "Lucia", "Hugo", "Alma", "Samuel",
+    "Clara", "Thiago", "Aurora", "Max", "Renata", "Brisa", "Elisa", "Adrian", "Vera", "Tomas",
+    "Iris", "Benicio", "Julia", "Santiago", "Lola", "Nicolas", "Paula", "Daniel", "Ines", "Marco",
+    "Sara", "Federico", "Malena", "Andres", "Carmen", "Facundo", "Pilar", "Gonzalo", "Ambar", "Joaquin",
 ]
 
 PERSONA_LAST_NAME_SEEDS = [
-    "Cruz",
-    "Reyes",
-    "Vega",
-    "Santos",
-    "Navarro",
-    "Costa",
-    "Silva",
-    "Molina",
-    "Castro",
-    "Prieto",
+    "Cruz", "Reyes", "Vega", "Santos", "Navarro", "Costa", "Silva", "Molina", "Castro", "Prieto",
+    "Suarez", "Ortega", "Rojas", "Medina", "Herrera", "Campos", "Ibarra", "Benitez", "Aguilar", "Salazar",
+    "Fuentes", "Paredes", "Valdez", "Romero", "Mendez", "Lopez", "Acosta", "Arias", "Peña", "Delgado",
+    "Peralta", "Correa", "Nieves", "Cabrera", "Bustos", "Miranda", "Luna", "Aguirre", "Soria", "Montero",
 ]
 
 PERSONA_COLOR_PALETTE = [

@@ -19,7 +19,11 @@ from services.multimodal_analysis import (
     delete_multimodal_video,
     prepare_gemini_video,
 )
-from services.persona_simulation import PERSONA_LIBRARY, analyze_persona_batch
+from services.persona_simulation import (
+    analyze_persona_batch,
+    build_persona_library_for_video,
+    order_personas_for_display,
+)
 from services.retention import (
     build_average_line,
     build_markers,
@@ -300,9 +304,14 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
             payload={"score_summary": creative_context},
         )
 
+        persona_library = build_persona_library_for_video(
+            video_id=video_id,
+            transcript_text=str(transcript.get("text", "")),
+            duration_seconds=duration_seconds,
+        )
         personas: list[dict[str, Any]] = []
         for batch_index in range(5):
-            batch = PERSONA_LIBRARY[batch_index * 20 : (batch_index + 1) * 20]
+            batch = persona_library[batch_index * 20 : (batch_index + 1) * 20]
             batch_result: list[dict[str, Any]] | None = None
             for _ in range(3):
                 batch_result = await analyze_persona_batch(batch, creative_context, transcript, duration_seconds)
@@ -320,6 +329,7 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
             await repository.update_job(job_id, {"stage": "persona.batch.completed", "progress_percent": progress})
             await repository.add_event(job_id=job_id, video_id=video_id, event_type="persona.batch.completed", status="processing", stage="persona.batch.completed", progress_percent=progress, payload={"batch_index": batch_index, "batch_size": len(batch_result), "personas": batch_result})
 
+        personas = order_personas_for_display(personas)
         target_audience = aggregate_target_audience(personas)
         await repository.update_job(job_id, {"stage": "demographics.completed", "progress_percent": 85})
         await repository.add_event(job_id=job_id, video_id=video_id, event_type="demographics.completed", status="processing", stage="demographics.completed", progress_percent=85, payload=target_audience)

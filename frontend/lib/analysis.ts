@@ -40,6 +40,7 @@ export type TranscriptData = {
 export type PersonaResult = {
   persona_id: string;
   name: string;
+  presentation_order?: number;
   archetype?: string;
   demographic_profile_id?: string;
   demographic_profile_label?: string;
@@ -492,6 +493,21 @@ const PERSONA_HOBBY_CLUSTERS = [
   ["gaming", "proyectos paralelos", "fotografía"],
 ];
 
+const PERSONA_FIRST_NAMES = [
+  "Mia", "Jordan", "Sofia", "Liam", "Ava", "Noah", "Zoe", "Lucas", "Emma", "Leo",
+  "Grace", "Mateo", "Olivia", "Ethan", "Nina", "Theo", "Isla", "Julian", "Aria", "Mason",
+  "Elena", "Bruno", "Camila", "Dylan", "Valentina", "Gael", "Lucia", "Hugo", "Alma", "Samuel",
+  "Clara", "Thiago", "Aurora", "Max", "Renata", "Brisa", "Elisa", "Adrian", "Vera", "Tomas",
+  "Iris", "Benicio", "Julia", "Santiago", "Lola", "Nicolas", "Paula", "Daniel", "Ines", "Marco",
+  "Sara", "Federico", "Malena", "Andres", "Carmen", "Facundo", "Pilar", "Gonzalo", "Ambar", "Joaquin",
+];
+const PERSONA_LAST_NAMES = [
+  "Cruz", "Reyes", "Vega", "Santos", "Navarro", "Costa", "Silva", "Molina", "Castro", "Prieto",
+  "Suarez", "Ortega", "Rojas", "Medina", "Herrera", "Campos", "Ibarra", "Benitez", "Aguilar", "Salazar",
+  "Fuentes", "Paredes", "Valdez", "Romero", "Mendez", "Lopez", "Acosta", "Arias", "Pena", "Delgado",
+  "Peralta", "Correa", "Nieves", "Cabrera", "Bustos", "Miranda", "Luna", "Aguirre", "Soria", "Montero",
+];
+
 export const ANALYSIS_STORAGE_KEY = "hackathon.analysis.latest";
 export const ANALYSIS_STORAGE_PREFIX = "hackathon.analysis.";
 
@@ -576,6 +592,99 @@ function makeHandle(index: number, random: () => number) {
   const suffix = suffixes[Math.floor(random() * suffixes.length)];
   const digits = String(100 + Math.floor(random() * 900)).slice(1);
   return `${prefix}_${suffix}${digits}`;
+}
+
+function buildSeededPersonaNames(count: number, seed: number) {
+  const random = createRandom(seed ^ 0x51f15d33);
+  const pool = PERSONA_FIRST_NAMES.flatMap((firstName) =>
+    PERSONA_LAST_NAMES.map((lastName) => `${firstName} ${lastName}`),
+  );
+  for (let index = pool.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    const current = pool[index];
+    pool[index] = pool[swapIndex]!;
+    pool[swapIndex] = current!;
+  }
+  const names: string[] = [];
+  const recentFirstNames: string[] = [];
+  const recentLastNames: string[] = [];
+
+  while (names.length < count && pool.length) {
+    let chosenIndex = -1;
+    let fallbackIndex = -1;
+
+    for (let index = 0; index < pool.length; index += 1) {
+      const [firstName, lastName] = pool[index]?.split(" ") ?? ["", ""];
+      const firstNameRecent = recentFirstNames.slice(-4).includes(firstName);
+      const lastNameRecent = recentLastNames.slice(-2).includes(lastName);
+      if (!firstNameRecent && !lastNameRecent) {
+        chosenIndex = index;
+        break;
+      }
+      if (fallbackIndex === -1 && !lastNameRecent) {
+        fallbackIndex = index;
+      }
+    }
+
+    if (chosenIndex === -1) {
+      chosenIndex = fallbackIndex !== -1 ? fallbackIndex : Math.floor(random() * pool.length);
+    }
+
+    const [selectedName] = pool.splice(chosenIndex, 1);
+    const [firstName, lastName] = selectedName?.split(" ") ?? ["", ""];
+    names.push(selectedName);
+    recentFirstNames.push(firstName);
+    recentLastNames.push(lastName);
+  }
+
+  return names.slice(0, count);
+}
+
+function orderFallbackPersonas(personas: PersonaResult[]) {
+  const remaining = [...personas];
+  const ordered: PersonaResult[] = [];
+  const usedSegments = new Set<string>();
+  const usedReasons = new Set<string>();
+
+  while (remaining.length) {
+    let bestIndex = 0;
+    let bestScore = Number.NEGATIVE_INFINITY;
+
+    remaining.forEach((persona, index) => {
+      let score = persona.retention_percent * 3 + persona.dropoff_second * 0.4;
+      if (!usedSegments.has(persona.segment_label)) {
+        score += 15;
+      }
+      if (persona.reason_code && !usedReasons.has(persona.reason_code)) {
+        score += 14;
+      }
+      if (ordered.length) {
+        const previous = ordered[ordered.length - 1];
+        if (previous.reason_code && previous.reason_code === persona.reason_code) {
+          score -= 6;
+        }
+        if (previous.segment_label === persona.segment_label) {
+          score -= 8;
+        }
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    });
+
+    const [selected] = remaining.splice(bestIndex, 1);
+    ordered.push({
+      ...selected,
+      presentation_order: ordered.length,
+    });
+    usedSegments.add(selected.segment_label);
+    if (selected.reason_code) {
+      usedReasons.add(selected.reason_code);
+    }
+  }
+
+  return ordered;
 }
 
 function buildBaseRetention(second: number, durationSeconds: number) {
@@ -805,8 +914,9 @@ function buildTranscriptSegments(text: string, durationSeconds: number): Transcr
   });
 }
 
-function buildMockPersonas(viewers: ViewerSimulation[], durationSeconds: number): PersonaResult[] {
-  return viewers.map((viewer, index) => {
+function buildMockPersonas(viewers: ViewerSimulation[], durationSeconds: number, seed: number): PersonaResult[] {
+  const names = buildSeededPersonaNames(viewers.length, seed);
+  const personas = viewers.map((viewer, index) => {
     const country = PERSONA_COUNTRIES[index % PERSONA_COUNTRIES.length];
     const ageRange = PERSONA_AGE_RANGES[index % PERSONA_AGE_RANGES.length];
     const occupation = PERSONA_OCCUPATIONS[index % PERSONA_OCCUPATIONS.length];
@@ -819,7 +929,8 @@ function buildMockPersonas(viewers: ViewerSimulation[], durationSeconds: number)
 
     return {
       persona_id: `persona-${index + 1}`,
-      name: viewer.segment,
+      name: names[index] ?? `Persona ${index + 1}`,
+      presentation_order: index,
       age_range: ageRange,
       country,
       occupation,
@@ -836,6 +947,8 @@ function buildMockPersonas(viewers: ViewerSimulation[], durationSeconds: number)
       batch_index: Math.floor(index / 20),
       dropoff_second: viewer.dropOffSecond,
       retention_percent: retentionPercent,
+      reason_code: leavesEarly ? "intro_too_slow" : "claim_lacks_proof",
+      reason_label: leavesEarly ? "Intro demasiado lenta" : "Prueba insuficiente",
       why_they_left: leavesEarly
         ? "La propuesta de valor tardó demasiado en volverse concreta para esta persona."
         : "Se quedó más tiempo porque la promesa se volvió útil antes de que la atención cayera del todo.",
@@ -844,6 +957,8 @@ function buildMockPersonas(viewers: ViewerSimulation[], durationSeconds: number)
         : `Mira cerca del ${retentionPercent}% porque el creativo termina demostrando el punto con suficiente claridad como para sostener la atención.`,
     };
   });
+
+  return orderFallbackPersonas(personas);
 }
 
 function buildAudienceDistribution(
@@ -1153,7 +1268,7 @@ export function createAnalysisPayload(input: CreateAnalysisInput): AnalysisRespo
 
   const previewName = input.fileName?.trim() || "uploaded-video.mp4";
   const transcriptSegments = buildTranscriptSegments(text, durationSeconds);
-  const personas = buildMockPersonas(viewers, durationSeconds);
+  const personas = buildMockPersonas(viewers, durationSeconds, seed);
   const targetAudience = buildTargetAudience(personas, topAudienceSegment);
   const timelineInsights = buildTimelineInsights(markers, durationSeconds);
   const scoreSummary: VideoScoreSummary = {

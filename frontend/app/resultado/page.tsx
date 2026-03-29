@@ -1927,6 +1927,67 @@ function GraphStep({
 }
 
 const PERSONAS_PER_PAGE = 6;
+type RawPersonaFilter = "retention" | "early" | "reasons" | "all";
+
+function sortPersonasForDisplay(personas: PersonaResult[]) {
+  return [...personas].sort((left, right) => {
+    const leftOrder = left.presentation_order ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder = right.presentation_order ?? Number.MAX_SAFE_INTEGER;
+    if (leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+    if (right.retention_percent !== left.retention_percent) {
+      return right.retention_percent - left.retention_percent;
+    }
+    return left.dropoff_second - right.dropoff_second;
+  });
+}
+
+function buildDistinctReasonPersonas(personas: PersonaResult[]) {
+  const remaining = [...sortPersonasForDisplay(personas)];
+  const selected: PersonaResult[] = [];
+  const usedReasons = new Set<string>();
+  const usedArchetypes = new Set<string>();
+
+  while (remaining.length) {
+    let bestIndex = 0;
+    let bestScore = Number.NEGATIVE_INFINITY;
+
+    remaining.forEach((persona, index) => {
+      let score = persona.retention_percent * 2.6;
+      if (persona.reason_code && !usedReasons.has(persona.reason_code)) {
+        score += 18;
+      }
+      if (persona.archetype && !usedArchetypes.has(persona.archetype)) {
+        score += 12;
+      }
+      if (selected.length) {
+        const previous = selected[selected.length - 1];
+        if (previous.reason_code && previous.reason_code === persona.reason_code) {
+          score -= 8;
+        }
+        if (previous.archetype && previous.archetype === persona.archetype) {
+          score -= 6;
+        }
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    });
+
+    const [chosen] = remaining.splice(bestIndex, 1);
+    selected.push(chosen);
+    if (chosen.reason_code) {
+      usedReasons.add(chosen.reason_code);
+    }
+    if (chosen.archetype) {
+      usedArchetypes.add(chosen.archetype);
+    }
+  }
+
+  return selected;
+}
 
 function RawPersonasStep({
   personas,
@@ -1934,9 +1995,37 @@ function RawPersonasStep({
   personas: PersonaResult[];
 }) {
   const [currentPage, setCurrentPage] = useState(0);
-  const totalPages = Math.ceil(personas.length / PERSONAS_PER_PAGE);
+  const [activeFilter, setActiveFilter] = useState<RawPersonaFilter>("retention");
+  const orderedPersonas = useMemo(() => sortPersonasForDisplay(personas), [personas]);
+  const filteredPersonas = useMemo(() => {
+    const byRetention = [...orderedPersonas].sort(
+      (left, right) =>
+        right.retention_percent - left.retention_percent ||
+        right.dropoff_second - left.dropoff_second,
+    );
+    const byEarly = [...orderedPersonas].sort(
+      (left, right) =>
+        left.dropoff_second - right.dropoff_second ||
+        left.retention_percent - right.retention_percent,
+    );
+    const byReasons = buildDistinctReasonPersonas(orderedPersonas);
+
+    return {
+      retention: byRetention,
+      early: byEarly,
+      reasons: byReasons,
+      all: orderedPersonas,
+    } satisfies Record<RawPersonaFilter, PersonaResult[]>;
+  }, [orderedPersonas]);
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [activeFilter, personas]);
+
+  const activePersonas = filteredPersonas[activeFilter];
+  const totalPages = Math.ceil(activePersonas.length / PERSONAS_PER_PAGE);
   const startIndex = currentPage * PERSONAS_PER_PAGE;
-  const visible = personas.slice(startIndex, startIndex + PERSONAS_PER_PAGE);
+  const visible = activePersonas.slice(startIndex, startIndex + PERSONAS_PER_PAGE);
 
   return (
     <section className="space-y-8">
@@ -1955,7 +2044,7 @@ function RawPersonasStep({
               {personas.length} personas simuladas
             </h3>
             <p className="mt-2 text-sm text-slate-500">
-              Mostrando {startIndex + 1}-{Math.min(startIndex + PERSONAS_PER_PAGE, personas.length)} de {personas.length}
+              Mostrando {activePersonas.length === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + PERSONAS_PER_PAGE, activePersonas.length)} de {activePersonas.length}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1983,6 +2072,28 @@ function RawPersonasStep({
               </svg>
             </button>
           </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          {[
+            { id: "retention", label: "Top retencion" },
+            { id: "early", label: "Abandono temprano" },
+            { id: "reasons", label: "Razones distintas" },
+            { id: "all", label: "Ver las 100" },
+          ].map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              onClick={() => setActiveFilter(filter.id as RawPersonaFilter)}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                activeFilter === filter.id
+                  ? "border-slate-900 bg-slate-950 text-white"
+                  : "border-slate-200 bg-white/80 text-slate-700 hover:border-slate-300"
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
         </div>
 
         {visible.length === 0 ? (
