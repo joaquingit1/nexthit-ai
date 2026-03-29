@@ -298,10 +298,17 @@ textarea {
   letter-spacing: -0.05em;
 }
 
-.landing-hero-metric span {
+.landing-hero-metric > span {
   color: #64748b;
   font-size: 0.92rem;
   line-height: 1.6;
+}
+
+.landing-hero-metric-value {
+  display: inline-block;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
 }
 
 .landing-hero-actions {

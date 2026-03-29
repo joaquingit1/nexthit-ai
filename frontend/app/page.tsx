@@ -274,7 +274,11 @@ function AnimatedCurrencyCountdown({
     return () => window.cancelAnimationFrame(frame);
   }, [active, endValue, startValue]);
 
-  return <span style={{ color }}>{`$${displayValue.toLocaleString("en-US")}`}</span>;
+  return (
+    <span className="landing-hero-metric-value" style={{ color }}>
+      {`$${displayValue.toLocaleString("en-US")}`}
+    </span>
+  );
 }
 
 function ProcessCard({
