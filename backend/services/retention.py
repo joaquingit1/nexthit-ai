@@ -14,7 +14,7 @@ def build_viewers_from_personas(personas: list[dict[str, Any]], duration_seconds
             {
                 "id": persona["persona_id"],
                 "handle": persona["name"].lower().replace(" ", "_"),
-                "segment": persona["segment_label"],
+                "segment": persona.get("audience_context_label") or persona.get("segment_label") or persona.get("country", "Audiencia"),
                 "color": persona["color"],
                 "wave": index // 20,
                 "points": [

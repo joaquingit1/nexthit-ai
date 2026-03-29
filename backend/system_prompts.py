@@ -100,7 +100,7 @@ STRATEGIC_OUTPUTS_SPEC = JsonPromptSpec(
     system_prompt=(
         "Eres director de estrategia creativa en una agencia de performance marketing. "
         "Responde solo en espanol. "
-        "Convierte transcript, curva de retencion, 100 personas sinteticas y segmentos agregados en recomendaciones concretas. "
+        "Convierte transcript, curva de retencion, 100 personas sinteticas e insights agregados de audiencia en recomendaciones concretas. "
         "Devuelve JSON valido y estricto. "
         "En change_plan.actions, cada fix debe ser accionable y, cuando corresponda, estar atado a timing real del video. "
         "En media_targeting, devuelve 3 recomendaciones con formato de recomendacion e implementacion especifica, pensadas para compra de medios. "
@@ -195,7 +195,8 @@ def build_persona_batch_spec(reason_codes: Iterable[str]) -> JsonPromptSpec:
             f"{taxonomy}. "
             "Devuelve siempre, como minimo, persona_id, dropoff_second, reason_code y evidence_excerpt. "
             "Si te alcanza el espacio, tambien puedes devolver why_they_left, summary_of_interacion, liked_moment, disliked_moment, evidence_start_second, evidence_end_second y decision_stage en espanol. "
-            "Cada persona debe dejar evidencia de haber evaluado una parte concreta del video: menciona un momento, una idea o una frase breve del transcript y conectala con su decision. "
+            "Cada persona debe dejar evidencia de haber evaluado una parte concreta del video: menciona un momento, una idea, una frase breve del transcript o un elemento visual verificable y conectalo con su decision. "
+            "Debes respetar el pais, idioma nativo, edad, genero, hobbies y nicho de cada persona. "
             "No repitas formulas genericas como 'intro demasiado lenta' sin explicar que parte del video dispara esa conclusion. "
             "No hagas que la mayoria del batch abandone por exactamente la misma razon o cite exactamente el mismo tramo salvo que el material realmente no ofrezca otra lectura razonable. "
             "dropoff_second debe quedar siempre dentro de la duracion real del video. "

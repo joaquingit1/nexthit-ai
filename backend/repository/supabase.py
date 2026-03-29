@@ -114,25 +114,30 @@ class Repository:
                 "video_id": persona["video_id"],
                 "persona_id": persona["persona_id"],
                 "name": persona["name"],
-                "archetype": persona.get("archetype"),
+                "gender": persona.get("gender"),
                 "demographic_profile_id": persona.get("demographic_profile_id"),
                 "demographic_profile_label": persona.get("demographic_profile_label"),
                 "age_range": persona["age_range"],
                 "country": persona["country"],
+                "native_language": persona.get("native_language"),
                 "occupation": persona["occupation"],
                 "income_bracket": persona["income_bracket"],
                 "social_status": persona["social_status"],
                 "interests": persona["interests"],
                 "hobbies": persona["hobbies"],
+                "niche_tags": persona.get("niche_tags", []),
                 "life_story": persona["life_story"],
                 "platform_habits": persona["platform_habits"],
                 "motivations": persona["motivations"],
                 "frustrations": persona["frustrations"],
-                "segment_label": persona["segment_label"],
+                "segment_label": persona.get("audience_context_label") or persona.get("segment_label") or persona["country"],
+                "audience_context_label": persona.get("audience_context_label"),
                 "color": persona["color"],
                 "batch_index": persona["batch_index"],
                 "dropoff_second": persona["dropoff_second"],
                 "retention_percent": persona["retention_percent"],
+                "language_affinity_multiplier": persona.get("language_affinity_multiplier"),
+                "weighted_retention_score": persona.get("weighted_retention_score"),
                 "reason_code": persona.get("reason_code"),
                 "reason_label": persona.get("reason_label"),
                 "why_they_left": persona["why_they_left"],
@@ -147,10 +152,45 @@ class Repository:
             for persona in personas
         ]
 
+        legacy_rows = [
+            {
+                key: value
+                for key, value in row.items()
+                if key
+                not in {
+                    "gender",
+                    "native_language",
+                    "niche_tags",
+                    "audience_context_label",
+                    "language_affinity_multiplier",
+                    "weighted_retention_score",
+                }
+            }
+            for row in rows
+        ]
+
         def _insert():
             return self.client.table("persona_results").insert(rows).execute()
 
-        await self._run(_insert)
+        try:
+            await self._run(_insert)
+        except Exception as exc:
+            message = str(exc).lower()
+            if not any(
+                marker in message
+                for marker in (
+                    "column",
+                    "schema cache",
+                    "does not exist",
+                    "could not find",
+                )
+            ):
+                raise
+
+            def _insert_legacy():
+                return self.client.table("persona_results").insert(legacy_rows).execute()
+
+            await self._run(_insert_legacy)
 
     async def save_result(self, payload: dict[str, Any], score_summary: dict[str, Any]) -> None:
         row = {

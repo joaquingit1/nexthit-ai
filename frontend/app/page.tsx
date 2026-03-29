@@ -971,7 +971,7 @@ export default function LandingPage() {
               Predecí el rendimiento de tu video antes de publicar
             </h1>
             <p className="landing-hero-copy">
-              Simulamos 100 espectadores para analizar retención, detectar puntos de abandono y optimizar tu contenido.
+              Modelamos simulaciones con 100 espectadores artificiales, para analizar retención, detectar puntos de abandono y optimizar tu contenido a su maximo potencial.
             </p>
 
             <div className="landing-hero-metrics">

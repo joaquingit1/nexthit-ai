@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   Suspense,
@@ -16,12 +16,14 @@ import {
   createAnalysisPayload,
   type AnalysisPoint,
   type AnalysisResponse,
+  type AudienceDistributionItem,
   type ChangePlan,
   type MediaTargetingRecommendation,
   type PersonaResult,
   type PersonaSegment,
   type SavingsROI,
   type SegmentDiagnosis,
+  type TargetAudience,
   type TimelineInsightItem,
   type TranscriptSegment,
   type VersionStrategy,
@@ -30,7 +32,6 @@ import {
 import { buildBrowserBackendUrl } from "@/lib/backend";
 
 type ViewerMode = "all" | "average";
-type ScreenMode = "story" | "analysis";
 
 type PersonaInsight = {
   name: string;
@@ -49,16 +50,6 @@ type TimelineInsight = {
   second: number;
   detail: string;
   tone: "risk" | "opportunity";
-};
-
-type FeaturedSegment = {
-  label: string;
-  archetype: string;
-  demographicCluster: string;
-  averageRetention: number;
-  medianDropoffSecond: number;
-  dominantReasonLabel: string;
-  support: number;
 };
 
 type SocialPost = {
@@ -81,10 +72,10 @@ const ANALYSIS_STEPS = [
     description: "Dataset completo de audiencia simulada: perfil demografico, momento de abandono y motivo.",
   },
   {
-    id: "segment-dropoff",
-    title: "Analisis por Segmento",
+    id: "audience",
+    title: "Insights de Audiencia",
     eyebrow: "Paso 3",
-    description: "Segmentacion de audiencia por arquetipos con tasas de retencion y diagnostico de abandono.",
+    description: "Distribucion de genero, edad, paises, hobbies y nichos con mejor respuesta esperada.",
   },
   {
     id: "retention",
@@ -687,15 +678,15 @@ function deriveTimelineInsights(
   return [
     {
       id: "hook",
-      label: "Hook débil",
+      label: "Hook dÃ©bil",
       second: Math.max(0.8, Math.min(dropMoment || 1.2, 2.4)),
       detail:
-        "La primera decisión de seguir o abandonar ocurre antes de que aparezca la prueba más fuerte. Mostrá el resultado antes que la explicación.",
+        "La primera decisiÃ³n de seguir o abandonar ocurre antes de que aparezca la prueba mÃ¡s fuerte. MostrÃ¡ el resultado antes que la explicaciÃ³n.",
       tone: "risk",
     },
     {
       id: "energy",
-      label: "Caída de energía",
+      label: "CaÃ­da de energÃ­a",
       second: Math.max(2.5, Math.min(dropMoment || 3.4, duration - 6)),
       detail:
         "El impulso cae cuando el video explica en vez de mostrar. Este es el momento para sumar movimiento, prueba o un quiebre de patron.",
@@ -757,6 +748,11 @@ function layoutTimelineInsights(timeline: TimelineInsight[], duration: number) {
 function bestPlatformLabel(analysis: AnalysisResponse["analysis"]) {
   return [...analysis.crossPost.platforms]
     .sort((left, right) => right.fit - left.fit)[0]?.platform ?? "Instagram Reels";
+}
+
+function roundNumber(value: number, digits = 0) {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
 }
 
 function buildPersonaSegmentsFromRaw(personas: PersonaResult[]): PersonaSegment[] {
@@ -843,6 +839,109 @@ function buildSegmentDiagnosesFromRaw(personas: PersonaResult[]): SegmentDiagnos
   });
 }
 
+function buildAudienceBreakdownFromScalar(
+  personas: PersonaResult[],
+  key: "gender" | "country" | "age_range",
+  limit?: number,
+): AudienceDistributionItem[] {
+  const totals = new Map<string, { score: number; retention: number; support: number }>();
+  let overall = 0;
+
+  for (const persona of personas) {
+    const label = String(persona[key] ?? "").trim();
+    if (!label) continue;
+    const weight =
+      typeof persona.weighted_retention_score === "number"
+        ? persona.weighted_retention_score
+        : persona.retention_percent * (persona.language_affinity_multiplier ?? 1);
+    const current = totals.get(label) ?? { score: 0, retention: 0, support: 0 };
+    current.score += weight;
+    current.retention += persona.retention_percent;
+    current.support += 1;
+    totals.set(label, current);
+    overall += weight;
+  }
+
+  const rows = [...totals.entries()]
+    .map(([label, stats]) => ({
+      label,
+      percentage: roundNumber((stats.score / Math.max(overall, 1)) * 100, 1),
+      averageRetention: roundNumber(stats.retention / Math.max(stats.support, 1), 1),
+      support: stats.support,
+    }))
+    .sort((left, right) => right.percentage - left.percentage);
+
+  return typeof limit === "number" ? rows.slice(0, limit) : rows;
+}
+
+function buildAudienceBreakdownFromList(
+  personas: PersonaResult[],
+  key: "hobbies" | "niche_tags",
+  limit = 6,
+  minSupport = 5,
+): AudienceDistributionItem[] {
+  const totals = new Map<string, { score: number; retention: number; support: number }>();
+  let overall = 0;
+
+  for (const persona of personas) {
+    const labels = (persona[key] ?? []).map((label) => String(label).trim()).filter(Boolean);
+    for (const label of labels) {
+      const weight =
+        typeof persona.weighted_retention_score === "number"
+          ? persona.weighted_retention_score
+          : persona.retention_percent * (persona.language_affinity_multiplier ?? 1);
+      const current = totals.get(label) ?? { score: 0, retention: 0, support: 0 };
+      current.score += weight;
+      current.retention += persona.retention_percent;
+      current.support += 1;
+      totals.set(label, current);
+      overall += weight;
+    }
+  }
+
+  return [...totals.entries()]
+    .map(([label, stats]) => ({
+      label,
+      percentage: roundNumber((stats.score / Math.max(overall, 1)) * 100, 1),
+      averageRetention: roundNumber(stats.retention / Math.max(stats.support, 1), 1),
+      support: stats.support,
+    }))
+    .filter((item) => (item.support ?? 0) >= minSupport)
+    .sort((left, right) => right.percentage - left.percentage)
+    .slice(0, limit);
+}
+
+function buildAudienceInsightsFallback(personas: PersonaResult[]): TargetAudience {
+  const genderBreakdown = buildAudienceBreakdownFromScalar(personas, "gender", 3);
+  const countryBreakdown = buildAudienceBreakdownFromScalar(personas, "country", 6);
+  const ageBreakdown = buildAudienceBreakdownFromScalar(personas, "age_range", 7);
+  const topHobbies = buildAudienceBreakdownFromList(personas, "hobbies", 6, 5);
+  const topNiches = buildAudienceBreakdownFromList(personas, "niche_tags", 6, 5);
+  const primaryAudience =
+    `${genderBreakdown[0]?.label ?? "Audiencia"} de ${ageBreakdown[0]?.label ?? "25-34"} en ${countryBreakdown[0]?.label ?? "mercados compatibles"}`;
+  const secondaryAudience =
+    `${genderBreakdown[1]?.label ?? genderBreakdown[0]?.label ?? "Audiencia"} de ${ageBreakdown[1]?.label ?? ageBreakdown[0]?.label ?? "18-24"} en ${countryBreakdown[1]?.label ?? countryBreakdown[0]?.label ?? "mercados compatibles"}`;
+  const audienceSummary = `La mejor respuesta aparece en ${primaryAudience.toLowerCase()}.`;
+
+  return {
+    primaryAudience,
+    secondaryAudience,
+    audienceSummary,
+    genderBreakdown,
+    countryBreakdown,
+    ageBreakdown,
+    topHobbies,
+    topNiches,
+    countries: countryBreakdown,
+    ageRanges: ageBreakdown,
+    interests: topNiches,
+    hobbies: topHobbies,
+    socialStatus: [],
+    incomeBrackets: [],
+    personaSegments: [],
+  };
+}
+
 function buildChangePlanFallback(analysis: AnalysisResponse["analysis"]): ChangePlan {
   const biggestDropSecond = findMajorDropSecond(analysis.graph.averageLine);
   const firstSpeechTime = analysis.transcript?.segments?.[0]?.start ?? 0;
@@ -915,7 +1014,7 @@ function buildVersionStrategiesFallback(
   return [
     {
       id: "A",
-      name: "Versión A",
+      name: "VersiÃ³n A",
       targetAudience: primary,
       direction: "Apertura de cortes rapidos para capturar atencion desde el primer frame.",
       structuralChanges: ["Abrir con el resultado", keyFix, "Meter un quiebre de patron antes del segundo 3"],
@@ -923,7 +1022,7 @@ function buildVersionStrategiesFallback(
     },
     {
       id: "B",
-      name: "Versión B",
+      name: "VersiÃ³n B",
       targetAudience: secondary,
       direction: "Proof-heavy edit para perfiles mas racionales o escepticos.",
       structuralChanges: ["Mostrar evidencia temprano", "Reducir claims abstractos", "Mover la llamada a la accion junto al punto de prueba"],
@@ -931,7 +1030,7 @@ function buildVersionStrategiesFallback(
     },
     {
       id: "C",
-      name: "Versión C",
+      name: "VersiÃ³n C",
       targetAudience: thirdAudience,
       direction: "Aspiration-led edit con construccion narrativa mas emocional.",
       structuralChanges: ["Reordenar el relato", "Sostener tension en mitad del video", "Cerrar con payoff memorable"],
@@ -1061,13 +1160,13 @@ function EmptyState() {
       <div className="mx-auto max-w-4xl">
         <div className="result-panel rounded-[2rem] px-8 py-12 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
-            Falta el análisis
+            Falta el anÃ¡lisis
           </p>
           <h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.05em] text-slate-950">
-            Todavía no hay un resultado listo para mostrar.
+            TodavÃ­a no hay un resultado listo para mostrar.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-600">
-            Subí un video primero. El flujo normal de resultados ahora solo muestra datos reales generados por el backend.
+            SubÃ­ un video primero. El flujo normal de resultados ahora solo muestra datos reales generados por el backend.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <button
@@ -1239,11 +1338,11 @@ function StoryScreen({
         <StoryBackdrop />
         <div className="relative">
         <h1 className="mx-auto max-w-4xl font-display text-4xl font-semibold tracking-[-0.06em] text-slate-950 [text-shadow:0_10px_28px_rgba(255,255,255,0.62)] md:text-6xl">
-          Mira quién deja de ver
-          <span className="text-[#2f6fda]"> antes de gastar un dólar</span>
+          Mira quiÃ©n deja de ver
+          <span className="text-[#2f6fda]"> antes de gastar un dÃ³lar</span>
         </h1>
         <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-slate-700 md:text-xl">
-          Analizamos tu video como lo haría una audiencia real: predecimos retención, puntos de abandono y con qué perfiles resuena tu contenido.
+          Analizamos tu video como lo harÃ­a una audiencia real: predecimos retenciÃ³n, puntos de abandono y con quÃ© perfiles resuena tu contenido.
         </p>
         </div>
       </section>
@@ -1264,7 +1363,7 @@ function StoryScreen({
             },
             {
               title: "Simulamos una audiencia real",
-              body: "100 personas sintéticas con comportamientos e intereses distintos miran tu video.",
+              body: "100 personas sintÃ©ticas con comportamientos e intereses distintos miran tu video.",
               icon: (
                 <div className="mx-auto grid w-28 grid-cols-4 gap-1.5 rounded-[1.4rem] bg-[#dbe7ff] p-3 shadow-[0_14px_35px_rgba(47,111,218,0.12)]">
                   {["#f2b28b", "#7a5c4d", "#d7a174", "#5f4637", "#c79a74", "#2f6fda", "#9c6b51", "#f0c49c", "#6f4f3f", "#f5cfaa", "#496aa8", "#c88b62"].map((color, index) => (
@@ -1279,7 +1378,7 @@ function StoryScreen({
             },
             {
               title: "Predecimos performance y crecimiento",
-              body: "Vas a ver dónde abandonan, quiénes se quedan y cómo mejorar para escalar.",
+              body: "Vas a ver dÃ³nde abandonan, quiÃ©nes se quedan y cÃ³mo mejorar para escalar.",
               icon: (
                 <div className="relative mx-auto h-20 w-28 rounded-[1.4rem] border border-[#cfe0ff] bg-[linear-gradient(180deg,#f8fbff,#eef4ff)] shadow-[0_14px_35px_rgba(47,111,218,0.1)]">
                   <div className="absolute inset-2 bg-[linear-gradient(rgba(47,111,218,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(47,111,218,0.08)_1px,transparent_1px)] bg-[length:16px_16px]" />
@@ -1310,14 +1409,14 @@ function StoryScreen({
 
         <div className="mt-8 border-t border-dashed border-slate-200 pt-8">
           <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
-            Qué vas a obtener
+            QuÃ© vas a obtener
           </h2>
           <div className="mt-5 grid gap-8 text-left md:grid-cols-[minmax(0,1fr),340px] md:items-center">
             <div className="grid gap-x-8 gap-y-3">
             {[
-              "Curva de retención predicha",
+              "Curva de retenciÃ³n predicha",
               "Tiempos exactos de abandono con sus motivos",
-              "Segmentos de audiencia que más conectan",
+              "Segmentos de audiencia que mÃ¡s conectan",
               "Ajustes creativos accionables",
               "Estrategia de crecimiento paga adaptada a tu video",
             ].map((item) => (
@@ -1334,13 +1433,13 @@ function StoryScreen({
         </div>
 
         <div className="mt-8 border-t border-dashed border-slate-200 pt-8">
-          <p className="text-lg text-slate-500">No es intuición: está construido sobre patrones de:</p>
+          <p className="text-lg text-slate-500">No es intuiciÃ³n: estÃ¡ construido sobre patrones de:</p>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {[
-              "dinámicas de atención",
+              "dinÃ¡micas de atenciÃ³n",
               "contenido short-form de alto rendimiento",
               "estructura narrativa",
-              "generación de estrategia de crecimiento",
+              "generaciÃ³n de estrategia de crecimiento",
             ].map((item) => (
               <div key={item} className="flex items-start gap-3 text-base leading-7 text-slate-700">
                 <svg className="mt-1.5 h-4 w-4 flex-shrink-0 text-[#2f6fda]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -1364,7 +1463,7 @@ function StoryScreen({
               ))}
             </div>
             <p className="text-base font-medium text-slate-700">
-              Tu informe de inteligencia creativa se está generando...
+              Tu informe de inteligencia creativa se estÃ¡ generando...
             </p>
           </div>
 
@@ -1372,7 +1471,7 @@ function StoryScreen({
             {[
               "Detectando ganchos debiles...",
               "Simulando el comportamiento de la audiencia...",
-              "Mapeando la estrategia de retención...",
+              "Mapeando la estrategia de retenciÃ³n...",
               "Generando la estrategia de crecimiento...",
             ].map((item) => (
               <span key={item} className="inline-flex items-center gap-2">
@@ -1392,7 +1491,7 @@ function StoryScreen({
           onClick={onProceed}
           className="rounded-full bg-slate-950 px-8 py-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
         >
-          Ir al análisis
+          Ir al anÃ¡lisis
         </button>
       </div>
     </section>
@@ -1423,7 +1522,7 @@ function AnalysisStepper({
   const stepIcons: Record<string, React.ReactNode> = {
     score: <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />,
     "raw-personas": <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />,
-    "segment-dropoff": <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />,
+    audience: <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 6h9m-9 6h9m-9 6h5.25M5.25 3.75h13.5A1.5 1.5 0 0120.25 5.25v13.5a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5V5.25a1.5 1.5 0 011.5-1.5z" />,
     retention: <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />,
     timeline: <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />,
     changes: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
@@ -1616,10 +1715,10 @@ function ScoreSummaryStep({
 
           <div className="mt-8 grid gap-4 md:grid-cols-2">
             {[
-              ["Duración del clip", analysis.clip.durationLabel],
+              ["DuraciÃ³n del clip", analysis.clip.durationLabel],
               ["Mejor encaje de plataforma", analysis.crossPost.platforms[0]?.platform ?? "Instagram Reels"],
               ["Audiencia principal", analysis.graph.bestFitAudience],
-              ["Abandono más común", analysis.graph.mostCommonDropOff],
+              ["Abandono mÃ¡s comÃºn", analysis.graph.mostCommonDropOff],
             ].map(([label, value]) => (
               <div key={label} className="rounded-[1.4rem] border border-slate-200/80 bg-white/80 px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
@@ -1761,7 +1860,7 @@ function GraphStep({
             onClick={() => setSimulationRunId((current) => current + 1)}
             className="rounded-full border border-slate-200 bg-white/70 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 transition hover:border-slate-300 hover:bg-white"
           >
-            Repetir simulación
+            Repetir simulaciÃ³n
           </button>
           {!simulationComplete && (
             <div className="flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5">
@@ -1780,8 +1879,8 @@ function GraphStep({
       <div className="grid gap-4 text-sm md:grid-cols-4">
         {[
           ["Puntaje general", `${analysis.summary.overallScore}/100`],
-          ["Tiempo promedio de visualización", analysis.graph.averageWatchTime],
-          ["Abandono más común", analysis.graph.mostCommonDropOff],
+          ["Tiempo promedio de visualizaciÃ³n", analysis.graph.averageWatchTime],
+          ["Abandono mÃ¡s comÃºn", analysis.graph.mostCommonDropOff],
           ["Audiencia con mejor encaje", analysis.graph.bestFitAudience],
         ].map(([label, value]) => (
           <div key={label} className="border-b border-slate-200/80 pb-4">
@@ -1937,7 +2036,7 @@ function GraphStep({
           </div>
         </section>
 
-        {/* Sidebar derecho - métricas compactas */}
+        {/* Sidebar derecho - mÃ©tricas compactas */}
         <div className="flex flex-col gap-2 self-start">
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2">
@@ -1950,7 +2049,7 @@ function GraphStep({
             </div>
             <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Retención
+                RetenciÃ³n
               </p>
               <p className="mt-1 font-display text-xl font-semibold tracking-[-0.04em] text-slate-950">
                 {Math.round(activeAveragePoint.retention)}%
@@ -2009,7 +2108,7 @@ function GraphStep({
           </>
         ) : null}
         <p className="mt-4 text-xs uppercase tracking-[0.16em] text-slate-400">
-          Pasá el mouse por el gráfico para ver qué están escuchando en cada segundo.
+          PasÃ¡ el mouse por el grÃ¡fico para ver quÃ© estÃ¡n escuchando en cada segundo.
         </p>
       </div>
     </section>
@@ -2037,7 +2136,8 @@ function buildDistinctReasonPersonas(personas: PersonaResult[]) {
   const remaining = [...sortPersonasForDisplay(personas)];
   const selected: PersonaResult[] = [];
   const usedReasons = new Set<string>();
-  const usedArchetypes = new Set<string>();
+  const usedCountries = new Set<string>();
+  const usedGenders = new Set<string>();
 
   while (remaining.length) {
     let bestIndex = 0;
@@ -2048,16 +2148,19 @@ function buildDistinctReasonPersonas(personas: PersonaResult[]) {
       if (persona.reason_code && !usedReasons.has(persona.reason_code)) {
         score += 18;
       }
-      if (persona.archetype && !usedArchetypes.has(persona.archetype)) {
-        score += 12;
+      if (persona.country && !usedCountries.has(persona.country)) {
+        score += 10;
+      }
+      if (persona.gender && !usedGenders.has(persona.gender)) {
+        score += 8;
       }
       if (selected.length) {
         const previous = selected[selected.length - 1];
         if (previous.reason_code && previous.reason_code === persona.reason_code) {
           score -= 8;
         }
-        if (previous.archetype && previous.archetype === persona.archetype) {
-          score -= 6;
+        if (previous.country && previous.country === persona.country) {
+          score -= 5;
         }
       }
       if (score > bestScore) {
@@ -2071,8 +2174,11 @@ function buildDistinctReasonPersonas(personas: PersonaResult[]) {
     if (chosen.reason_code) {
       usedReasons.add(chosen.reason_code);
     }
-    if (chosen.archetype) {
-      usedArchetypes.add(chosen.archetype);
+    if (chosen.country) {
+      usedCountries.add(chosen.country);
+    }
+    if (chosen.gender) {
+      usedGenders.add(chosen.gender);
     }
   }
 
@@ -2230,7 +2336,7 @@ function RawPersonasStep({
                       </p>
                     </div>
                     <span className="text-sm text-slate-500">
-                      {persona.archetype ?? "Persona"} · {persona.demographic_profile_label ?? persona.age_range}
+                      {[persona.gender, persona.age_range, persona.country, persona.native_language?.toUpperCase()].filter(Boolean).join(" · ")}
                     </span>
                     <span className="ml-auto text-sm font-medium text-slate-700">
                       Abandono: {formatMoment(persona.dropoff_second)} ({persona.retention_percent}%)
@@ -2246,7 +2352,7 @@ function RawPersonasStep({
                       <span className="text-slate-600">{persona.liked_moment ?? "Conecta con la promesa"}</span>
                     </div>
                     <div>
-                      <span className="text-rose-500">−</span>{" "}
+                      <span className="text-rose-500">âˆ’</span>{" "}
                       <span className="text-slate-600">{persona.disliked_moment ?? persona.why_they_left}</span>
                     </div>
                   </div>
@@ -2293,7 +2399,7 @@ function RawPersonasStep({
                   className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide"
                   style={{ backgroundColor: `${selectedPersona.color}22`, color: selectedPersona.color }}
                 >
-                  {selectedPersona.archetype ?? "Persona"}
+                  {selectedPersona.gender ?? "Audiencia"}
                 </span>
               </div>
 
@@ -2305,7 +2411,7 @@ function RawPersonasStep({
               </p>
 
               <p className="mt-1 text-sm text-slate-500">
-                {[selectedPersona.age_range, selectedPersona.country, selectedPersona.income_bracket, selectedPersona.social_status].filter(Boolean).join(" · ")}
+                {[selectedPersona.age_range, selectedPersona.country, selectedPersona.income_bracket, selectedPersona.social_status].filter(Boolean).join(" Â· ")}
               </p>
 
               <div className="mt-4 flex items-center gap-4 rounded-xl bg-slate-100 p-4">
@@ -2536,7 +2642,7 @@ function SegmentDropoffStep({
                       className="rounded-[1.2rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4"
                     >
                       <p className="text-sm font-semibold text-slate-900">
-                        {example.name} · {formatMoment(example.dropoffSecond)}
+                        {example.name} Â· {formatMoment(example.dropoffSecond)}
                       </p>
                       <p className="mt-2 text-sm leading-7 text-slate-600">
                         {example.reasonLabel}. {example.evidenceExcerpt}
@@ -2563,6 +2669,153 @@ function SegmentDropoffStep({
           </div>
         ) : null}
       </section>
+    </section>
+  );
+}
+
+function AudienceInsightsStep({
+  audience,
+}: {
+  audience: TargetAudience;
+}) {
+  const genderBreakdown = audience.genderBreakdown ?? [];
+  const ageBreakdown = audience.ageBreakdown ?? audience.ageRanges;
+  const countryBreakdown = audience.countryBreakdown ?? audience.countries;
+  const topHobbies = audience.topHobbies ?? audience.hobbies;
+  const topNiches = audience.topNiches ?? audience.interests;
+  const palette = ["#2563eb", "#38bdf8", "#93c5fd"];
+
+  let start = 0;
+  const pieGradient = genderBreakdown.length
+    ? genderBreakdown
+        .map((item, index) => {
+          const end = start + item.percentage;
+          const segment = `${palette[index % palette.length]} ${start}% ${end}%`;
+          start = end;
+          return segment;
+        })
+        .join(", ")
+    : "#cbd5e1 0 100%";
+
+  const renderBars = (rows: AudienceDistributionItem[], tone: "blue" | "slate" = "blue") => (
+    <div className="space-y-3">
+      {rows.map((item) => (
+        <div key={item.label} className="space-y-1.5">
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="font-medium text-slate-700">{item.label}</span>
+            <span className="text-slate-500">{item.percentage}%</span>
+          </div>
+          <div className="h-2 rounded-full bg-slate-100">
+            <div
+              className={`h-full rounded-full ${tone === "blue" ? "bg-gradient-to-r from-blue-600 to-cyan-400" : "bg-slate-900"}`}
+              style={{ width: `${Math.max(item.percentage, 4)}%` }}
+            />
+          </div>
+          <p className="text-xs text-slate-500">
+            Retencion media {item.averageRetention ?? 0}%{item.support ? ` Â· soporte ${item.support}` : ""}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <section className="space-y-8">
+      <StepIntro
+        title="Insights de audiencia"
+        description="Lectura tipo plataforma social sobre quienes mejor responden al video: genero, edad, paises, hobbies y nichos."
+      />
+
+      <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+        <section className="result-panel rounded-[2.2rem] px-6 py-7">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center">
+            <div className="relative flex h-44 w-44 shrink-0 items-center justify-center rounded-full border border-blue-100 bg-slate-50">
+              <div className="h-36 w-36 rounded-full" style={{ background: `conic-gradient(${pieGradient})` }} />
+              <div className="absolute flex h-20 w-20 items-center justify-center rounded-full bg-white text-center shadow-sm">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Genero</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{genderBreakdown[0]?.label ?? "-"}</p>
+                </div>
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Resumen de audiencia</p>
+              <h3 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em] text-slate-950">
+                {audience.primaryAudience}
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-slate-600">
+                {audience.audienceSummary ?? "Esta lectura resume quien sostiene mejor la retencion ajustada por idioma y performance esperada."}
+              </p>
+              {genderBreakdown.length ? (
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {genderBreakdown.map((item) => (
+                    <div key={item.label} className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{item.label}</p>
+                      <p className="mt-2 text-2xl font-semibold text-slate-950">{item.percentage}%</p>
+                      <p className="mt-1 text-xs text-slate-500">Retencion media {item.averageRetention ?? 0}%</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        <section className="result-panel rounded-[2.2rem] px-6 py-7">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Edades con mejor respuesta</p>
+          <div className="mt-5">{renderBars(ageBreakdown.slice(0, 7))}</div>
+        </section>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <section className="result-panel rounded-[2.2rem] px-6 py-7">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Paises con mejor performance esperada</p>
+          <div className="mt-5">{renderBars(countryBreakdown.slice(0, 6))}</div>
+        </section>
+
+        <section className="result-panel rounded-[2.2rem] px-6 py-7">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Contextos destacados</p>
+          <div className="mt-5 grid gap-3">
+            {[
+              { title: "Primario", value: audience.primaryAudience },
+              { title: "Secundario", value: audience.secondaryAudience },
+            ].map((item) => (
+              <div key={item.title} className="rounded-2xl border border-slate-200/80 bg-white/85 px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{item.title}</p>
+                <p className="mt-2 text-base font-semibold text-slate-900">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        {topHobbies.length ? (
+          <section className="result-panel rounded-[2.2rem] px-6 py-7">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Top hobbies a targetear</p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              {topHobbies.map((item) => (
+                <div key={item.label} className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700">
+                  {item.label} Â· {item.percentage}%
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {topNiches.length ? (
+          <section className="result-panel rounded-[2.2rem] px-6 py-7">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Top nichos con mejor ajuste</p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              {topNiches.map((item) => (
+                <div key={item.label} className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
+                  {item.label} Â· {item.percentage}%
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </div>
     </section>
   );
 }
@@ -3187,31 +3440,17 @@ function StepFooter({
   currentStep,
   onBack,
   onNext,
-  onReturnToStory,
-  isNewUpload,
 }: {
   currentStep: number;
   onBack: () => void;
   onNext: () => void;
-  onReturnToStory: () => void;
-  isNewUpload: boolean;
 }) {
   const isFirst = currentStep === 0;
   const isLast = currentStep === ANALYSIS_STEPS.length - 1;
 
   return (
     <div className="flex flex-col gap-3 border-t border-slate-200/80 pt-6 sm:flex-row sm:items-center sm:justify-between">
-      {isNewUpload ? (
-        <button
-          type="button"
-          onClick={onReturnToStory}
-          className="text-sm font-semibold text-slate-500 transition hover:text-slate-900"
-        >
-          Volver a la explicación
-        </button>
-      ) : (
-        <div />
-      )}
+      <div />
 
       <div className="flex flex-wrap gap-3">
         <button
@@ -3240,12 +3479,10 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const analysisId = searchParams.get("id");
   const demoMode = searchParams.get("demo");
-  const isNewUpload = searchParams.get("new") === "1";
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [ready, setReady] = useState(false);
-  const [screenMode, setScreenMode] = useState<ScreenMode>(isNewUpload ? "story" : "analysis");
   const [currentStep, setCurrentStep] = useState(0);
-  const [maxReachedStep, setMaxReachedStep] = useState(isNewUpload ? 0 : ANALYSIS_STEPS.length - 1);
+  const [maxReachedStep, setMaxReachedStep] = useState(ANALYSIS_STEPS.length - 1);
   const [viewerMode, setViewerMode] = useState<ViewerMode>("all");
   const [selectedPlatform, setSelectedPlatform] = useState("LinkedIn");
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
@@ -3328,24 +3565,21 @@ function DashboardContent() {
     [analysis],
   );
 
-  const personaSegments = useMemo(() => {
+  const audienceInsights = useMemo(() => {
     if (!analysis) {
-      return [] as PersonaSegment[];
+      return null as TargetAudience | null;
     }
 
-    return (
-      analysis.analysis.personaSegments ??
-      analysis.analysis.targetAudience?.personaSegments ??
-      buildPersonaSegmentsFromRaw(rawPersonas)
-    );
-  }, [analysis, rawPersonas]);
-
-  const segmentDiagnoses = useMemo(() => {
-    if (!analysis) {
-      return [] as SegmentDiagnosis[];
+    const targetAudience = analysis.analysis.targetAudience;
+    if (
+      targetAudience?.genderBreakdown?.length ||
+      targetAudience?.countryBreakdown?.length ||
+      targetAudience?.ageBreakdown?.length
+    ) {
+      return targetAudience;
     }
 
-    return analysis.analysis.segmentDiagnoses ?? buildSegmentDiagnosesFromRaw(rawPersonas);
+    return rawPersonas.length ? buildAudienceInsightsFallback(rawPersonas) : targetAudience ?? null;
   }, [analysis, rawPersonas]);
 
   const timeline = useMemo(() => {
@@ -3477,10 +3711,7 @@ function DashboardContent() {
   return (
     <main className="result-shell min-h-screen overflow-x-hidden px-4 py-5 md:px-6 md:py-6">
       <div className="space-y-6">
-        {screenMode === "story" ? (
-          <StoryScreen analysis={analysis.analysis} onProceed={() => setScreenMode("analysis")} />
-        ) : (
-          <section className="space-y-6">
+        <section className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <button
@@ -3515,15 +3746,6 @@ function DashboardContent() {
                 >
                   Analizar otro video
                 </button>
-                {isNewUpload ? (
-                  <button
-                    type="button"
-                    onClick={() => setScreenMode("story")}
-                    className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                  >
-                    Volver a la explicación
-                  </button>
-                ) : null}
               </div>
             </div>
 
@@ -3540,11 +3762,8 @@ function DashboardContent() {
                 <RawPersonasStep personas={rawPersonas} />
               ) : null}
 
-              {step.id === "segment-dropoff" ? (
-                <SegmentDropoffStep
-                  segments={personaSegments}
-                  diagnoses={segmentDiagnoses}
-                />
+              {step.id === "audience" && audienceInsights ? (
+                <AudienceInsightsStep audience={audienceInsights} />
               ) : null}
 
               {step.id === "retention" ? (
@@ -3581,12 +3800,9 @@ function DashboardContent() {
                   setCurrentStep(nextStep);
                   setMaxReachedStep((current) => Math.max(current, nextStep));
                 }}
-                onReturnToStory={() => setScreenMode("story")}
-                isNewUpload={isNewUpload}
               />
             </section>
-          </section>
-        )}
+        </section>
       </div>
     </main>
   );
@@ -3599,3 +3815,5 @@ export default function ResultadoPage() {
     </Suspense>
   );
 }
+
+

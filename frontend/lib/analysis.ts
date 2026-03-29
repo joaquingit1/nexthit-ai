@@ -42,25 +42,31 @@ export type PersonaResult = {
   name: string;
   presentation_order?: number;
   archetype?: string;
+  gender?: "Mujer" | "Hombre" | "Otro" | string;
   demographic_profile_id?: string;
   demographic_profile_label?: string;
   demographic_cluster?: string;
   age_range: string;
   country: string;
+  native_language?: string;
   occupation: string;
   income_bracket: string;
   social_status: string;
   interests: string[];
   hobbies: string[];
+  niche_tags?: string[];
   life_story: string;
   platform_habits: string;
   motivations: string[];
   frustrations: string[];
-  segment_label: string;
+  segment_label?: string;
+  audience_context_label?: string;
   color: string;
   batch_index: number;
   dropoff_second: number;
   retention_percent: number;
+  language_affinity_multiplier?: number;
+  weighted_retention_score?: number;
   reason_code?: string;
   reason_label?: string;
   why_they_left: string;
@@ -77,12 +83,19 @@ export type AudienceDistributionItem = {
   label: string;
   percentage: number;
   averageRetention?: number;
+  support?: number;
   note?: string;
 };
 
 export type TargetAudience = {
   primaryAudience: string;
   secondaryAudience: string;
+  audienceSummary?: string;
+  genderBreakdown?: AudienceDistributionItem[];
+  countryBreakdown?: AudienceDistributionItem[];
+  ageBreakdown?: AudienceDistributionItem[];
+  topHobbies?: AudienceDistributionItem[];
+  topNiches?: AudienceDistributionItem[];
   countries: AudienceDistributionItem[];
   ageRanges: AudienceDistributionItem[];
   interests: AudienceDistributionItem[];
@@ -653,8 +666,9 @@ function orderFallbackPersonas(personas: PersonaResult[]) {
     let bestScore = Number.NEGATIVE_INFINITY;
 
     remaining.forEach((persona, index) => {
+      const currentLabel = persona.segment_label ?? persona.audience_context_label ?? persona.country ?? persona.age_range;
       let score = persona.retention_percent * 3 + persona.dropoff_second * 0.4;
-      if (!usedSegments.has(persona.segment_label)) {
+      if (!usedSegments.has(currentLabel)) {
         score += 15;
       }
       if (persona.reason_code && !usedReasons.has(persona.reason_code)) {
@@ -662,10 +676,12 @@ function orderFallbackPersonas(personas: PersonaResult[]) {
       }
       if (ordered.length) {
         const previous = ordered[ordered.length - 1];
+        const previousLabel =
+          previous.segment_label ?? previous.audience_context_label ?? previous.country ?? previous.age_range;
         if (previous.reason_code && previous.reason_code === persona.reason_code) {
           score -= 6;
         }
-        if (previous.segment_label === persona.segment_label) {
+        if (previousLabel === currentLabel) {
           score -= 8;
         }
       }
@@ -680,7 +696,7 @@ function orderFallbackPersonas(personas: PersonaResult[]) {
       ...selected,
       presentation_order: ordered.length,
     });
-    usedSegments.add(selected.segment_label);
+    usedSegments.add(selected.segment_label ?? selected.audience_context_label ?? selected.country ?? selected.age_range);
     if (selected.reason_code) {
       usedReasons.add(selected.reason_code);
     }

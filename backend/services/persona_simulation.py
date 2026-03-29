@@ -10,16 +10,16 @@ from typing import Any
 from config import resolve_prompt_model
 from constants import (
     LEAVE_REASON_LABELS,
-    PERSONA_ARCHETYPES,
+    PERSONA_AUDIENCE_CONTEXTS,
     PERSONA_COLOR_PALETTE,
-    PERSONA_DEMOGRAPHIC_PROFILES,
     PERSONA_FRUSTRATIONS,
     PERSONA_HOBBIES,
+    PERSONA_INTEREST_PROFILES,
     PERSONA_INTERESTS,
     PERSONA_LAST_NAME_SEEDS,
     PERSONA_MOTIVATIONS,
     PERSONA_NAME_SEEDS,
-    PERSONA_OCCUPATIONS,
+    PERSONA_NATIVE_LANGUAGES,
 )
 from schemas import persona_batch_compact_schema
 from services.groq_client import call_groq_chat_json
@@ -30,6 +30,53 @@ from utils import clamp, round_value
 
 def normalize_seed_text(text: str) -> str:
     return " ".join(text.lower().split()).strip()
+
+
+def canonical_language(value: str | None) -> str:
+    normalized = (value or "").strip().lower()
+    aliases = {
+        "spanish": "es",
+        "espanol": "es",
+        "español": "es",
+        "english": "en",
+        "ingles": "en",
+        "inglés": "en",
+        "portuguese": "pt",
+        "portugues": "pt",
+        "português": "pt",
+        "french": "fr",
+        "frances": "fr",
+        "francés": "fr",
+        "german": "de",
+        "aleman": "de",
+        "alemán": "de",
+    }
+    return aliases.get(normalized, normalized[:2] if normalized else "")
+
+
+def language_family(language_code: str) -> str:
+    families = {
+        "es": "romance",
+        "pt": "romance",
+        "fr": "romance",
+        "it": "romance",
+        "en": "germanic",
+        "de": "germanic",
+        "nl": "germanic",
+    }
+    return families.get(language_code, language_code)
+
+
+def build_platform_habits(age_range: str, country: str) -> str:
+    if age_range in {"<18", "18-24"}:
+        return f"Consume TikTok e Instagram varias veces al dia y decide en segundos si el video vale seguir viendolo desde {country}."
+    if age_range in {"55-64", "65+"}:
+        return f"Combina Facebook, YouTube Shorts e Instagram, y necesita claridad rapida para seguir mirando desde {country}."
+    return f"Alterna Reels, TikTok y Shorts durante el dia y decide rapido si el contenido justifica su atencion desde {country}."
+
+
+def build_audience_context_label(persona: dict[str, Any]) -> str:
+    return f"{persona['gender']} · {persona['age_range']} · {persona['country']}"
 
 
 def build_video_seed(video_id: str, transcript_text: str, duration_seconds: int) -> int:
@@ -116,36 +163,41 @@ def build_persona_library_for_video(
     """Build the canonical 100 synthetic personas for one video deterministically."""
     personas: list[dict[str, Any]] = []
     video_seed = build_video_seed(video_id, transcript_text, duration_seconds)
-    seeded_names = build_seeded_full_names(
-        len(PERSONA_ARCHETYPES) * len(PERSONA_DEMOGRAPHIC_PROFILES),
-        video_seed,
-    )
-    for archetype_index, archetype in enumerate(PERSONA_ARCHETYPES):
-        for profile_index, profile in enumerate(PERSONA_DEMOGRAPHIC_PROFILES):
-            index = archetype_index * len(PERSONA_DEMOGRAPHIC_PROFILES) + profile_index
-            personas.append(
-                {
-                    "persona_id": f"persona-{archetype_index + 1:02d}-{profile_index + 1:02d}",
-                    "name": seeded_names[index],
-                    "archetype": archetype,
-                    "demographic_profile_id": profile["id"],
-                    "demographic_profile_label": profile["label"],
-                    "demographic_cluster": profile["cluster"],
-                    "age_range": profile["age_range"],
-                    "country": profile["country"],
-                    "occupation": PERSONA_OCCUPATIONS[(archetype_index + profile_index) % len(PERSONA_OCCUPATIONS)],
-                    "income_bracket": profile["income_bracket"],
-                    "social_status": profile["social_status"],
-                    "interests": PERSONA_INTERESTS[(archetype_index + profile_index + (video_seed % len(PERSONA_INTERESTS))) % len(PERSONA_INTERESTS)],
-                    "hobbies": PERSONA_HOBBIES[(archetype_index + profile_index + (video_seed % len(PERSONA_HOBBIES))) % len(PERSONA_HOBBIES)],
-                    "life_story": f"{archetype}. Consume short-form y decide en segundos si el video merece atencion.",
-                    "platform_habits": "Principalmente consume Instagram Reels y TikTok en pausas cortas del dia.",
-                    "motivations": PERSONA_MOTIVATIONS[(archetype_index + (video_seed % len(PERSONA_MOTIVATIONS))) % len(PERSONA_MOTIVATIONS)],
-                    "frustrations": PERSONA_FRUSTRATIONS[(profile_index + (video_seed % len(PERSONA_FRUSTRATIONS))) % len(PERSONA_FRUSTRATIONS)],
-                    "segment_label": f"{profile['cluster']} {archetype}",
-                    "color": PERSONA_COLOR_PALETTE[archetype_index % len(PERSONA_COLOR_PALETTE)],
-                }
-            )
+    total_count = len(PERSONA_AUDIENCE_CONTEXTS) * len(PERSONA_INTEREST_PROFILES)
+    seeded_names = build_seeded_full_names(total_count, video_seed)
+    for context_index, context in enumerate(PERSONA_AUDIENCE_CONTEXTS):
+        for interest_index, interest_profile in enumerate(PERSONA_INTEREST_PROFILES):
+            index = context_index * len(PERSONA_INTEREST_PROFILES) + interest_index
+            persona = {
+                "persona_id": f"persona-{context_index + 1:02d}-{interest_index + 1:02d}",
+                "name": seeded_names[index],
+                "gender": context["gender"],
+                "age_range": context["age_range"],
+                "country": context["country"],
+                "native_language": context.get("native_language") or PERSONA_NATIVE_LANGUAGES.get(context["country"], "en"),
+                "occupation": interest_profile["occupation"],
+                "income_bracket": context["income_bracket"],
+                "social_status": context["social_status"],
+                "interests": interest_profile.get("interests") or PERSONA_INTERESTS[index % len(PERSONA_INTERESTS)],
+                "hobbies": interest_profile.get("hobbies") or PERSONA_HOBBIES[index % len(PERSONA_HOBBIES)],
+                "niche_tags": interest_profile["niche_tags"],
+                "life_story": (
+                    f"Vive en {context['country']}, habla principalmente {context.get('native_language', 'en')} "
+                    f"y consume contenido corto para decidir rapido si algo le sirve dentro de {interest_profile['niche_tags'][0]}."
+                ),
+                "platform_habits": build_platform_habits(context["age_range"], context["country"]),
+                "motivations": interest_profile.get("motivations") or PERSONA_MOTIVATIONS[index % len(PERSONA_MOTIVATIONS)],
+                "frustrations": interest_profile.get("frustrations") or PERSONA_FRUSTRATIONS[index % len(PERSONA_FRUSTRATIONS)],
+                "demographic_profile_id": context["id"],
+                "demographic_profile_label": f"{context['gender']} {context['age_range']} en {context['country']}",
+                "audience_context_id": context["id"],
+                "audience_context_label": "",
+                "interest_profile_id": interest_profile["id"],
+                "color": PERSONA_COLOR_PALETTE[interest_index % len(PERSONA_COLOR_PALETTE)],
+            }
+            persona["audience_context_label"] = build_audience_context_label(persona)
+            persona["segment_label"] = persona["audience_context_label"]
+            personas.append(persona)
     return personas
 
 
@@ -187,14 +239,16 @@ def build_compact_persona_prompt_payload(
             {
                 "persona_id": persona["persona_id"],
                 "name": persona["name"],
-                "archetype": persona["archetype"],
-                "demographic": persona.get("demographic_profile_label") or persona.get("demographic_cluster"),
+                "gender": persona["gender"],
                 "age_range": persona["age_range"],
                 "country": persona["country"],
+                "native_language": persona["native_language"],
                 "income_bracket": persona["income_bracket"],
                 "social_status": persona["social_status"],
+                "occupation": persona["occupation"],
                 "interest": (persona.get("interests") or [""])[0],
                 "hobby": (persona.get("hobbies") or [""])[0],
+                "niche_tag": (persona.get("niche_tags") or [""])[0],
                 "motivation": (persona.get("motivations") or [""])[0],
                 "frustration": (persona.get("frustrations") or [""])[0],
             }
@@ -218,6 +272,7 @@ def build_compact_persona_prompt_payload(
 
     return {
         "duration_seconds": duration_seconds,
+        "transcript_language": transcript.get("language"),
         "transcript_text": str(transcript.get("text", ""))[:900],
         "beats": beats,
         "signal_summary": {
@@ -258,14 +313,41 @@ def build_compact_persona_prompt_payload(
     }
 
 
+def compute_language_affinity_multiplier(
+    persona: dict[str, Any],
+    transcript_language: str | None,
+    creative_context: dict[str, Any],
+) -> float:
+    persona_language = canonical_language(persona.get("native_language"))
+    video_language = canonical_language(transcript_language)
+    if not persona_language or not video_language:
+        return 0.92
+    if persona_language == video_language:
+        return 1.0
+
+    multiplier = 0.72
+    if language_family(persona_language) == language_family(video_language):
+        multiplier += 0.08
+    visual_score = float(creative_context.get("visual_score", 0))
+    if visual_score >= 82:
+        multiplier += 0.14
+    elif visual_score >= 72:
+        multiplier += 0.1
+    elif visual_score >= 62:
+        multiplier += 0.06
+    if float(creative_context.get("clarity_score", 0)) >= 75:
+        multiplier += 0.04
+    return clamp(multiplier, 0.62, 0.96)
+
+
 def infer_reason_code(
     persona: dict[str, Any],
     creative_context: dict[str, Any],
     transcript_signals: dict[str, Any],
     duration_seconds: int,
+    transcript_language: str | None,
 ) -> tuple[str, float]:
     """Infer a reason code and rough drop-off anchor from creative and transcript signals."""
-    archetype = str(persona.get("archetype", ""))
     first_speech = float(transcript_signals.get("first_speech_time", 0) or 0)
     hook_moment = pick_primary_moment(transcript_signals, "hook_moments")
     benefit_moment = pick_primary_moment(transcript_signals, "benefit_moments")
@@ -277,87 +359,39 @@ def infer_reason_code(
     proof_anchor = float(proof_moment["start"]) if proof_moment else duration_seconds * 0.42
     cta_anchor = float(cta_moment["start"]) if cta_moment else duration_seconds * 0.82
     overload_anchor = float(overload_moment["start"]) if overload_moment else duration_seconds * 0.58
+    age_range = str(persona.get("age_range", ""))
+    social_status = str(persona.get("social_status", ""))
+    niche_tags = {str(tag).lower() for tag in persona.get("niche_tags", [])}
+    language_multiplier = compute_language_affinity_multiplier(persona, transcript_language, creative_context)
 
     if first_speech > 0.5:
         return "silent_intro", min(first_speech + 0.4, duration_seconds)
 
-    if archetype == "Scroller veloz":
-        if creative_context["hook_score"] < 66 or hook_anchor > 1.5:
-            return "intro_too_slow", min(hook_anchor + 0.4, duration_seconds)
-        if creative_context["novelty_score"] < 68:
-            return "low_novelty", min(hook_anchor + 0.7, duration_seconds)
-    if archetype == "Cazador de tendencias":
-        if creative_context["novelty_score"] < 70:
-            return "low_novelty", min(hook_anchor + 0.7, duration_seconds)
-        if creative_context["hook_score"] < 64:
-            return "weak_visual_hook", min(hook_anchor + 0.5, duration_seconds)
-    if archetype == "Entretenido casual":
-        if creative_context["hook_score"] < 63:
-            return "intro_too_slow", min(hook_anchor + 0.6, duration_seconds)
-        if creative_context["pacing_score"] < 65:
-            return "low_energy", min(duration_seconds * 0.34, duration_seconds)
-    if archetype == "Comprador esceptico":
+    if language_multiplier <= 0.8 and creative_context["visual_score"] < 74:
+        return "irrelevant_for_audience", min(benefit_anchor + 0.3, duration_seconds)
+    if age_range in {"<18", "18-24"} and (creative_context["hook_score"] < 68 or hook_anchor > 1.4):
+        return "intro_too_slow", min(hook_anchor + 0.4, duration_seconds)
+    if age_range in {"<18", "18-24"} and creative_context["novelty_score"] < 68:
+        return "low_novelty", min(hook_anchor + 0.7, duration_seconds)
+    if niche_tags & {"growth marketing", "paid social", "analytics", "saas", "ai", "b2b", "ecommerce", "conversion"}:
         if not proof_moment or creative_context["clarity_score"] < 72:
-            return "claim_lacks_proof", min(proof_anchor + 0.6, duration_seconds)
-        if cta_moment and cta_anchor > duration_seconds * 0.7:
-            return "cta_too_late", min(cta_anchor + 0.2, duration_seconds)
-    if archetype == "Comprador problema-solucion":
-        if not benefit_moment or creative_context["clarity_score"] < 70:
-            return "unclear_value", min(benefit_anchor + 0.7, duration_seconds)
-        if not proof_moment:
             return "claim_lacks_proof", min(proof_anchor + 0.5, duration_seconds)
-    if archetype == "Buscador de valor":
-        if overload_moment and creative_context["audio_score"] < 67:
-            return "cognitive_overload", min(overload_anchor + 0.4, duration_seconds)
-        if not benefit_moment or creative_context["clarity_score"] < 70:
-            return "unclear_value", min(benefit_anchor + 0.5, duration_seconds)
-    if archetype == "Creador o marketer":
-        if creative_context["visual_score"] < 70:
-            return "weak_visual_hook", min(hook_anchor + 0.5, duration_seconds)
-        if overload_moment:
-            return "cognitive_overload", min(overload_anchor + 0.4, duration_seconds)
-    if archetype == "Comprador impulsivo":
-        if cta_moment and cta_anchor > duration_seconds * 0.68:
-            return "cta_too_late", min(cta_anchor + 0.2, duration_seconds)
-        if creative_context["hook_score"] < 64:
-            return "intro_too_slow", min(hook_anchor + 0.5, duration_seconds)
-    if archetype == "Viewer guiado por historia":
-        if creative_context["pacing_score"] < 68:
-            return "weak_story_payoff", min(duration_seconds * 0.7, duration_seconds)
-        if creative_context["pacing_score"] < 64:
-            return "low_energy", min(duration_seconds * 0.45, duration_seconds)
-    if archetype == "Entusiasta de nicho":
-        if not benefit_moment:
-            return "irrelevant_for_audience", min(duration_seconds * 0.42, duration_seconds)
-        if creative_context["clarity_score"] < 66:
-            return "unclear_value", min(benefit_anchor + 0.8, duration_seconds)
-
-    if creative_context["hook_score"] < 60 or hook_anchor > 1.9:
-        return "intro_too_slow", min(hook_anchor + 0.5, duration_seconds)
-    if archetype in {"Cazador de tendencias", "Entretenido casual"} and creative_context["novelty_score"] < 64:
-        return "low_novelty", min(benefit_anchor + 0.6, duration_seconds)
-    if archetype in {"Comprador esceptico", "Comprador problema-solucion"} and (
-        not proof_moment or creative_context["clarity_score"] < 70
-    ):
-        return "claim_lacks_proof", min(proof_anchor + 0.8, duration_seconds)
-    if archetype in {"Buscador de valor", "Comprador problema-solucion"} and (
-        not benefit_moment or creative_context["clarity_score"] < 68
-    ):
-        return "unclear_value", min(benefit_anchor + 0.7, duration_seconds)
-    if archetype == "Creador o marketer" and creative_context["visual_score"] < 68:
-        return "weak_visual_hook", min(hook_anchor + 0.8, duration_seconds)
-    if archetype == "Comprador impulsivo" and cta_moment and cta_anchor > duration_seconds * 0.72:
+    if niche_tags & {"travel", "lifestyle", "social", "gaming", "creator economy"} and creative_context["visual_score"] < 68:
+        return "weak_visual_hook", min(hook_anchor + 0.5, duration_seconds)
+    if niche_tags & {"beauty", "conversion", "food", "hospitality", "consumer goods"} and cta_moment and cta_anchor > duration_seconds * 0.68:
         return "cta_too_late", min(cta_anchor + 0.2, duration_seconds)
-    if archetype == "Entusiasta de nicho":
-        return "irrelevant_for_audience", min(duration_seconds * 0.42, duration_seconds)
-    if archetype == "Viewer guiado por historia" and creative_context["pacing_score"] < 66:
-        return "weak_story_payoff", min(duration_seconds * 0.74, duration_seconds)
-    if overload_moment and creative_context["audio_score"] < 64:
-        return "too_much_talking", min(overload_anchor + 0.6, duration_seconds)
-    if overload_moment and archetype in {"Buscador de valor", "Creador o marketer", "Comprador esceptico"}:
-        return "cognitive_overload", min(overload_anchor + 0.5, duration_seconds)
-    if creative_context["pacing_score"] < 63:
+    if social_status in {"Profesional consolidado", "Dueno de negocio", "Retirado activo"} and overload_moment:
+        return "cognitive_overload", min(overload_anchor + 0.4, duration_seconds)
+    if not benefit_moment or creative_context["clarity_score"] < 68:
+        return "unclear_value", min(benefit_anchor + 0.6, duration_seconds)
+    if creative_context["audio_score"] < 63 and overload_moment:
+        return "too_much_talking", min(overload_anchor + 0.5, duration_seconds)
+    if creative_context["pacing_score"] < 64:
+        if age_range in {"55-64", "65+"}:
+            return "weak_story_payoff", min(duration_seconds * 0.72, duration_seconds)
         return "low_energy", min(duration_seconds * 0.46, duration_seconds)
+    if creative_context["visual_score"] < 66:
+        return "weak_visual_hook", min(hook_anchor + 0.6, duration_seconds)
     return "unclear_value", min(duration_seconds * 0.38, duration_seconds)
 
 
@@ -454,55 +488,49 @@ def default_persona_reason(
     rng = random.Random(
         f"{persona['persona_id']}::{creative_context['overall_score']}::{creative_context['hook_score']}::{duration_seconds}"
     )
-    reason_code, anchor = infer_reason_code(persona, creative_context, transcript_signals, duration_seconds)
-    proof_moment = pick_primary_moment(transcript_signals, "proof_moments")
-    cta_moment = pick_primary_moment(transcript_signals, "cta_moments")
-    overload_moment = pick_primary_moment(transcript_signals, "overload_moments")
-    if persona.get("age_range") == "18-24" and reason_code == "unclear_value":
-        reason_code = "low_novelty"
-    if persona.get("social_status") == "Dueno de negocio" and reason_code in {"unclear_value", "low_novelty"} and cta_moment:
-        reason_code = "cta_too_late"
-        anchor = float(cta_moment["start"])
-    if persona.get("social_status") == "Profesional consolidado" and overload_moment and reason_code == "unclear_value":
-        reason_code = "cognitive_overload"
-        anchor = float(overload_moment["start"])
-    if persona.get("country") in {"Alemania", "Francia"} and proof_moment and reason_code == "unclear_value":
-        reason_code = "claim_lacks_proof"
-        anchor = float(proof_moment["start"])
-    archetype_bias = {
-        "Scroller veloz": -1.1,
-        "Cazador de tendencias": -0.7,
-        "Buscador de valor": 0.4,
-        "Comprador esceptico": 0.7,
-        "Entusiasta de nicho": 0.5,
-        "Entretenido casual": -0.4,
-        "Comprador problema-solucion": 0.9,
-        "Creador o marketer": 0.3,
-        "Comprador impulsivo": -0.2,
-        "Viewer guiado por historia": 1.1,
-    }
-    base = anchor + archetype_bias.get(str(persona.get("archetype", "")), 0) + rng.uniform(-0.6, 0.7)
-    if persona.get("age_range") == "18-24":
-        base -= 0.3
-    if persona.get("social_status") == "Dueno de negocio":
-        base += 0.4
+    reason_code, anchor = infer_reason_code(
+        persona,
+        creative_context,
+        transcript_signals,
+        duration_seconds,
+        transcript.get("language"),
+    )
+    language_multiplier = compute_language_affinity_multiplier(persona, transcript.get("language"), creative_context)
+    social_status = str(persona.get("social_status", ""))
+    age_range = str(persona.get("age_range", ""))
+    niche_tags = {str(tag).lower() for tag in persona.get("niche_tags", [])}
 
+    base = anchor + rng.uniform(-0.6, 0.7)
+    if age_range in {"<18", "18-24"}:
+        base -= 0.4
+    if social_status == "Dueno de negocio":
+        base += 0.4
+    if social_status == "Retirado activo":
+        base += 0.3
+    if niche_tags & {"growth marketing", "paid social", "analytics", "saas", "ai"}:
+        base += 0.35
+    if niche_tags & {"travel", "lifestyle", "social"} and creative_context["visual_score"] >= 72:
+        base += 0.3
+    base -= (1 - language_multiplier) * max(duration_seconds * 0.35, 2.2)
     dropoff_second = round_value(clamp(base, 0.8, duration_seconds), 1)
     retention_percent = int(clamp(round_value((dropoff_second / max(duration_seconds, 1)) * 100), 0, 100))
+    weighted_retention_score = round_value(retention_percent * language_multiplier, 1)
     reason_label = LEAVE_REASON_LABELS.get(reason_code, "Motivo no clasificado")
     evidence = build_persona_evidence(persona, reason_code, dropoff_second, transcript_signals, duration_seconds)
     why_they_left = (
         f"{persona['name']} abandona por {reason_label.lower()} cerca de {dropoff_second}s. "
         f"El quiebre aparece cuando evalua {evidence['evidence_excerpt']} y siente que el video no termina "
-        f"de resolver lo que esperaba ver."
+        f"de resolver lo que esperaba ver para alguien de {persona['country']} que habla {persona['native_language']}."
     )
     summary_of_interacion = (
         f"{persona['name']} primero conecta con el tramo que le resulta mas prometedor, pero termina saliendo en la fase "
-        f"{evidence['decision_stage']} por {reason_label.lower()} al no encontrar suficiente avance."
+        f"{evidence['decision_stage']} por {reason_label.lower()} al no encontrar suficiente relevancia, claridad o prueba."
     )
     return {
         "dropoff_second": dropoff_second,
         "retention_percent": retention_percent,
+        "language_affinity_multiplier": language_multiplier,
+        "weighted_retention_score": weighted_retention_score,
         "reason_code": reason_code,
         "reason_label": reason_label,
         "why_they_left": why_they_left,
@@ -517,6 +545,8 @@ def normalize_persona_result(
     base: dict[str, Any],
     transcript_signals: dict[str, Any],
     duration_seconds: int,
+    transcript_language: str | None,
+    creative_context: dict[str, Any],
 ) -> dict[str, Any]:
     dropoff_second = round_value(clamp(float(result.get("dropoff_second", base["dropoff_second"])), 0.8, duration_seconds), 1)
     reason_code = str(result.get("reason_code", base["reason_code"])).strip()
@@ -536,10 +566,14 @@ def normalize_persona_result(
         evidence_excerpt = evidence_fallback["evidence_excerpt"]
         decision_stage = evidence_fallback["decision_stage"]
 
+    language_multiplier = compute_language_affinity_multiplier(persona, transcript_language, creative_context)
+    retention_percent = int(clamp(round_value((dropoff_second / max(duration_seconds, 1)) * 100), 0, 100))
     return {
         **persona,
         "dropoff_second": dropoff_second,
-        "retention_percent": int(clamp(round_value((dropoff_second / max(duration_seconds, 1)) * 100), 0, 100)),
+        "retention_percent": retention_percent,
+        "language_affinity_multiplier": language_multiplier,
+        "weighted_retention_score": round_value(retention_percent * language_multiplier, 1),
         "reason_code": reason_code,
         "reason_label": LEAVE_REASON_LABELS.get(reason_code, base["reason_label"]),
         "why_they_left": str(result.get("why_they_left", base["why_they_left"])).strip() or base["why_they_left"],
@@ -561,27 +595,36 @@ def order_personas_for_display(personas: list[dict[str, Any]]) -> list[dict[str,
     remaining = [dict(persona) for persona in personas]
     ordered: list[dict[str, Any]] = []
     used_reasons: set[str] = set()
-    used_archetypes: set[str] = set()
-    used_profiles: set[str] = set()
+    used_genders: set[str] = set()
+    used_countries: set[str] = set()
+    used_ages: set[str] = set()
+    used_niches: set[str] = set()
 
     while remaining:
         best_index = 0
         best_score = float("-inf")
         for index, persona in enumerate(remaining):
-            score = float(persona.get("retention_percent", 0)) * 3.2
+            primary_niche = str((persona.get("niche_tags") or [""])[0])
+            score = float(persona.get("weighted_retention_score", persona.get("retention_percent", 0))) * 3.2
             score += float(persona.get("dropoff_second", 0)) * 0.45
             if str(persona.get("reason_code", "")) not in used_reasons:
-                score += 18
-            if str(persona.get("archetype", "")) not in used_archetypes:
-                score += 12
-            if str(persona.get("demographic_profile_id", "")) not in used_profiles:
+                score += 16
+            if str(persona.get("gender", "")) not in used_genders:
+                score += 8
+            if str(persona.get("country", "")) not in used_countries:
+                score += 8
+            if str(persona.get("age_range", "")) not in used_ages:
+                score += 8
+            if primary_niche and primary_niche not in used_niches:
                 score += 10
             if ordered:
                 previous = ordered[-1]
                 if str(previous.get("reason_code", "")) == str(persona.get("reason_code", "")):
                     score -= 7
-                if str(previous.get("archetype", "")) == str(persona.get("archetype", "")):
-                    score -= 5
+                if str(previous.get("country", "")) == str(persona.get("country", "")):
+                    score -= 4
+                if str(previous.get("age_range", "")) == str(persona.get("age_range", "")):
+                    score -= 4
                 previous_surname = str(previous.get("name", "")).rsplit(" ", 1)[-1]
                 current_surname = str(persona.get("name", "")).rsplit(" ", 1)[-1]
                 if previous_surname == current_surname:
@@ -593,8 +636,12 @@ def order_personas_for_display(personas: list[dict[str, Any]]) -> list[dict[str,
         selected = remaining.pop(best_index)
         ordered.append(selected)
         used_reasons.add(str(selected.get("reason_code", "")))
-        used_archetypes.add(str(selected.get("archetype", "")))
-        used_profiles.add(str(selected.get("demographic_profile_id", "")))
+        used_genders.add(str(selected.get("gender", "")))
+        used_countries.add(str(selected.get("country", "")))
+        used_ages.add(str(selected.get("age_range", "")))
+        primary_niche = str((selected.get("niche_tags") or [""])[0])
+        if primary_niche:
+            used_niches.add(primary_niche)
 
     return [{**persona, "presentation_order": index} for index, persona in enumerate(ordered)]
 
@@ -644,12 +691,12 @@ async def request_persona_batch_from_model(
         ),
         "quality_requirements": [
             "Usa evidence_excerpt y timestamps reales.",
+            "Toma en cuenta pais, idioma nativo y contexto cultural de cada persona.",
             "No concentres casi todas las personas en el mismo reason_code si el material no lo justifica.",
             "Haz que why_they_left y summary_of_interacion se sientan especificos del video y de la persona.",
             "Distribuye la atencion entre distintos momentos del video cuando el material tenga mas de un beat relevante.",
             "No repitas el mismo evidence_excerpt para la mayoria del batch.",
             "Si citas evidencia, combina si hace falta voz, visual y texto en pantalla.",
-            "Si necesitas ahorrar tokens, prioriza persona_id, dropoff_second, reason_code y evidence_excerpt; el backend completara el resto.",
         ],
     }
     if retry_note:
@@ -714,6 +761,8 @@ async def analyze_persona_batch(
                         base,
                         transcript_signals,
                         duration_seconds,
+                        transcript.get("language"),
+                        creative_context,
                     )
                 )
             if not batch_needs_retry(normalized):

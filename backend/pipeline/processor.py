@@ -9,7 +9,7 @@ from config import ALLOW_MULTIMODAL_FALLBACK, PUBLIC_BACKEND_URL
 from constants import STATUS_STEPS
 from repository import repository
 from system_prompts import set_db_prompts
-from services.audience import aggregate_target_audience, build_segment_diagnoses
+from services.audience import aggregate_target_audience, build_audience_diagnoses
 from services.change_plan import build_change_plan
 from services.creative_analysis import analyze_creative_context
 from services.ffmpeg import compute_duration_seconds
@@ -79,7 +79,7 @@ def build_final_analysis_payload(
     target_audience: dict[str, Any],
     final_copy: dict[str, Any],
     video_analysis: dict[str, Any] | None,
-    segment_diagnoses: list[dict[str, Any]],
+    audience_diagnoses: list[dict[str, Any]],
     change_plan: dict[str, Any],
     media_targeting: list[dict[str, Any]],
     version_strategies: list[dict[str, Any]],
@@ -118,8 +118,8 @@ def build_final_analysis_payload(
             "transcript": transcript,
             "personas": personas,
             "targetAudience": target_audience,
-            "personaSegments": target_audience.get("personaSegments", []),
-            "segmentDiagnoses": segment_diagnoses,
+            "personaSegments": [],
+            "segmentDiagnoses": audience_diagnoses,
             "timelineInsights": creative_context["timeline_insights"],
             "changePlan": change_plan,
             "mediaTargeting": media_targeting,
@@ -363,7 +363,7 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
         await repository.add_event(job_id=job_id, video_id=video_id, event_type="demographics.completed", status="processing", stage="demographics.completed", progress_percent=85, payload=target_audience)
 
         average_line = build_average_line(build_viewers_from_personas(personas, duration_seconds), duration_seconds)
-        segment_diagnoses = build_segment_diagnoses(personas)
+        audience_diagnoses = build_audience_diagnoses(personas)
         change_plan = build_change_plan(transcript, average_line, personas, duration_seconds)
         final_copy = await synthesize_final_copy(
             creative_context,
@@ -390,7 +390,7 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
             duration_seconds=duration_seconds,
             average_line=average_line,
             change_plan=change_plan,
-            segment_diagnoses=segment_diagnoses,
+            segment_diagnoses=audience_diagnoses,
         )
         latest_video = await repository.get_video(video_id) or video
         payload = build_final_analysis_payload(
@@ -402,7 +402,7 @@ async def process_job(job_id: str, video_id: str, preferred_platform: str | None
             target_audience=target_audience,
             final_copy=final_copy,
             video_analysis=video_analysis,
-            segment_diagnoses=segment_diagnoses,
+            audience_diagnoses=audience_diagnoses,
             change_plan=strategic_outputs["change_plan"],
             media_targeting=strategic_outputs["media_targeting"],
             version_strategies=strategic_outputs["version_strategies"],
