@@ -21,6 +21,81 @@ const FINAL_PATTERNS = [
   "generación de estrategia de crecimiento",
 ];
 
+const FOOTER_ASCII_FRAMES = [
+  String.raw`
+                     ·      ·
+              ·           o        ·
+         ·        ·   o---+---o
+                o---+---o |     \
+          ·    /    |     \|      o
+              o     o------o---o--+---o
+               \   / \      \  |  /   /
+                o-+---o------o-+-o---o
+                  |      ·      |
+                o-+---o      o--+---o
+               /  |   / \      / |   \
+              o---+--o   o----o--+----o
+                   \             /
+                    o-----o-----o
+  `,
+  String.raw`
+                     ·      ·            ·
+              ·           o        ·   o---o
+         ·        ·   o---+---o       /  |  \
+                o---+---o |     \    o---+---o
+          ·    /    |     \|      o--+---o   |
+              o     o------o---o--+--o   \   o
+               \   / \      \  |  /   /   o--+
+                o-+---o------o-+-o---o   /  /
+                  |      ·      |     \ o--o
+                o-+---o      o--+---o  \  |
+               /  |   / \      / |   \  o-+
+              o---+--o   o----o--+----o  \|
+               \  | / \  |   / \ |   / \  o
+                o-+-o--o-+--o--+-o--o--o-+
+                   \      |      /     \ |
+                    o-----o-----o---o---o
+  `,
+  String.raw`
+                     o      ·            o
+              ·     / \   o        ·   o-+-o
+         ·       o-+---+---o       / \ /  |  \
+               /  o---+---o |     o---+---o---o
+          ·   o---/   |     \|     |  /o   \   |
+             / \ o    o------o---o-+-o-+----\\--o
+              \  \   / \      \  | /   / \   o-+
+               o--+-+---o------o-+-o---o--o-/  /
+                  |  \   ·      |     \   o--o
+                o-+---o------o--+---o  \ / |  \
+               /  |   / \      / |   \  o--+---o
+              o---+--o---o----o--+----o  \ |  /|
+               \  | / \  |   / \ |   / \  o-+-o
+                o-+-o--o-+--o--+-o--o--o--+-+--o
+                   \      |      /   \   /  |  /
+                    o-----o-----o-----o-----o
+  `,
+  String.raw`
+                     o      o            o
+               o----+----o/ \   o    o--+-+-o
+         ·    / \  / \  o-+---+---o / \ / |  \
+             o---+-+--o/  o---+---o-+---+-o--o
+          o--+---/ |  /    |   |    \|  /o  \ |
+         / \ |   o  o------o---o---o-+-o-+---\\o
+         \  \|  / \ / \      \  |  /  / \ \  o+
+          o--+-+---o---o------o-+-o--o--o--o/ /
+             |  \  ·    \      |   \   \ o--o
+           o-+---o------o---o--+---o\  / |  \
+          /  |   / \      / \ / |   \o--+---o
+         o---+--o---o----o--+-+-+----o \ | / |
+          \  | / \  |   / \ |/ /|   / \o-+-o o
+           o-+-o--o-+--o--+-+-o-+--o--o-+-+--o
+             \ |   / |   \  | / | / \  / | | /
+              o-+--o-+----o-+-o-+-o--o-+-o-+o
+                \      |      /   \   /   |/
+                 o-----o-----o-----o-----o
+  `,
+];
+
 const HERO_SCROLL_CAPTURE_THRESHOLD = 24;
 
 function clamp(value: number, min: number, max: number) {
@@ -511,6 +586,22 @@ function ProcessGraphVisual() {
   );
 }
 
+function LandingFooterAscii() {
+  return (
+    <div className="landing-footer-ascii" aria-hidden="true">
+      {FOOTER_ASCII_FRAMES.map((frame, index) => (
+        <pre
+          key={index}
+          className="landing-footer-ascii-frame"
+          style={{ animationDelay: `${index * 1.6}s` }}
+        >
+          {frame}
+        </pre>
+      ))}
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const router = useRouter();
   const shellRef = useRef<HTMLElement | null>(null);
@@ -527,6 +618,8 @@ export default function LandingPage() {
   const [processRef, processVisible] = useSectionInView<HTMLElement>(0.35);
   const [benefitsRef, benefitsVisible] = useSectionInView<HTMLElement>(0.32);
   const [finalRef, finalVisible] = useSectionInView<HTMLElement>(0.45);
+  const [footerRef, footerVisible] = useSectionInView<HTMLElement>(0.12);
+  const [freeScrollFromFinal, setFreeScrollFromFinal] = useState(false);
 
   useEffect(() => {
     heroGraphProgressRef.current = heroGraphProgress;
@@ -592,6 +685,45 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) {
+      return;
+    }
+
+    let frame = 0;
+
+    const update = () => {
+      frame = 0;
+      const finalSection = finalSectionSnapRef.current;
+      if (!finalSection) {
+        return;
+      }
+
+      const threshold = Math.max(finalSection.offsetTop - 80, 0);
+      setFreeScrollFromFinal(shell.scrollTop >= threshold);
+    };
+
+    const requestUpdate = () => {
+      if (frame) {
+        return;
+      }
+      frame = window.requestAnimationFrame(update);
+    };
+
+    update();
+    shell.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+
+    return () => {
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+      shell.removeEventListener("scroll", requestUpdate);
+      window.removeEventListener("resize", requestUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
     router.prefetch("/app");
   }, [router]);
 
@@ -647,12 +779,26 @@ export default function LandingPage() {
     }, 110);
   };
 
+  const scrollToLandingSection = (event: ReactMouseEvent<HTMLAnchorElement>, sectionId: string) => {
+    event.preventDefault();
+    const shell = shellRef.current;
+    const target = shell?.querySelector<HTMLElement>(sectionId);
+    if (!shell || !target) {
+      return;
+    }
+
+    shell.scrollTo({
+      top: target.offsetTop,
+      behavior: "smooth",
+    });
+  };
+
   const heroScrollLocked = heroGraphProgress < 0.995;
 
   return (
     <main
       ref={shellRef}
-      className={`landing-snap-shell bg-white text-slate-950 ${heroScrollLocked ? "landing-snap-shell--hero-locked" : ""}`}
+      className={`landing-snap-shell bg-white text-slate-950 ${heroScrollLocked ? "landing-snap-shell--hero-locked" : ""} ${freeScrollFromFinal ? "landing-snap-shell--footer-free" : ""}`}
     >
       <nav className="landing-nav pointer-events-none fixed left-1/2 top-4 z-50 flex w-[calc(100%-1.5rem)] max-w-6xl -translate-x-1/2 items-center justify-between rounded-[1.4rem] border border-slate-200/70 bg-white/78 px-4 py-3 shadow-[0_18px_42px_rgba(15,23,42,0.08)] backdrop-blur-xl md:px-6">
         <Link href="/" className="pointer-events-auto flex items-center gap-2">
@@ -822,7 +968,7 @@ export default function LandingPage() {
               Saber qué tan bien le va a ir a tu contenido, antes de gastar un centavo.
             </h2>
             <p className="landing-final-copy">
-              Construido sobre patrones de:
+              <span className="landing-final-copy-emphasis">Construido sobre patrones de:</span>
             </p>
 
             <div className="landing-pattern-slot" aria-hidden="true">
@@ -845,6 +991,48 @@ export default function LandingPage() {
           </div>
         </section>
       </LandingSection>
+
+      <footer ref={footerRef} className={`landing-footer ${footerVisible ? "is-visible" : ""}`}>
+        <div className="landing-footer-shell">
+          <div className="landing-footer-top">
+            <div className="landing-footer-brand">
+              <Link href="/" className="landing-footer-logo">
+                <img src="/logo.svg" alt="NextHit" className="h-9 w-auto" />
+                <span>NextHit</span>
+              </Link>
+              <p className="landing-footer-copy">
+                Inteligencia creativa predictiva para videos short-form.
+              </p>
+              <p className="landing-footer-meta">© 2026 NextHit. Todos los derechos reservados.</p>
+            </div>
+
+            <div className="landing-footer-links">
+              <div className="landing-footer-column">
+                <span className="landing-footer-heading">Landing</span>
+                <Link href="#landing-hero" onClick={(event) => scrollToLandingSection(event, "#landing-hero")}>Inicio</Link>
+                <Link href="#landing-process" onClick={(event) => scrollToLandingSection(event, "#landing-process")}>Cómo funciona</Link>
+                <Link href="#landing-benefits" onClick={(event) => scrollToLandingSection(event, "#landing-benefits")}>Qué vas a obtener</Link>
+              </div>
+
+              <div className="landing-footer-column">
+                <span className="landing-footer-heading">Secciones</span>
+                <Link href="#landing-final" onClick={(event) => scrollToLandingSection(event, "#landing-final")}>Por qué importa</Link>
+                <Link href="#landing-hero" onClick={(event) => scrollToLandingSection(event, "#landing-hero")}>Personas sintéticas</Link>
+                <Link href="#landing-benefits" onClick={(event) => scrollToLandingSection(event, "#landing-benefits")}>Curva predictiva</Link>
+              </div>
+
+              <div className="landing-footer-column">
+                <span className="landing-footer-heading">Navegar</span>
+                <Link href="#landing-hero" onClick={(event) => scrollToLandingSection(event, "#landing-hero")}>Volver arriba</Link>
+                <Link href="#landing-process" onClick={(event) => scrollToLandingSection(event, "#landing-process")}>Proceso</Link>
+                <Link href="#landing-final" onClick={(event) => scrollToLandingSection(event, "#landing-final")}>CTA final</Link>
+              </div>
+            </div>
+          </div>
+
+          <LandingFooterAscii />
+        </div>
+      </footer>
     </main>
   );
 }

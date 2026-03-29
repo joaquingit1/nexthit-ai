@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 
 const navSections = [
   {
@@ -73,7 +72,6 @@ const navSections = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const isItemActive = (href: string) => {
     if (pathname === href) return true;
@@ -84,7 +82,6 @@ export default function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-slate-200/60 bg-white">
-      {/* Logo */}
       <Link href="/" className="flex h-16 items-center gap-2 border-b border-slate-200/60 px-6 transition hover:bg-slate-50">
         <img src="/logo.svg" alt="NextHit" className="h-8 w-auto" />
         <span className="text-lg font-bold text-slate-900">NextHit</span>
@@ -131,7 +128,6 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Credits Card */}
       <div className="border-t border-slate-200/60 px-4 pt-4">
         <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3">
           <div className="flex items-center justify-between">
@@ -139,10 +135,7 @@ export default function Sidebar() {
             <p className="text-sm font-bold text-slate-900">5/10</p>
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="h-full rounded-full bg-blue-500"
-              style={{ width: "50%" }}
-            />
+            <div className="h-full rounded-full bg-blue-500" style={{ width: "50%" }} />
           </div>
           <Link
             href="/precios"
@@ -156,49 +149,16 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* User Dropdown */}
-      <div className="relative border-t border-slate-200/60 p-4">
-        <div
-          onClick={() => setUserMenuOpen(!userMenuOpen)}
-          className="flex items-center gap-3 rounded-xl p-2 transition hover:bg-slate-50 cursor-pointer"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
+      <div className="border-t border-slate-200/60 p-3">
+        <div className="flex items-center gap-3 rounded-xl px-3 py-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-sm font-bold text-white">
             U
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-900 truncate">Usuario</p>
-            <p className="text-xs text-slate-500 truncate">usuario@gmail.com</p>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-slate-900">Usuario</p>
+            <p className="truncate text-xs text-slate-500">usuario@hackitba.edu.ar</p>
           </div>
-          <svg className={`h-4 w-4 text-slate-400 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
         </div>
-
-        {userMenuOpen && (
-          <div className="absolute bottom-full left-4 right-4 mb-2 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-            <Link
-              href="/profile"
-              onClick={() => setUserMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              Profile
-            </Link>
-            <Link
-              href="/settings"
-              onClick={() => setUserMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Settings
-            </Link>
-          </div>
-        )}
       </div>
     </aside>
   );
