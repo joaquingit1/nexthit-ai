@@ -90,7 +90,7 @@ const colorClasses: Record<string, { bg: string; icon: string; border: string; s
 
 export default function UseCasesPage() {
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-white">
       {/* Navbar */}
       <nav className="fixed left-1/2 top-4 z-50 flex w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 items-center justify-between rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.06)] backdrop-blur-md md:px-6">
         <Link href="/" className="flex items-center gap-2">

@@ -95,12 +95,42 @@ const colorClasses: Record<string, { bg: string; icon: string; border: string }>
   rose: { bg: "bg-rose-50", icon: "bg-rose-500", border: "border-rose-200" },
   cyan: { bg: "bg-cyan-50", icon: "bg-cyan-500", border: "border-cyan-200" },
   indigo: { bg: "bg-indigo-50", icon: "bg-indigo-500", border: "border-indigo-200" },
-  slate: { bg: "bg-slate-50", icon: "bg-slate-500", border: "border-slate-200" },
+  slate: { bg: "bg-slate-100", icon: "bg-slate-500", border: "border-slate-200" },
 };
+
+const processSteps = [
+  {
+    step: "01",
+    title: "Subi tu video",
+    description: "Arrastra y solta tu video en cualquier formato. Procesamos MP4, MOV, AVI y mas.",
+  },
+  {
+    step: "02",
+    title: "Analizamos con IA",
+    description: "Nuestro modelo procesa audio, video y texto para entender cada segundo.",
+  },
+  {
+    step: "03",
+    title: "Simulamos audiencia",
+    description: "100 personas sinteticas miran tu video y nos dicen donde abandonan.",
+  },
+  {
+    step: "04",
+    title: "Obtene insights",
+    description: "Recibis curva de retencion, momentos clave y recomendaciones accionables.",
+  },
+];
+
+const metrics = [
+  { value: "100", label: "Personas simuladas por video" },
+  { value: "<2min", label: "Tiempo de analisis" },
+  { value: "8", label: "Metricas de rendimiento" },
+  { value: "3", label: "Variantes creativas" },
+];
 
 export default function FeaturesPage() {
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-white">
       {/* Navbar */}
       <nav className="fixed left-1/2 top-4 z-50 flex w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 items-center justify-between rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.06)] backdrop-blur-md md:px-6">
         <Link href="/" className="flex items-center gap-2">
@@ -108,23 +138,14 @@ export default function FeaturesPage() {
           <span className="text-lg font-bold text-slate-900">NextHit</span>
         </Link>
 
-        <div className="flex flex-1 items-center gap-6 pl-8">
-          <Link
-            href="/funcionalidades"
-            className="text-sm font-medium text-slate-900"
-          >
+        <div className="hidden flex-1 items-center gap-6 pl-8 md:flex">
+          <Link href="/funcionalidades" className="text-sm font-medium text-slate-900">
             Funcionalidades
           </Link>
-          <Link
-            href="/casos-de-uso"
-            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
-          >
+          <Link href="/casos-de-uso" className="text-sm font-medium text-slate-600 transition hover:text-slate-900">
             Casos de Uso
           </Link>
-          <Link
-            href="/precios"
-            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
-          >
+          <Link href="/precios" className="text-sm font-medium text-slate-600 transition hover:text-slate-900">
             Precios
           </Link>
         </div>
@@ -152,10 +173,33 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="px-6 pb-24">
+      {/* Metrics */}
+      <section className="border-y border-slate-200 bg-slate-50 px-6 py-12">
         <div className="mx-auto max-w-5xl">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {metrics.map((metric) => (
+              <div key={metric.label} className="text-center">
+                <p className="font-display text-4xl font-bold text-slate-900">{metric.value}</p>
+                <p className="mt-2 text-sm text-slate-600">{metric.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Grid */}
+      <section className="px-6 py-24">
+        <div className="mx-auto max-w-5xl">
+          <div className="text-center">
+            <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
+              Funcionalidades principales
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
+              Cada herramienta disenada para maximizar el rendimiento de tu contenido.
+            </p>
+          </div>
+
+          <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {features.map((feature) => {
               const colors = colorClasses[feature.color];
               return (
@@ -179,18 +223,123 @@ export default function FeaturesPage() {
         </div>
       </section>
 
+      {/* How it works */}
+      <section className="border-t border-slate-200 bg-slate-50 px-6 py-24">
+        <div className="mx-auto max-w-5xl">
+          <div className="text-center">
+            <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
+              Como funciona
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
+              De video a insights en 4 pasos simples.
+            </p>
+          </div>
+
+          <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            {processSteps.map((step, index) => (
+              <div key={step.step} className="relative">
+                {index < processSteps.length - 1 && (
+                  <div className="absolute left-1/2 top-8 hidden h-0.5 w-full bg-slate-200 lg:block" />
+                )}
+                <div className="relative rounded-2xl bg-white p-6 shadow-sm">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-lg font-bold text-white">
+                    {step.step}
+                  </div>
+                  <h3 className="mt-4 font-display text-lg font-semibold text-slate-900">
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-600">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Deep Dive Feature */}
+      <section className="px-6 py-24">
+        <div className="mx-auto max-w-5xl">
+          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+            <div>
+              <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                Destacado
+              </span>
+              <h2 className="mt-4 font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
+                Curva de retencion predictiva
+              </h2>
+              <p className="mt-4 text-lg text-slate-600">
+                Nuestra tecnologia analiza tu video segundo a segundo y simula como reaccionaria una audiencia real.
+                Ve exactamente donde pierdes atencion y por que.
+              </p>
+              <ul className="mt-8 space-y-4">
+                {[
+                  "Visualizacion segundo a segundo",
+                  "Identificacion de puntos de abandono",
+                  "Comparativa con benchmarks de la industria",
+                  "Recomendaciones para cada momento critico",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-3">
+                    <svg className="h-5 w-5 flex-shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-slate-700">{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/app"
+                className="mt-8 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                Probar ahora
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
+            <div className="relative">
+              <div className="aspect-video overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-xl">
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-center">
+                    <svg className="mx-auto h-16 w-16 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <p className="mt-4 text-sm text-slate-400">Vista previa de la curva</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Integrations */}
+      <section className="border-t border-slate-200 bg-slate-50 px-6 py-16">
+        <div className="mx-auto max-w-5xl text-center">
+          <h2 className="font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
+            Optimizado para las plataformas que usas
+          </h2>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-8 text-slate-400">
+            {["TikTok", "Instagram Reels", "YouTube Shorts", "LinkedIn", "Meta Ads"].map((platform) => (
+              <span key={platform} className="text-lg font-semibold">{platform}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
-      <section className="border-t border-slate-200 bg-white px-6 py-16">
+      <section className="bg-slate-900 px-6 py-16">
         <div className="mx-auto max-w-3xl text-center">
-          <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950">
+          <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-white">
             Empieza a optimizar tus videos hoy
           </h2>
-          <p className="mt-4 text-lg text-slate-600">
+          <p className="mt-4 text-lg text-slate-300">
             Subi tu primer video y obtene un analisis completo en minutos.
           </p>
           <Link
             href="/app"
-            className="mt-8 inline-flex items-center justify-center rounded-full bg-slate-900 px-8 py-4 text-lg font-semibold text-white transition hover:bg-slate-800"
+            className="mt-8 inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-lg font-semibold text-slate-900 transition hover:bg-slate-100"
           >
             Analizar video gratis
           </Link>
