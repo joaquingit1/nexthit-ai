@@ -130,8 +130,8 @@ const ANALYSIS_STEPS = [
   },
 ] as const;
 
-const GRAPH_WIDTH = 700;
-const GRAPH_HEIGHT = 240;
+const GRAPH_WIDTH = 550;
+const GRAPH_HEIGHT = 200;
 const GRAPH_PADDING = { top: 34, right: 26, bottom: 48, left: 70 };
 const STOPWORDS = new Set([
   "the",
