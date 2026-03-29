@@ -471,6 +471,18 @@ function parseStoredAnalysis(id: string | null) {
   }
 }
 
+async function fetchAnalysisByJobId(jobId: string) {
+  const response = await fetch(buildBrowserBackendUrl(`/api/analysis/jobs/${jobId}/result`), {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudo recuperar el resultado del backend.");
+  }
+
+  return (await response.json()) as AnalysisResponse;
+}
+
 function createDemoAnalysis() {
   return createAnalysisPayload({
     texto:
@@ -2952,20 +2964,57 @@ function DashboardContent() {
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (typeof window === "undefined") {
       return;
     }
 
-    const allowDevDemo =
-      process.env.NODE_ENV === "development" && demoMode === "1";
-    const demoAnalysis = allowDevDemo ? createDemoAnalysis() : null;
-    const stored = demoAnalysis ? null : parseStoredAnalysis(analysisId);
-    const resolvedAnalysis = demoAnalysis || stored;
+    setReady(false);
 
-    startTransition(() => {
-      setAnalysis(resolvedAnalysis ? normalizeAnalysisPayload(resolvedAnalysis) : null);
-      setReady(true);
-    });
+    const loadAnalysis = async () => {
+      const allowDevDemo =
+        process.env.NODE_ENV === "development" && demoMode === "1";
+      const demoAnalysis = allowDevDemo ? createDemoAnalysis() : null;
+
+      try {
+        let resolvedAnalysis = demoAnalysis;
+
+        if (!resolvedAnalysis) {
+          resolvedAnalysis = parseStoredAnalysis(analysisId);
+        }
+
+        if (!resolvedAnalysis && analysisId) {
+          resolvedAnalysis = await fetchAnalysisByJobId(analysisId);
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        startTransition(() => {
+          setAnalysis(resolvedAnalysis ? normalizeAnalysisPayload(resolvedAnalysis) : null);
+          setReady(true);
+        });
+      } catch (error) {
+        console.error("No se pudo cargar el resultado:", error);
+
+        if (cancelled) {
+          return;
+        }
+
+        startTransition(() => {
+          setAnalysis(null);
+          setReady(true);
+        });
+      }
+    };
+
+    void loadAnalysis();
+
+    return () => {
+      cancelled = true;
+    };
   }, [analysisId, demoMode]);
 
   const featuredPersonas = useMemo(() => {

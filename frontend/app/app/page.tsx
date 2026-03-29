@@ -15,10 +15,19 @@ import { buildBrowserBackendUrl, getPublicBackendBaseUrl } from "@/lib/backend";
 import { supabase } from "@/lib/supabase";
 
 function storeAnalysisResult(router: ReturnType<typeof useRouter>, data: AnalysisResponse) {
-  const serialized = JSON.stringify(data);
-  window.localStorage.setItem(ANALYSIS_STORAGE_KEY, serialized);
-  window.localStorage.setItem(`${ANALYSIS_STORAGE_PREFIX}${data.id}`, serialized);
-  router.push(`/resultado?id=${encodeURIComponent(data.id)}&new=1`);
+  try {
+    window.localStorage.removeItem(ANALYSIS_STORAGE_KEY);
+    window.localStorage.removeItem(`${ANALYSIS_STORAGE_PREFIX}${data.id}`);
+    if (data.job_id) {
+      window.localStorage.removeItem(`${ANALYSIS_STORAGE_PREFIX}${data.job_id}`);
+    }
+  } catch {
+    // Ignora errores de storage: el resultado se recupera desde el backend.
+  }
+
+  const resultId = data.job_id || data.id;
+  const analysisIdQuery = data.id && data.id !== resultId ? `&analysis=${encodeURIComponent(data.id)}` : "";
+  router.push(`/resultado?id=${encodeURIComponent(resultId)}${analysisIdQuery}&new=1`);
 }
 
 export default function AppMain() {
