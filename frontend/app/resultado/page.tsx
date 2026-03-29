@@ -1638,20 +1638,21 @@ function ScoreSummaryStep({
                   className="transition-[stroke-dashoffset] duration-700 ease-out"
                 />
               </svg>
+              {/* Score inside donut */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <p
+                  className="font-display text-6xl font-semibold tracking-[-0.08em] md:text-7xl"
+                  style={{ color: scoreColor }}
+                >
+                  {displayScore}
+                </p>
+                <p className="text-sm font-medium text-slate-400">/ 100</p>
+              </div>
             </div>
           </div>
 
-          <div className="mt-6 flex flex-col items-center text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Puntaje
-            </p>
-            <p
-              className="mt-2 font-display text-6xl font-semibold tracking-[-0.08em] md:text-7xl"
-              style={{ color: scoreColor }}
-            >
-              {displayScore}
-            </p>
-            <p className="mt-2 text-sm font-medium text-slate-500">
+          <div className="mt-4 flex flex-col items-center text-center">
+            <p className="text-lg font-semibold text-slate-700">
               {analysis.summary.overallLabel}
             </p>
           </div>
