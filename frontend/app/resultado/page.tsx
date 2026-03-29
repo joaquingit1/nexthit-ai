@@ -1999,7 +1999,7 @@ function RawPersonasStep({
 }) {
   const [currentPage, setCurrentPage] = useState(0);
   const [activeFilter, setActiveFilter] = useState<RawPersonaFilter>("retention");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedPersona, setSelectedPersona] = useState<PersonaResult | null>(null);
   const orderedPersonas = useMemo(() => sortPersonasForDisplay(personas), [personas]);
   const filteredPersonas = useMemo(() => {
     const byRetention = [...orderedPersonas].sort(
@@ -2107,117 +2107,143 @@ function RawPersonasStep({
         ) : null}
 
         <div className="mt-6 space-y-2">
-          {visible.map((persona) => {
-            const isExpanded = expandedId === persona.persona_id;
-            return (
-              <article
-                key={persona.persona_id}
-                className={`rounded-xl border bg-white/85 transition-all cursor-pointer ${
-                  isExpanded ? "border-slate-300 shadow-sm" : "border-slate-200/80 hover:border-slate-300"
-                }`}
-              >
+          {visible.map((persona) => (
+            <article
+              key={persona.persona_id}
+              onClick={() => setSelectedPersona(persona)}
+              className="rounded-xl border border-slate-200/80 bg-white/85 px-5 py-4 cursor-pointer transition-all hover:border-slate-300 hover:shadow-sm"
+            >
+              <div className="flex items-start gap-4">
                 <div
-                  className="flex items-start gap-4 px-5 py-4"
-                  onClick={() => setExpandedId(isExpanded ? null : persona.persona_id)}
-                >
-                  {/* Bullet indicator */}
-                  <div
-                    className="mt-1.5 h-3 w-3 flex-shrink-0 rounded-full"
-                    style={{ backgroundColor: persona.color }}
-                  />
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <h4 className="font-semibold text-slate-950">
-                        {cleanPersonaName(persona.name)}
-                      </h4>
-                      <span className="text-sm text-slate-500">
-                        {persona.archetype ?? "Persona"} · {persona.demographic_profile_label ?? persona.age_range}
-                      </span>
-                      <span className="ml-auto flex items-center gap-2 text-sm font-medium text-slate-700">
-                        Abandono: {formatMoment(persona.dropoff_second)} ({persona.retention_percent}%)
-                        <svg
-                          className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </span>
+                  className="mt-1.5 h-3 w-3 flex-shrink-0 rounded-full"
+                  style={{ backgroundColor: persona.color }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <h4 className="font-semibold text-slate-950">
+                      {cleanPersonaName(persona.name)}
+                    </h4>
+                    <span className="text-sm text-slate-500">
+                      {persona.archetype ?? "Persona"} · {persona.demographic_profile_label ?? persona.age_range}
+                    </span>
+                    <span className="ml-auto text-sm font-medium text-slate-700">
+                      Abandono: {formatMoment(persona.dropoff_second)} ({persona.retention_percent}%)
+                    </span>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-600">
+                    <span className="font-medium text-slate-700">{persona.reason_label ?? "Sin clasificar"}:</span>{" "}
+                    {persona.why_they_left}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                    <div>
+                      <span className="text-emerald-600">+</span>{" "}
+                      <span className="text-slate-600">{persona.liked_moment ?? "Conecta con la promesa"}</span>
                     </div>
-
-                    <div className="mt-2 text-sm text-slate-600">
-                      <span className="font-medium text-slate-700">{persona.reason_label ?? "Sin clasificar"}:</span>{" "}
-                      {persona.why_they_left}
+                    <div>
+                      <span className="text-rose-500">−</span>{" "}
+                      <span className="text-slate-600">{persona.disliked_moment ?? persona.why_they_left}</span>
                     </div>
-
-                    {!isExpanded && (
-                      <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                        <div>
-                          <span className="text-emerald-600">+</span>{" "}
-                          <span className="text-slate-600">{persona.liked_moment ?? "Conecta con la promesa"}</span>
-                        </div>
-                        <div>
-                          <span className="text-rose-500">−</span>{" "}
-                          <span className="text-slate-600">{persona.disliked_moment ?? persona.why_they_left}</span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
-
-                {/* Expanded detail */}
-                {isExpanded && (
-                  <div className="border-t border-slate-200/80 px-5 py-4 bg-slate-50/50">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Perfil</p>
-                        <p className="mt-1 text-sm text-slate-700">
-                          {[persona.age_range, persona.country, persona.income_bracket, persona.social_status].filter(Boolean).join(" · ")}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Evidencia</p>
-                        <p className="mt-1 text-sm font-medium text-slate-700">
-                          {persona.evidence_start_second !== undefined
-                            ? `${formatMoment(persona.evidence_start_second)} - ${formatMoment(persona.evidence_end_second ?? persona.evidence_start_second)}`
-                            : formatMoment(persona.dropoff_second)}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-600">
-                          {persona.evidence_excerpt ?? "Sin extracto de evidencia"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Que le gusto</p>
-                        <p className="mt-1 text-sm text-slate-700">
-                          {persona.liked_moment ?? "Conecta cuando la promesa se vuelve mas concreta."}
-                        </p>
-                      </div>
-                      <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">Que la hizo irse</p>
-                        <p className="mt-1 text-sm text-slate-700">
-                          {persona.disliked_moment ?? persona.why_they_left}
-                        </p>
-                      </div>
-                    </div>
-
-                    {persona.summary_of_interacion && (
-                      <div className="mt-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Resumen de interaccion</p>
-                        <p className="mt-1 text-sm text-slate-600">{persona.summary_of_interacion}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </article>
-            );
-          })}
+              </div>
+            </article>
+          ))}
         </div>
+
+        {/* Modal */}
+        {selectedPersona && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setSelectedPersona(null)}
+          >
+            <div
+              className="relative mx-4 max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setSelectedPersona(null)}
+                className="absolute right-4 top-4 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div
+                  className="h-4 w-4 rounded-full"
+                  style={{ backgroundColor: selectedPersona.color }}
+                />
+                <span
+                  className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide"
+                  style={{ backgroundColor: `${selectedPersona.color}22`, color: selectedPersona.color }}
+                >
+                  {selectedPersona.archetype ?? "Persona"}
+                </span>
+              </div>
+
+              <h3 className="mt-3 text-2xl font-bold text-slate-900">
+                {cleanPersonaName(selectedPersona.name)}
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                {[selectedPersona.age_range, selectedPersona.country, selectedPersona.income_bracket, selectedPersona.social_status].filter(Boolean).join(" · ")}
+              </p>
+
+              <div className="mt-4 flex items-center gap-4 rounded-xl bg-slate-100 p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-slate-900">{formatMoment(selectedPersona.dropoff_second)}</p>
+                  <p className="text-xs text-slate-500">Abandono</p>
+                </div>
+                <div className="h-8 w-px bg-slate-300" />
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-slate-900">{selectedPersona.retention_percent}%</p>
+                  <p className="text-xs text-slate-500">Retencion</p>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Motivo de abandono</p>
+                <p className="mt-1 font-medium text-slate-800">{selectedPersona.reason_label ?? "Sin clasificar"}</p>
+                <p className="mt-1 text-sm text-slate-600">{selectedPersona.why_they_left}</p>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Que le gusto</p>
+                  <p className="mt-2 text-sm text-slate-700">
+                    {selectedPersona.liked_moment ?? "Conecta cuando la promesa se vuelve mas concreta."}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-rose-700">Que la hizo irse</p>
+                  <p className="mt-2 text-sm text-slate-700">
+                    {selectedPersona.disliked_moment ?? selectedPersona.why_they_left}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Evidencia del video</p>
+                <p className="mt-1 font-medium text-slate-800">
+                  {selectedPersona.evidence_start_second !== undefined
+                    ? `${formatMoment(selectedPersona.evidence_start_second)} - ${formatMoment(selectedPersona.evidence_end_second ?? selectedPersona.evidence_start_second)}`
+                    : formatMoment(selectedPersona.dropoff_second)}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {selectedPersona.evidence_excerpt ?? "Sin extracto de evidencia disponible."}
+                </p>
+              </div>
+
+              {selectedPersona.summary_of_interacion && (
+                <div className="mt-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Resumen de interaccion</p>
+                  <p className="mt-1 text-sm text-slate-600">{selectedPersona.summary_of_interacion}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {totalPages > 1 ? (
           <div className="mt-6 flex justify-center gap-1">
