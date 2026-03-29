@@ -234,6 +234,49 @@ function AnimatedMetricNumber({
   return <>{displayValue}</>;
 }
 
+function AnimatedCurrencyCountdown({
+  startValue,
+  endValue,
+  active,
+}: {
+  startValue: number;
+  endValue: number;
+  active: boolean;
+}) {
+  const [displayValue, setDisplayValue] = useState(startValue);
+  const [color, setColor] = useState("hsl(0 80% 56%)");
+
+  useEffect(() => {
+    if (!active) {
+      setDisplayValue(startValue);
+      setColor("hsl(0 80% 56%)");
+      return;
+    }
+
+    let frame = 0;
+    const duration = 1400;
+    const startedAt = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = clamp((now - startedAt) / duration, 0, 1);
+      const eased = 1 - Math.pow(1 - elapsed, 3);
+      const nextValue = Math.round(startValue + (endValue - startValue) * eased);
+      const hue = 120 * eased;
+      setDisplayValue(nextValue);
+      setColor(`hsl(${hue} 74% 46%)`);
+
+      if (elapsed < 1) {
+        frame = window.requestAnimationFrame(tick);
+      }
+    };
+
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [active, endValue, startValue]);
+
+  return <span style={{ color }}>{`$${displayValue.toLocaleString("en-US")}`}</span>;
+}
+
 function ProcessCard({
   title,
   copy,
@@ -686,7 +729,7 @@ export default function LandingPage() {
                 <span>curva predictiva de retención</span>
               </div>
               <div className="landing-hero-metric">
-                <strong><AnimatedMetricNumber value={0} active /></strong>
+                <strong><AnimatedCurrencyCountdown startValue={4000} endValue={0} active /></strong>
                 <span>dólares desperdiciados antes de testear</span>
               </div>
             </div>
