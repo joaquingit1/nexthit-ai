@@ -1999,6 +1999,7 @@ function RawPersonasStep({
 }) {
   const [currentPage, setCurrentPage] = useState(0);
   const [activeFilter, setActiveFilter] = useState<RawPersonaFilter>("retention");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const orderedPersonas = useMemo(() => sortPersonasForDisplay(personas), [personas]);
   const filteredPersonas = useMemo(() => {
     const byRetention = [...orderedPersonas].sort(
@@ -2105,49 +2106,117 @@ function RawPersonasStep({
           </div>
         ) : null}
 
-        <div className="mt-6 space-y-3">
-          {visible.map((persona) => (
-            <article key={persona.persona_id} className="rounded-xl border border-slate-200/80 bg-white/85 px-5 py-4">
-              <div className="flex items-start gap-4">
-                {/* Bullet indicator */}
+        <div className="mt-6 space-y-2">
+          {visible.map((persona) => {
+            const isExpanded = expandedId === persona.persona_id;
+            return (
+              <article
+                key={persona.persona_id}
+                className={`rounded-xl border bg-white/85 transition-all cursor-pointer ${
+                  isExpanded ? "border-slate-300 shadow-sm" : "border-slate-200/80 hover:border-slate-300"
+                }`}
+              >
                 <div
-                  className="mt-1.5 h-3 w-3 flex-shrink-0 rounded-full"
-                  style={{ backgroundColor: persona.color }}
-                />
+                  className="flex items-start gap-4 px-5 py-4"
+                  onClick={() => setExpandedId(isExpanded ? null : persona.persona_id)}
+                >
+                  {/* Bullet indicator */}
+                  <div
+                    className="mt-1.5 h-3 w-3 flex-shrink-0 rounded-full"
+                    style={{ backgroundColor: persona.color }}
+                  />
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <h4 className="font-semibold text-slate-950">
-                      {cleanPersonaName(persona.name)}
-                    </h4>
-                    <span className="text-sm text-slate-500">
-                      {persona.archetype ?? "Persona"} · {persona.demographic_profile_label ?? persona.age_range}
-                    </span>
-                    <span className="ml-auto text-sm font-medium text-slate-700">
-                      Abandono: {formatMoment(persona.dropoff_second)} ({persona.retention_percent}%)
-                    </span>
-                  </div>
-
-                  <div className="mt-2 text-sm text-slate-600">
-                    <span className="font-medium text-slate-700">{persona.reason_label ?? "Sin clasificar"}:</span>{" "}
-                    {persona.why_they_left}
-                  </div>
-
-                  <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                    <div>
-                      <span className="text-emerald-600">+</span>{" "}
-                      <span className="text-slate-600">{persona.liked_moment ?? "Conecta con la promesa"}</span>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <h4 className="font-semibold text-slate-950">
+                        {cleanPersonaName(persona.name)}
+                      </h4>
+                      <span className="text-sm text-slate-500">
+                        {persona.archetype ?? "Persona"} · {persona.demographic_profile_label ?? persona.age_range}
+                      </span>
+                      <span className="ml-auto flex items-center gap-2 text-sm font-medium text-slate-700">
+                        Abandono: {formatMoment(persona.dropoff_second)} ({persona.retention_percent}%)
+                        <svg
+                          className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </span>
                     </div>
-                    <div>
-                      <span className="text-rose-500">−</span>{" "}
-                      <span className="text-slate-600">{persona.disliked_moment ?? persona.why_they_left}</span>
+
+                    <div className="mt-2 text-sm text-slate-600">
+                      <span className="font-medium text-slate-700">{persona.reason_label ?? "Sin clasificar"}:</span>{" "}
+                      {persona.why_they_left}
                     </div>
+
+                    {!isExpanded && (
+                      <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                        <div>
+                          <span className="text-emerald-600">+</span>{" "}
+                          <span className="text-slate-600">{persona.liked_moment ?? "Conecta con la promesa"}</span>
+                        </div>
+                        <div>
+                          <span className="text-rose-500">−</span>{" "}
+                          <span className="text-slate-600">{persona.disliked_moment ?? persona.why_they_left}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
+
+                {/* Expanded detail */}
+                {isExpanded && (
+                  <div className="border-t border-slate-200/80 px-5 py-4 bg-slate-50/50">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Perfil</p>
+                        <p className="mt-1 text-sm text-slate-700">
+                          {[persona.age_range, persona.country, persona.income_bracket, persona.social_status].filter(Boolean).join(" · ")}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Evidencia</p>
+                        <p className="mt-1 text-sm font-medium text-slate-700">
+                          {persona.evidence_start_second !== undefined
+                            ? `${formatMoment(persona.evidence_start_second)} - ${formatMoment(persona.evidence_end_second ?? persona.evidence_start_second)}`
+                            : formatMoment(persona.dropoff_second)}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {persona.evidence_excerpt ?? "Sin extracto de evidencia"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Que le gusto</p>
+                        <p className="mt-1 text-sm text-slate-700">
+                          {persona.liked_moment ?? "Conecta cuando la promesa se vuelve mas concreta."}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">Que la hizo irse</p>
+                        <p className="mt-1 text-sm text-slate-700">
+                          {persona.disliked_moment ?? persona.why_they_left}
+                        </p>
+                      </div>
+                    </div>
+
+                    {persona.summary_of_interacion && (
+                      <div className="mt-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Resumen de interaccion</p>
+                        <p className="mt-1 text-sm text-slate-600">{persona.summary_of_interacion}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
 
         {totalPages > 1 ? (
