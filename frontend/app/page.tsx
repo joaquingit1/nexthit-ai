@@ -490,18 +490,6 @@ export default function LandingPage() {
       return;
     }
 
-    let resetFrame = 0;
-
-    const keepHeroPinned = () => {
-      if (window.innerWidth < 768) {
-        return;
-      }
-
-      if (heroGraphProgressRef.current < 0.999 && shell.scrollTop > 0) {
-        shell.scrollTop = 0;
-      }
-    };
-
     const handleWheel = (event: WheelEvent) => {
       if (window.innerWidth < 768) {
         return;
@@ -537,18 +525,17 @@ export default function LandingPage() {
 
       const heroIsPinned = currentIndex === 0 && currentScroll < heroHeight * 0.8;
       const currentGraphProgress = heroGraphProgressRef.current;
+      const graphIsLocked = currentGraphProgress < 0.995;
       if (
         heroIsPinned &&
-        ((event.deltaY > 0 && currentGraphProgress < 0.999) ||
+        ((event.deltaY > 0 && graphIsLocked) ||
           (event.deltaY < 0 && currentGraphProgress > 0.001))
       ) {
         event.preventDefault();
-        if (currentScroll !== 0) {
-          shell.scrollTop = 0;
-        }
-        setHeroGraphProgress((current) =>
-          clamp(current + event.deltaY / 900, 0, 1),
-        );
+        setHeroGraphProgress((current) => {
+          const next = clamp(current + event.deltaY / 900, 0, 1);
+          return next >= 0.995 ? 1 : next;
+        });
         return;
       }
 
@@ -572,25 +559,9 @@ export default function LandingPage() {
       }, 720);
     };
 
-    const handleScroll = () => {
-      if (resetFrame) {
-        return;
-      }
-
-      resetFrame = window.requestAnimationFrame(() => {
-        resetFrame = 0;
-        keepHeroPinned();
-      });
-    };
-
     shell.addEventListener("wheel", handleWheel, { passive: false });
-    shell.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       shell.removeEventListener("wheel", handleWheel);
-      shell.removeEventListener("scroll", handleScroll);
-      if (resetFrame) {
-        window.cancelAnimationFrame(resetFrame);
-      }
     };
   }, []);
 
@@ -650,8 +621,13 @@ export default function LandingPage() {
     }, 110);
   };
 
+  const heroScrollLocked = heroGraphProgress < 0.995;
+
   return (
-    <main ref={shellRef} className="landing-snap-shell bg-white text-slate-950">
+    <main
+      ref={shellRef}
+      className={`landing-snap-shell bg-white text-slate-950 ${heroScrollLocked ? "landing-snap-shell--hero-locked" : ""}`}
+    >
       <nav className="landing-nav pointer-events-none fixed left-1/2 top-4 z-50 flex w-[calc(100%-1.5rem)] max-w-6xl -translate-x-1/2 items-center justify-between rounded-[1.4rem] border border-slate-200/70 bg-white/78 px-4 py-3 shadow-[0_18px_42px_rgba(15,23,42,0.08)] backdrop-blur-xl md:px-6">
         <Link href="/" className="pointer-events-auto flex items-center gap-2">
           <img src="/logo.svg" alt="NextHit" className="h-8 w-auto" />

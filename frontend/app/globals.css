@@ -140,6 +140,12 @@ textarea {
     linear-gradient(180deg, #f7fbff 0%, #f4f8ff 46%, #f8fbff 100%);
 }
 
+@media (min-width: 769px) {
+  .landing-snap-shell--hero-locked {
+    overflow-y: hidden;
+  }
+}
+
 .landing-snap-panel {
   scroll-snap-align: start;
   scroll-snap-stop: always;
