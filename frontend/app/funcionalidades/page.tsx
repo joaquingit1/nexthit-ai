@@ -56,7 +56,580 @@ function AnimatedCounter({ value, suffix = "", active }: { value: number; suffix
   return <>{displayValue}{suffix}</>;
 }
 
-function RetentionCurveAnimation({ active }: { active: boolean }) {
+// Process Step Visuals - Like the landing page
+function UploadVisual({ active }: { active: boolean }) {
+  return (
+    <div className="process-visual-shell">
+      <div className={`process-upload ${active ? "is-active" : ""}`}>
+        <div className="process-upload-file">
+          <div className="process-upload-file-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M15 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7l-5-5z" />
+              <path d="M14 2v6h6M10 12l4 4m0-4l-4 4" />
+            </svg>
+          </div>
+          <div className="process-upload-file-info">
+            <span className="process-upload-file-name">video-hook.mp4</span>
+            <span className="process-upload-file-size">12.4 MB</span>
+          </div>
+        </div>
+        <div className="process-upload-progress">
+          <div className="process-upload-progress-bar" />
+        </div>
+        <div className="process-upload-dropzone">
+          <div className="process-upload-dropzone-ring" />
+          <div className="process-upload-dropzone-ring" />
+          <svg className="process-upload-dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+        </div>
+      </div>
+      <style jsx>{`
+        .process-visual-shell {
+          width: 100%;
+          height: 180px;
+          position: relative;
+          overflow: hidden;
+        }
+        .process-upload {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+        }
+        .process-upload-dropzone {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 1;
+          transition: opacity 0.5s ease;
+        }
+        .process-upload.is-active .process-upload-dropzone {
+          opacity: 0;
+        }
+        .process-upload-dropzone-ring {
+          position: absolute;
+          width: 100px;
+          height: 100px;
+          border: 2px dashed rgba(59, 130, 246, 0.3);
+          border-radius: 50%;
+          animation: pulse-ring 2s ease-out infinite;
+        }
+        .process-upload-dropzone-ring:nth-child(2) {
+          animation-delay: 1s;
+        }
+        .process-upload-dropzone-icon {
+          width: 32px;
+          height: 32px;
+          color: #3b82f6;
+          opacity: 0.6;
+        }
+        @keyframes pulse-ring {
+          0% { transform: scale(0.8); opacity: 1; }
+          100% { transform: scale(1.4); opacity: 0; }
+        }
+        .process-upload-file {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: rgba(59, 130, 246, 0.1);
+          border: 1px solid rgba(59, 130, 246, 0.2);
+          border-radius: 12px;
+          padding: 12px 16px;
+          opacity: 0;
+          transform: translateY(20px);
+          transition: all 0.5s ease 0.3s;
+        }
+        .process-upload.is-active .process-upload-file {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .process-upload-file-icon {
+          width: 36px;
+          height: 36px;
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .process-upload-file-icon svg {
+          width: 20px;
+          height: 20px;
+          color: white;
+        }
+        .process-upload-file-info {
+          display: flex;
+          flex-direction: column;
+        }
+        .process-upload-file-name {
+          font-size: 13px;
+          font-weight: 600;
+          color: #1e293b;
+        }
+        .process-upload-file-size {
+          font-size: 11px;
+          color: #64748b;
+        }
+        .process-upload-progress {
+          width: 180px;
+          height: 4px;
+          background: rgba(59, 130, 246, 0.1);
+          border-radius: 2px;
+          overflow: hidden;
+          opacity: 0;
+          transition: opacity 0.3s ease 0.6s;
+        }
+        .process-upload.is-active .process-upload-progress {
+          opacity: 1;
+        }
+        .process-upload-progress-bar {
+          height: 100%;
+          width: 0%;
+          background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+          border-radius: 2px;
+          animation: progress-fill 1.5s ease 0.8s forwards;
+        }
+        .process-upload.is-active .process-upload-progress-bar {
+          animation: progress-fill 1.5s ease 0.8s forwards;
+        }
+        @keyframes progress-fill {
+          0% { width: 0%; }
+          100% { width: 100%; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function AnalyzeVisual({ active }: { active: boolean }) {
+  return (
+    <div className="process-visual-shell">
+      <div className={`process-analyze ${active ? "is-active" : ""}`}>
+        <div className="process-analyze-video">
+          <div className="process-analyze-frame">
+            <div className="process-analyze-scanline" />
+          </div>
+          <div className="process-analyze-waveform">
+            {Array.from({ length: 24 }, (_, i) => (
+              <span key={i} className="process-analyze-bar" style={{ animationDelay: `${i * 50}ms` }} />
+            ))}
+          </div>
+        </div>
+        <div className="process-analyze-tags">
+          {["audio", "visual", "texto", "ritmo"].map((tag, i) => (
+            <span key={tag} className="process-analyze-tag" style={{ animationDelay: `${0.5 + i * 0.15}s` }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
+      <style jsx>{`
+        .process-visual-shell {
+          width: 100%;
+          height: 180px;
+          position: relative;
+          overflow: hidden;
+        }
+        .process-analyze {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+        }
+        .process-analyze-video {
+          width: 160px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .process-analyze-frame {
+          width: 100%;
+          height: 90px;
+          background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+          border-radius: 8px;
+          position: relative;
+          overflow: hidden;
+        }
+        .process-analyze-scanline {
+          position: absolute;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, #3b82f6, #8b5cf6, transparent);
+          opacity: 0;
+          top: 0;
+        }
+        .process-analyze.is-active .process-analyze-scanline {
+          opacity: 1;
+          animation: scanline 1.5s ease-in-out infinite;
+        }
+        @keyframes scanline {
+          0% { top: 0; }
+          50% { top: 100%; }
+          50.1% { top: 0; }
+          100% { top: 100%; }
+        }
+        .process-analyze-waveform {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 2px;
+          height: 24px;
+        }
+        .process-analyze-bar {
+          width: 3px;
+          height: 4px;
+          background: linear-gradient(to top, #3b82f6, #8b5cf6);
+          border-radius: 1px;
+          opacity: 0.3;
+        }
+        .process-analyze.is-active .process-analyze-bar {
+          animation: waveform 0.8s ease-in-out infinite alternate;
+        }
+        @keyframes waveform {
+          0% { height: 4px; opacity: 0.3; }
+          100% { height: 20px; opacity: 1; }
+        }
+        .process-analyze-tags {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        .process-analyze-tag {
+          font-size: 10px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          padding: 4px 10px;
+          background: rgba(139, 92, 246, 0.1);
+          color: #8b5cf6;
+          border-radius: 20px;
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        .process-analyze.is-active .process-analyze-tag {
+          animation: tag-pop 0.4s ease forwards;
+        }
+        @keyframes tag-pop {
+          0% { opacity: 0; transform: scale(0.8); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function SimulateVisual({ active }: { active: boolean }) {
+  return (
+    <div className="process-visual-shell">
+      <div className={`process-simulate ${active ? "is-active" : ""}`}>
+        <div className="process-simulate-grid">
+          {Array.from({ length: 100 }, (_, i) => {
+            const row = Math.floor(i / 10);
+            const col = i % 10;
+            const delay = (row + col) * 30;
+            const colors = ["#3b82f6", "#8b5cf6", "#ec4899", "#10b981", "#f59e0b"];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            return (
+              <span
+                key={i}
+                className="process-simulate-dot"
+                style={{
+                  animationDelay: `${delay}ms`,
+                  backgroundColor: color,
+                }}
+              />
+            );
+          })}
+        </div>
+        <div className="process-simulate-counter">
+          <span className="process-simulate-number">100</span>
+          <span className="process-simulate-label">personas</span>
+        </div>
+      </div>
+      <style jsx>{`
+        .process-visual-shell {
+          width: 100%;
+          height: 180px;
+          position: relative;
+          overflow: hidden;
+        }
+        .process-simulate {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .process-simulate-grid {
+          display: grid;
+          grid-template-columns: repeat(10, 1fr);
+          gap: 4px;
+          padding: 8px;
+        }
+        .process-simulate-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          opacity: 0.2;
+          transform: scale(0.5);
+          transition: all 0.3s ease;
+        }
+        .process-simulate.is-active .process-simulate-dot {
+          opacity: 0.9;
+          transform: scale(1);
+          animation: dot-pulse 2s ease infinite;
+        }
+        @keyframes dot-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(0.85); }
+        }
+        .process-simulate-counter {
+          position: absolute;
+          bottom: 12px;
+          right: 12px;
+          display: flex;
+          align-items: baseline;
+          gap: 4px;
+          background: rgba(15, 23, 42, 0.8);
+          padding: 6px 12px;
+          border-radius: 20px;
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        .process-simulate.is-active .process-simulate-counter {
+          opacity: 1;
+          transform: translateY(0);
+          transition: all 0.4s ease 0.8s;
+        }
+        .process-simulate-number {
+          font-size: 18px;
+          font-weight: 700;
+          color: white;
+        }
+        .process-simulate-label {
+          font-size: 11px;
+          color: rgba(255,255,255,0.7);
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function InsightsVisual({ active }: { active: boolean }) {
+  return (
+    <div className="process-visual-shell">
+      <div className={`process-insights ${active ? "is-active" : ""}`}>
+        <svg className="process-insights-chart" viewBox="0 0 200 100">
+          <defs>
+            <linearGradient id="chartGrad" x1="0%" x2="100%" y1="0%" y2="0%">
+              <stop offset="0%" stopColor="#3b82f6" />
+              <stop offset="50%" stopColor="#8b5cf6" />
+              <stop offset="100%" stopColor="#ec4899" />
+            </linearGradient>
+            <linearGradient id="chartFill" x1="0%" x2="0%" y1="0%" y2="100%">
+              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path
+            className="process-insights-area"
+            d="M0,80 C20,75 40,60 60,55 S100,40 120,45 S160,55 180,50 L180,100 L0,100 Z"
+            fill="url(#chartFill)"
+          />
+          <path
+            className="process-insights-line"
+            d="M0,80 C20,75 40,60 60,55 S100,40 120,45 S160,55 180,50"
+            fill="none"
+            stroke="url(#chartGrad)"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <circle className="process-insights-dot" cx="60" cy="55" r="4" fill="#3b82f6" />
+          <circle className="process-insights-dot" cx="120" cy="45" r="4" fill="#8b5cf6" />
+          <circle className="process-insights-dot" cx="180" cy="50" r="4" fill="#ec4899" />
+        </svg>
+        <div className="process-insights-badges">
+          <span className="process-insights-badge process-insights-badge--good">+40% retencion</span>
+          <span className="process-insights-badge process-insights-badge--action">3 acciones</span>
+        </div>
+      </div>
+      <style jsx>{`
+        .process-visual-shell {
+          width: 100%;
+          height: 180px;
+          position: relative;
+          overflow: hidden;
+        }
+        .process-insights {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+        }
+        .process-insights-chart {
+          width: 100%;
+          max-width: 200px;
+          height: auto;
+        }
+        .process-insights-line {
+          stroke-dasharray: 300;
+          stroke-dashoffset: 300;
+        }
+        .process-insights.is-active .process-insights-line {
+          animation: draw-line 1.5s ease forwards;
+        }
+        .process-insights-area {
+          opacity: 0;
+        }
+        .process-insights.is-active .process-insights-area {
+          animation: fade-in 0.5s ease 1s forwards;
+        }
+        .process-insights-dot {
+          opacity: 0;
+          transform-origin: center;
+        }
+        .process-insights.is-active .process-insights-dot:nth-child(4) {
+          animation: dot-appear 0.3s ease 0.6s forwards;
+        }
+        .process-insights.is-active .process-insights-dot:nth-child(5) {
+          animation: dot-appear 0.3s ease 0.9s forwards;
+        }
+        .process-insights.is-active .process-insights-dot:nth-child(6) {
+          animation: dot-appear 0.3s ease 1.2s forwards;
+        }
+        @keyframes draw-line {
+          to { stroke-dashoffset: 0; }
+        }
+        @keyframes fade-in {
+          to { opacity: 1; }
+        }
+        @keyframes dot-appear {
+          0% { opacity: 0; transform: scale(0); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .process-insights-badges {
+          display: flex;
+          gap: 8px;
+          margin-top: 16px;
+        }
+        .process-insights-badge {
+          font-size: 11px;
+          font-weight: 600;
+          padding: 5px 12px;
+          border-radius: 20px;
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        .process-insights.is-active .process-insights-badge {
+          animation: badge-up 0.4s ease forwards;
+        }
+        .process-insights.is-active .process-insights-badge:nth-child(1) {
+          animation-delay: 1.4s;
+        }
+        .process-insights.is-active .process-insights-badge:nth-child(2) {
+          animation-delay: 1.6s;
+        }
+        @keyframes badge-up {
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .process-insights-badge--good {
+          background: rgba(16, 185, 129, 0.15);
+          color: #10b981;
+        }
+        .process-insights-badge--action {
+          background: rgba(139, 92, 246, 0.15);
+          color: #8b5cf6;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function ProcessCard({
+  title,
+  description,
+  step,
+  active,
+  delay,
+  children,
+}: {
+  title: string;
+  description: string;
+  step: string;
+  active: boolean;
+  delay: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <article
+      className={`process-card ${active ? "is-visible" : ""}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      <div className="process-card-visual">{children}</div>
+      <div className="process-card-step">{step}</div>
+      <h3 className="process-card-title">{title}</h3>
+      <p className="process-card-description">{description}</p>
+      <style jsx>{`
+        .process-card {
+          background: white;
+          border-radius: 24px;
+          padding: 24px;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+          border: 1px solid rgba(0, 0, 0, 0.04);
+          opacity: 0;
+          transform: translateY(30px);
+          transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .process-card.is-visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .process-card-visual {
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          border-radius: 16px;
+          margin-bottom: 20px;
+          overflow: hidden;
+        }
+        .process-card-step {
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: #3b82f6;
+          margin-bottom: 8px;
+        }
+        .process-card-title {
+          font-size: 20px;
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 8px;
+        }
+        .process-card-description {
+          font-size: 14px;
+          line-height: 1.6;
+          color: #64748b;
+        }
+      `}</style>
+    </article>
+  );
+}
+
+// Feature Section Visual Components
+function RetentionCurveVisual({ active }: { active: boolean }) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -81,269 +654,263 @@ function RetentionCurveAnimation({ active }: { active: boolean }) {
     return () => window.cancelAnimationFrame(frame);
   }, [active]);
 
-  const lineReveal = `${progress * 100} 100`;
-
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-6">
-      <div className="absolute inset-0 opacity-20">
-        {[20, 40, 60, 80].map((y) => (
-          <div key={y} className="absolute left-0 right-0 border-t border-white/10" style={{ top: `${y}%` }} />
-        ))}
-        {[20, 40, 60, 80].map((x) => (
-          <div key={x} className="absolute top-0 bottom-0 border-l border-white/10" style={{ left: `${x}%` }} />
+    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
+      {/* Grid */}
+      <div className="absolute inset-8 grid grid-cols-6 grid-rows-4">
+        {Array.from({ length: 24 }, (_, i) => (
+          <div key={i} className="border-b border-r border-white/5" />
         ))}
       </div>
-      <svg className="relative h-full w-full" viewBox="0 0 100 60" preserveAspectRatio="none">
+
+      {/* Y-axis labels */}
+      <div className="absolute left-3 top-8 bottom-8 flex flex-col justify-between text-[10px] text-white/40">
+        <span>100%</span>
+        <span>50%</span>
+        <span>0%</span>
+      </div>
+
+      {/* Curve */}
+      <svg className="absolute inset-8" viewBox="0 0 100 50" preserveAspectRatio="none">
         <defs>
-          <linearGradient id="curveGradient" x1="0%" x2="100%" y1="0%" y2="0%">
-            <stop offset="0%" stopColor="#3b82f6" />
-            <stop offset="50%" stopColor="#8b5cf6" />
-            <stop offset="100%" stopColor="#ec4899" />
+          <linearGradient id="retentionGrad" x1="0%" x2="100%" y1="0%" y2="0%">
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="40%" stopColor="#3b82f6" />
+            <stop offset="70%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#ef4444" />
           </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="2" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
+          <linearGradient id="retentionFill" x1="0%" x2="0%" y1="0%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+          </linearGradient>
         </defs>
         <path
-          d="M0,10 C10,12 20,15 30,22 S50,35 60,40 S80,48 100,52"
+          d="M0,5 C8,5 15,8 25,12 S40,20 50,25 S65,32 75,38 S90,44 100,46"
           fill="none"
-          stroke="url(#curveGradient)"
-          strokeWidth="2"
+          stroke="url(#retentionGrad)"
+          strokeWidth="2.5"
           strokeLinecap="round"
           pathLength="100"
-          strokeDasharray={lineReveal}
-          filter="url(#glow)"
+          strokeDasharray="100"
+          strokeDashoffset={100 - progress * 100}
         />
-        {[
-          { x: 30, y: 22, label: "Hook" },
-          { x: 60, y: 40, label: "Caida" },
-          { x: 85, y: 50, label: "CTA" },
-        ].map((point, i) => (
-          <g key={i} style={{ opacity: progress > (point.x / 100) ? 1 : 0, transition: "opacity 0.3s" }}>
-            <circle cx={point.x} cy={point.y} r="3" fill="#fff" />
-            <circle cx={point.x} cy={point.y} r="6" fill="none" stroke="#fff" strokeWidth="1" opacity="0.5" />
+        {progress > 0.3 && (
+          <g style={{ opacity: progress > 0.4 ? 1 : 0 }} className="transition-opacity duration-300">
+            <circle cx="25" cy="12" r="2.5" fill="#22c55e" />
+            <circle cx="25" cy="12" r="5" fill="none" stroke="#22c55e" strokeWidth="1" opacity="0.5" />
           </g>
-        ))}
+        )}
+        {progress > 0.6 && (
+          <g style={{ opacity: progress > 0.7 ? 1 : 0 }} className="transition-opacity duration-300">
+            <circle cx="50" cy="25" r="2.5" fill="#f59e0b" />
+            <circle cx="50" cy="25" r="5" fill="none" stroke="#f59e0b" strokeWidth="1" opacity="0.5" />
+          </g>
+        )}
+        {progress > 0.9 && (
+          <g style={{ opacity: 1 }} className="transition-opacity duration-300">
+            <circle cx="75" cy="38" r="2.5" fill="#ef4444" />
+            <circle cx="75" cy="38" r="5" fill="none" stroke="#ef4444" strokeWidth="1" opacity="0.5" />
+          </g>
+        )}
       </svg>
-      <div className="absolute bottom-4 left-6 right-6 flex justify-between text-xs text-white/60">
+
+      {/* Time labels */}
+      <div className="absolute bottom-2 left-8 right-8 flex justify-between text-[10px] text-white/40">
         <span>0:00</span>
-        <span>0:15</span>
+        <span>0:10</span>
+        <span>0:20</span>
         <span>0:30</span>
       </div>
+
+      {/* Legend */}
+      <div className="absolute top-3 right-4 flex items-center gap-4 text-[10px]">
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" /> Hook</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" /> Caida</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /> Abandono</span>
+      </div>
     </div>
   );
 }
 
-function AudienceDotsAnimation({ active }: { active: boolean }) {
+function AudienceGridVisual({ active }: { active: boolean }) {
+  const archetypes = [
+    { name: "Gen Z", color: "#ec4899", count: 18 },
+    { name: "Millennials", color: "#8b5cf6", count: 25 },
+    { name: "Profesionales", color: "#3b82f6", count: 22 },
+    { name: "Padres", color: "#10b981", count: 15 },
+    { name: "Estudiantes", color: "#f59e0b", count: 12 },
+    { name: "Otros", color: "#64748b", count: 8 },
+  ];
+
+  let dotIndex = 0;
+
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 to-purple-700 p-6">
-      <div className="absolute inset-0 flex items-center justify-center">
+    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-6">
+      <div className="absolute inset-0 bg-black/20" />
+
+      {/* Dots grid */}
+      <div className="relative flex h-full items-center justify-center">
         <div className="grid grid-cols-10 gap-2">
-          {Array.from({ length: 100 }, (_, i) => {
-            const delay = (i % 10) * 50 + Math.floor(i / 10) * 30;
-            const hue = 200 + Math.random() * 60;
-            return (
-              <div
-                key={i}
-                className="h-3 w-3 rounded-full transition-all duration-500"
-                style={{
-                  backgroundColor: `hsl(${hue}, 70%, 70%)`,
-                  opacity: active ? 0.8 : 0.2,
-                  transform: active ? "scale(1)" : "scale(0.5)",
-                  transitionDelay: `${delay}ms`,
-                }}
-              />
-            );
-          })}
+          {archetypes.flatMap((arch) =>
+            Array.from({ length: arch.count }, (_, i) => {
+              const idx = dotIndex++;
+              const row = Math.floor(idx / 10);
+              const col = idx % 10;
+              const delay = (row + col) * 25;
+              return (
+                <div
+                  key={`${arch.name}-${i}`}
+                  className="h-4 w-4 rounded-full transition-all duration-500"
+                  style={{
+                    backgroundColor: arch.color,
+                    opacity: active ? 0.9 : 0.2,
+                    transform: active ? "scale(1)" : "scale(0.3)",
+                    transitionDelay: `${delay}ms`,
+                    boxShadow: active ? `0 0 10px ${arch.color}50` : "none",
+                  }}
+                />
+              );
+            })
+          )}
         </div>
       </div>
-      <div className="absolute bottom-4 left-6 text-white">
-        <p className="text-2xl font-bold">100</p>
-        <p className="text-sm opacity-80">personas simuladas</p>
+
+      {/* Legend */}
+      <div className="absolute bottom-4 left-4 right-4 flex flex-wrap justify-center gap-3">
+        {archetypes.map((arch) => (
+          <span
+            key={arch.name}
+            className="flex items-center gap-1.5 rounded-full bg-black/30 px-3 py-1 text-[10px] font-medium text-white backdrop-blur-sm transition-all duration-500"
+            style={{
+              opacity: active ? 1 : 0,
+              transform: active ? "translateY(0)" : "translateY(10px)",
+            }}
+          >
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: arch.color }} />
+            {arch.name} ({arch.count})
+          </span>
+        ))}
       </div>
     </div>
   );
 }
 
-function InsightsAnimation({ active }: { active: boolean }) {
+function InsightsListVisual({ active }: { active: boolean }) {
   const insights = [
-    { icon: "⚡", text: "Hook debil en primeros 3s", color: "text-amber-400" },
-    { icon: "📉", text: "Caida del 40% en segundo 12", color: "text-rose-400" },
-    { icon: "✨", text: "Oportunidad: agregar CTA", color: "text-emerald-400" },
+    { type: "warning", icon: "⚡", title: "Hook debil", desc: "Primeros 3 segundos no enganchan", color: "#f59e0b" },
+    { type: "danger", icon: "📉", title: "Punto de abandono", desc: "40% abandona en segundo 12", color: "#ef4444" },
+    { type: "success", icon: "✨", title: "Oportunidad", desc: "Agregar CTA en segundo 8", color: "#10b981" },
+    { type: "info", icon: "🎯", title: "Audiencia ideal", desc: "Millennials retienen 60% mas", color: "#3b82f6" },
   ];
 
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-6">
-      <div className="space-y-4">
+    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-6">
+      <div className="space-y-3">
         {insights.map((insight, i) => (
           <div
             key={i}
-            className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-3 backdrop-blur transition-all duration-500"
+            className="flex items-center gap-3 rounded-xl bg-white/5 p-3 backdrop-blur transition-all duration-500"
             style={{
               opacity: active ? 1 : 0,
-              transform: active ? "translateX(0)" : "translateX(-20px)",
-              transitionDelay: `${i * 200}ms`,
+              transform: active ? "translateX(0)" : "translateX(-30px)",
+              transitionDelay: `${i * 150}ms`,
+              borderLeft: `3px solid ${insight.color}`,
             }}
           >
-            <span className="text-2xl">{insight.icon}</span>
-            <span className={`font-medium ${insight.color}`}>{insight.text}</span>
+            <span className="text-xl">{insight.icon}</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-white">{insight.title}</p>
+              <p className="text-xs text-white/60">{insight.desc}</p>
+            </div>
+            <svg className="h-5 w-5 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </div>
         ))}
       </div>
-      <div className="absolute -right-8 -bottom-8 h-32 w-32 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-2xl" />
+
+      {/* Decorative gradient */}
+      <div className="absolute -right-20 -bottom-20 h-40 w-40 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-3xl" />
     </div>
   );
 }
 
 const mainFeatures = [
   {
-    id: "personas",
-    title: "100 Personas Sinteticas",
-    subtitle: "Audiencia simulada con IA",
-    description: "Cada persona tiene edad, ocupacion, intereses y patron de consumo unico. Simulamos diversidad real para predecir comportamiento.",
-    visual: AudienceDotsAnimation,
-    stats: [
-      { value: "100", label: "Perfiles unicos" },
-      { value: "12", label: "Arquetipos" },
-      { value: "∞", label: "Combinaciones" },
+    id: "retencion",
+    kicker: "Curva predictiva",
+    title: "Visualiza la retencion segundo a segundo",
+    description: "Ve exactamente donde tu audiencia pierde interes. Identifica hooks efectivos, puntos de caida y el momento ideal para tu CTA.",
+    visual: RetentionCurveVisual,
+    bullets: [
+      "Precision de 1 segundo",
+      "Deteccion de momentos criticos",
+      "Comparativa con benchmarks",
     ],
   },
   {
-    id: "retencion",
-    title: "Curva de Retencion Predictiva",
-    subtitle: "Segundo a segundo",
-    description: "Visualiza exactamente donde tu audiencia pierde interes. Identifica hooks efectivos, puntos de caida y oportunidades de mejora.",
-    visual: RetentionCurveAnimation,
-    stats: [
-      { value: "1s", label: "Precision" },
-      { value: "3", label: "Momentos clave" },
-      { value: "95%", label: "Accuracy" },
+    id: "audiencia",
+    kicker: "100 personas sinteticas",
+    title: "Simulamos una audiencia real y diversa",
+    description: "Cada persona tiene edad, ocupacion, intereses y comportamiento unico. 12 arquetipos distintos para entender quien conecta con tu contenido.",
+    visual: AudienceGridVisual,
+    bullets: [
+      "12 arquetipos de audiencia",
+      "Perfiles demograficos reales",
+      "Comportamiento individualizado",
     ],
   },
   {
     id: "insights",
-    title: "Insights Accionables",
-    subtitle: "No solo data, soluciones",
-    description: "Recibis recomendaciones especificas para mejorar cada segundo de tu video. Cambios concretos que impactan en retencion.",
-    visual: InsightsAnimation,
-    stats: [
-      { value: "5+", label: "Acciones" },
-      { value: "40%", label: "Mejora avg" },
-      { value: "✓", label: "Priorizadas" },
+    kicker: "Acciones concretas",
+    title: "No solo data, soluciones que podes aplicar",
+    description: "Cada insight viene con una accion especifica. Sabe exactamente que cambiar y donde para mejorar tu retencion.",
+    visual: InsightsListVisual,
+    bullets: [
+      "Recomendaciones priorizadas",
+      "Cambios especificos por segundo",
+      "Impacto estimado por accion",
     ],
   },
 ];
 
 const additionalFeatures = [
   {
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-      </svg>
-    ),
-    title: "Segmentacion por Arquetipos",
-    description: "Agrupa tu audiencia en 12 perfiles distintos y entiende cual conecta mejor con tu contenido.",
+    icon: "📊",
+    title: "Segmentacion por arquetipos",
+    description: "Agrupa tu audiencia en 12 perfiles distintos y entiende cual conecta mejor.",
   },
   {
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    title: "Momentos Clave",
-    description: "Mapa temporal con los puntos criticos: donde enganchas, donde perdes y donde podes mejorar.",
+    icon: "⏱️",
+    title: "Momentos clave",
+    description: "Mapa temporal con los puntos criticos: donde enganchas, donde perdes.",
   },
   {
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-      </svg>
-    ),
-    title: "Variantes Creativas",
-    description: "3 versiones alternativas de tu video optimizadas para diferentes audiencias y objetivos.",
+    icon: "🔄",
+    title: "Variantes creativas",
+    description: "3 versiones alternativas optimizadas para diferentes audiencias.",
   },
   {
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-    title: "Estrategia de Medios",
-    description: "Configuracion de targeting para Meta Ads basada en los segmentos que mejor retienen.",
+    icon: "🎯",
+    title: "Estrategia de medios",
+    description: "Configuracion de targeting para Meta Ads basada en tus mejores segmentos.",
   },
   {
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    title: "Calculo de Ahorro",
-    description: "Estima cuanto dinero ahorrarias al optimizar antes de invertir en pauta publicitaria.",
+    icon: "💰",
+    title: "Calculo de ahorro",
+    description: "Estima cuanto ahorrarias al optimizar antes de invertir en pauta.",
   },
   {
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-      </svg>
-    ),
+    icon: "📄",
     title: "Exportar PDF y CSV",
-    description: "Descarga tu analisis completo para presentaciones o integraciones con otras herramientas.",
-  },
-];
-
-const processSteps = [
-  {
-    step: "01",
-    title: "Subi tu video",
-    description: "Arrastra y solta tu video. Soportamos MP4, MOV, AVI y mas formatos.",
-    icon: (
-      <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-      </svg>
-    ),
-  },
-  {
-    step: "02",
-    title: "Procesamos con IA",
-    description: "Analizamos audio, video y texto para entender cada segundo de tu contenido.",
-    icon: (
-      <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    step: "03",
-    title: "Simulamos audiencia",
-    description: "100 personas sinteticas miran tu video y registramos su comportamiento.",
-    icon: (
-      <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    ),
-  },
-  {
-    step: "04",
-    title: "Obtene insights",
-    description: "Recibis la curva de retencion, momentos clave y acciones para mejorar.",
-    icon: (
-      <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
+    description: "Descarga tu analisis para presentaciones o integraciones.",
   },
 ];
 
 export default function FeaturesPage() {
   const [heroRef, heroVisible] = useSectionInView<HTMLElement>(0.3);
-  const [processRef, processVisible] = useSectionInView<HTMLElement>(0.25);
-  const featureRefs = mainFeatures.map(() => useSectionInView<HTMLElement>(0.35));
+  const [processRef, processVisible] = useSectionInView<HTMLElement>(0.2);
+  const featureRefs = mainFeatures.map(() => useSectionInView<HTMLElement>(0.3));
 
   return (
     <main className="min-h-screen bg-white">
@@ -375,57 +942,61 @@ export default function FeaturesPage() {
       </nav>
 
       {/* Hero */}
-      <section ref={heroRef} className="relative overflow-hidden px-6 pb-24 pt-32">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-white" />
-        <div className="absolute left-1/2 top-32 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-100/40 via-violet-100/40 to-pink-100/40 blur-3xl" />
+      <section ref={heroRef} className="relative overflow-hidden px-6 pb-20 pt-32">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/40 via-white to-white" />
 
         <div className="relative mx-auto max-w-5xl text-center">
-          <span
-            className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-blue-700 transition-all duration-700"
+          <div
+            className="transition-all duration-700"
             style={{
               opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "translateY(0)" : "translateY(20px)",
+              transform: heroVisible ? "translateY(0)" : "translateY(30px)",
             }}
           >
-            Funcionalidades
-          </span>
+            <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
+              Funcionalidades
+            </span>
+          </div>
+
           <h1
-            className="mt-6 font-display text-4xl font-semibold tracking-[-0.04em] text-slate-950 md:text-5xl lg:text-6xl transition-all duration-700 delay-100"
+            className="mt-8 font-display text-4xl font-semibold tracking-[-0.04em] text-slate-950 md:text-5xl lg:text-6xl transition-all duration-700 delay-100"
             style={{
               opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "translateY(0)" : "translateY(20px)",
+              transform: heroVisible ? "translateY(0)" : "translateY(30px)",
             }}
           >
-            Inteligencia predictiva para{" "}
+            Inteligencia predictiva
+            <br />
             <span className="bg-gradient-to-r from-blue-600 via-violet-600 to-pink-600 bg-clip-text text-transparent">
-              creadores de video
+              para creadores de video
             </span>
           </h1>
+
           <p
             className="mx-auto mt-6 max-w-2xl text-lg text-slate-600 md:text-xl transition-all duration-700 delay-200"
             style={{
               opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "translateY(0)" : "translateY(20px)",
+              transform: heroVisible ? "translateY(0)" : "translateY(30px)",
             }}
           >
-            Simulamos una audiencia real antes de que publiques. Sabe exactamente donde perdes atencion y como mejorar tu contenido.
+            Simula 100 espectadores antes de publicar. Sabe exactamente donde perdes atencion y que cambiar para maximizar retencion.
           </p>
 
-          {/* Animated Stats */}
+          {/* Stats */}
           <div
-            className="mt-12 flex flex-wrap items-center justify-center gap-8 md:gap-16 transition-all duration-700 delay-300"
+            className="mt-12 flex flex-wrap justify-center gap-12 transition-all duration-700 delay-300"
             style={{
               opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "translateY(0)" : "translateY(20px)",
+              transform: heroVisible ? "translateY(0)" : "translateY(30px)",
             }}
           >
             {[
               { value: 100, suffix: "", label: "Personas simuladas" },
-              { value: 95, suffix: "%", label: "Precision predictiva" },
-              { value: 40, suffix: "%", label: "Mejora en retencion" },
+              { value: 95, suffix: "%", label: "Precision" },
+              { value: 40, suffix: "%", label: "Mejora promedio" },
             ].map((stat, i) => (
               <div key={i} className="text-center">
-                <p className="font-display text-4xl font-bold text-slate-900 md:text-5xl">
+                <p className="font-display text-5xl font-bold text-slate-900">
                   <AnimatedCounter value={stat.value} suffix={stat.suffix} active={heroVisible} />
                 </p>
                 <p className="mt-2 text-sm text-slate-500">{stat.label}</p>
@@ -433,33 +1004,96 @@ export default function FeaturesPage() {
             ))}
           </div>
 
+          {/* CTA */}
           <div
             className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center transition-all duration-700 delay-400"
             style={{
               opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "translateY(0)" : "translateY(20px)",
+              transform: heroVisible ? "translateY(0)" : "translateY(30px)",
             }}
           >
             <Link
               href="/app"
-              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-base font-semibold text-white transition hover:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:bg-slate-800"
             >
               Probar gratis
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
-            <Link
-              href="/precios"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-8 py-4 text-base font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Ver precios
-            </Link>
           </div>
         </div>
       </section>
 
-      {/* Main Features - Full Width Sections */}
+      {/* Process Section */}
+      <section ref={processRef} className="bg-slate-50 px-6 py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-16 text-center">
+            <span
+              className="inline-flex rounded-full bg-violet-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700 transition-all duration-600"
+              style={{
+                opacity: processVisible ? 1 : 0,
+                transform: processVisible ? "translateY(0)" : "translateY(20px)",
+              }}
+            >
+              Como funciona
+            </span>
+            <h2
+              className="mt-6 font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950 md:text-4xl transition-all duration-600 delay-100"
+              style={{
+                opacity: processVisible ? 1 : 0,
+                transform: processVisible ? "translateY(0)" : "translateY(20px)",
+              }}
+            >
+              De video a insights en minutos
+            </h2>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <ProcessCard
+              step="Paso 01"
+              title="Subi tu video"
+              description="Arrastra y solta cualquier formato. MP4, MOV, AVI y mas."
+              active={processVisible}
+              delay={0}
+            >
+              <UploadVisual active={processVisible} />
+            </ProcessCard>
+
+            <ProcessCard
+              step="Paso 02"
+              title="Analizamos con IA"
+              description="Procesamos audio, video y texto segundo a segundo."
+              active={processVisible}
+              delay={100}
+            >
+              <AnalyzeVisual active={processVisible} />
+            </ProcessCard>
+
+            <ProcessCard
+              step="Paso 03"
+              title="Simulamos audiencia"
+              description="100 personas sinteticas miran tu video."
+              active={processVisible}
+              delay={200}
+            >
+              <SimulateVisual active={processVisible} />
+            </ProcessCard>
+
+            <ProcessCard
+              step="Paso 04"
+              title="Obtene insights"
+              description="Curva de retencion, momentos clave y acciones."
+              active={processVisible}
+              delay={300}
+            >
+              <InsightsVisual active={processVisible} />
+            </ProcessCard>
+          </div>
+        </div>
+      </section>
+
+      {/* Main Features */}
       {mainFeatures.map((feature, index) => {
         const [ref, isVisible] = featureRefs[index];
         const isEven = index % 2 === 0;
@@ -473,7 +1107,6 @@ export default function FeaturesPage() {
           >
             <div className="mx-auto max-w-6xl">
               <div className={`grid gap-12 lg:grid-cols-2 lg:items-center ${!isEven ? "lg:grid-flow-dense" : ""}`}>
-                {/* Content */}
                 <div className={!isEven ? "lg:col-start-2" : ""}>
                   <span
                     className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-blue-700"
@@ -483,7 +1116,7 @@ export default function FeaturesPage() {
                       transition: "all 0.6s ease-out",
                     }}
                   >
-                    {feature.subtitle}
+                    {feature.kicker}
                   </span>
                   <h2
                     className="mt-4 font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950 md:text-4xl"
@@ -505,31 +1138,32 @@ export default function FeaturesPage() {
                   >
                     {feature.description}
                   </p>
-
-                  {/* Feature Stats */}
-                  <div
-                    className="mt-8 flex gap-8"
+                  <ul
+                    className="mt-6 space-y-3"
                     style={{
                       opacity: isVisible ? 1 : 0,
                       transform: isVisible ? "translateY(0)" : "translateY(20px)",
                       transition: "all 0.6s ease-out 0.3s",
                     }}
                   >
-                    {feature.stats.map((stat, i) => (
-                      <div key={i}>
-                        <p className="font-display text-2xl font-bold text-slate-900">{stat.value}</p>
-                        <p className="text-sm text-slate-500">{stat.label}</p>
-                      </div>
+                    {feature.bullets.map((bullet, i) => (
+                      <li key={i} className="flex items-center gap-3">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100">
+                          <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </span>
+                        <span className="text-slate-700">{bullet}</span>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
 
-                {/* Visual */}
                 <div
                   className={!isEven ? "lg:col-start-1 lg:row-start-1" : ""}
                   style={{
                     opacity: isVisible ? 1 : 0,
-                    transform: isVisible ? "scale(1)" : "scale(0.95)",
+                    transform: isVisible ? "scale(1) translateY(0)" : "scale(0.95) translateY(20px)",
                     transition: "all 0.8s ease-out 0.2s",
                   }}
                 >
@@ -541,87 +1175,25 @@ export default function FeaturesPage() {
         );
       })}
 
-      {/* How It Works */}
-      <section ref={processRef} className="bg-slate-900 px-6 py-24">
+      {/* Additional Features */}
+      <section className="border-t border-slate-200 px-6 py-24">
         <div className="mx-auto max-w-6xl">
-          <div className="text-center">
-            <span
-              className="inline-flex rounded-full bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80"
-              style={{
-                opacity: processVisible ? 1 : 0,
-                transform: processVisible ? "translateY(0)" : "translateY(20px)",
-                transition: "all 0.6s ease-out",
-              }}
-            >
-              Como funciona
-            </span>
-            <h2
-              className="mt-6 font-display text-3xl font-semibold tracking-[-0.04em] text-white md:text-4xl"
-              style={{
-                opacity: processVisible ? 1 : 0,
-                transform: processVisible ? "translateY(0)" : "translateY(20px)",
-                transition: "all 0.6s ease-out 0.1s",
-              }}
-            >
-              De video a insights en minutos
-            </h2>
-          </div>
-
-          <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {processSteps.map((step, i) => (
-              <div
-                key={step.step}
-                className="relative"
-                style={{
-                  opacity: processVisible ? 1 : 0,
-                  transform: processVisible ? "translateY(0)" : "translateY(30px)",
-                  transition: `all 0.6s ease-out ${i * 0.1}s`,
-                }}
-              >
-                {i < processSteps.length - 1 && (
-                  <div className="absolute left-1/2 top-12 hidden h-0.5 w-full bg-gradient-to-r from-white/20 to-transparent lg:block" />
-                )}
-                <div className="relative rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 text-white">
-                    {step.icon}
-                  </div>
-                  <div className="mt-4 text-xs font-bold uppercase tracking-wider text-white/40">
-                    Paso {step.step}
-                  </div>
-                  <h3 className="mt-2 font-display text-xl font-semibold text-white">
-                    {step.title}
-                  </h3>
-                  <p className="mt-2 text-sm text-white/60">
-                    {step.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Additional Features Grid */}
-      <section className="px-6 py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="text-center">
+          <div className="mb-16 text-center">
             <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950 md:text-4xl">
               Y mucho mas
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
-              Cada herramienta disenada para maximizar el rendimiento de tu contenido.
+            <p className="mx-auto mt-4 max-w-xl text-lg text-slate-600">
+              Cada herramienta disenada para maximizar tu rendimiento.
             </p>
           </div>
 
-          <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {additionalFeatures.map((feature, i) => (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {additionalFeatures.map((feature) => (
               <article
                 key={feature.title}
-                className="group rounded-2xl border border-slate-200 bg-white p-6 transition-all hover:border-slate-300 hover:shadow-lg"
+                className="group rounded-2xl border border-slate-200 bg-white p-6 transition-all hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/50"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors group-hover:bg-blue-100 group-hover:text-blue-600">
-                  {feature.icon}
-                </div>
+                <span className="text-3xl">{feature.icon}</span>
                 <h3 className="mt-4 font-display text-lg font-semibold text-slate-900">
                   {feature.title}
                 </h3>
@@ -664,22 +1236,14 @@ export default function FeaturesPage() {
             Empieza a predecir el rendimiento de tus videos
           </h2>
           <p className="mt-4 text-lg text-slate-300">
-            Subi tu primer video y obtene un analisis completo. Sin tarjeta de credito.
+            Primer analisis gratis. Sin tarjeta de credito.
           </p>
-          <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Link
-              href="/app"
-              className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-lg font-semibold text-slate-900 transition hover:bg-slate-100"
-            >
-              Analizar video gratis
-            </Link>
-            <Link
-              href="/precios"
-              className="inline-flex items-center justify-center rounded-full border border-white/20 px-8 py-4 text-lg font-semibold text-white transition hover:bg-white/10"
-            >
-              Ver planes
-            </Link>
-          </div>
+          <Link
+            href="/app"
+            className="mt-8 inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-lg font-semibold text-slate-900 shadow-2xl transition hover:bg-slate-100"
+          >
+            Analizar video gratis
+          </Link>
         </div>
       </section>
     </main>
