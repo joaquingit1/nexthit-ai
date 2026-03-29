@@ -279,9 +279,13 @@ function LandingSection({
 function AnimatedMetricNumber({
   value,
   active,
+  duration = 1500,
+  locale = "es-AR",
 }: {
   value: number;
   active: boolean;
+  duration?: number;
+  locale?: string;
 }) {
   const [displayValue, setDisplayValue] = useState(0);
 
@@ -292,12 +296,11 @@ function AnimatedMetricNumber({
     }
 
     let frame = 0;
-    const duration = 1500;
     const startedAt = performance.now();
 
     const tick = (now: number) => {
       const elapsed = clamp((now - startedAt) / duration, 0, 1);
-      const eased = elapsed * elapsed;
+      const eased = Math.pow(elapsed, 2.35);
       setDisplayValue(Math.round(value * eased));
       if (elapsed < 1) {
         frame = window.requestAnimationFrame(tick);
@@ -308,7 +311,7 @@ function AnimatedMetricNumber({
     return () => window.cancelAnimationFrame(frame);
   }, [active, value]);
 
-  return <>{displayValue}</>;
+  return <>{displayValue.toLocaleString(locale)}</>;
 }
 
 function AnimatedCurrencyCountdown({
@@ -977,8 +980,8 @@ export default function LandingPage() {
                 <span>personas sintéticas</span>
               </div>
               <div className="landing-hero-metric">
-                <strong><AnimatedMetricNumber value={1} active /></strong>
-                <span>curva predictiva de retención</span>
+                <strong><AnimatedMetricNumber value={240000} active duration={1650} locale="de-DE" /></strong>
+                <span>permutaciones de contextos de audiencia</span>
               </div>
               <div className="landing-hero-metric">
                 <strong><AnimatedCurrencyCountdown startValue={4000} endValue={0} active /></strong>
