@@ -2986,7 +2986,9 @@ function SavingsROIStep({
   savingsRoi: SavingsROI | undefined;
 }) {
   const [budget, setBudget] = useState(1000);
-  const multiplier = savingsRoi?.savings_multiplier ?? 3;
+  const rawMultiplier = savingsRoi?.savings_multiplier ?? 3;
+  const multiplier = Math.round(rawMultiplier * 10) / 10;
+  const savingsMultiple = Math.round((multiplier - 1) * 10) / 10;
   const savingsFromBudget = Math.round(budget * (multiplier - 1));
   const editCost = Math.round(budget);
   const reshootCost = Math.round(budget * multiplier);
@@ -3011,64 +3013,72 @@ function SavingsROIStep({
       />
 
       <section className="result-panel rounded-[2.2rem] px-6 py-7">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-lg font-bold text-white">
-            {multiplier}x
-          </span>
-          <div>
-            <p className="font-display text-lg font-semibold text-slate-950">Multiplo de ahorro</p>
-            <p className="text-sm text-slate-500">Por cada $1 en edicion, ahorrarias ${multiplier - 1} vs regrabar</p>
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-lg font-bold text-white">
+              {multiplier}x
+            </span>
+            <div>
+              <p className="font-display text-lg font-semibold text-slate-950">Multiplo de ahorro</p>
+              <p className="text-sm font-medium text-slate-900">Por cada $1 en edicion, ahorrarias ${savingsMultiple}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-6">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tiempo ahorrado</p>
+              <p className="font-display text-xl font-semibold text-slate-900">{savingsRoi?.time_saved_hours ?? 2}h</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Ahorro</p>
+              <p className="font-display text-xl font-semibold text-slate-900">{Math.round(((multiplier - 1) / multiplier) * 100)}%</p>
+            </div>
           </div>
         </div>
 
-        <div className="mt-8">
-          <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-            Tu presupuesto de edicion
-          </label>
-          <div className="mt-3 flex items-center gap-4">
-            <span className="text-lg font-semibold text-slate-400">$</span>
-            <input
-              type="range"
-              min={100}
-              max={10000}
-              step={100}
-              value={budget}
-              onChange={(e) => setBudget(Number(e.target.value))}
-              className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-slate-900"
-            />
-            <input
-              type="number"
-              min={100}
-              max={50000}
-              value={budget}
-              onChange={(e) => setBudget(Math.max(100, Number(e.target.value) || 100))}
-              className="w-24 rounded-xl border border-slate-200 bg-white px-3 py-2 text-right font-semibold text-slate-900 focus:border-slate-400 focus:outline-none"
-            />
-          </div>
+        <div className="mt-6 inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Presupuesto</span>
+          <span className="text-sm font-semibold text-slate-400">$</span>
+          <input
+            type="range"
+            min={100}
+            max={10000}
+            step={100}
+            value={budget}
+            onChange={(e) => setBudget(Number(e.target.value))}
+            className="h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-slate-200 accent-slate-900"
+          />
+          <input
+            type="number"
+            min={100}
+            max={50000}
+            value={budget}
+            onChange={(e) => setBudget(Math.max(100, Number(e.target.value) || 100))}
+            className="w-20 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-right text-sm font-semibold text-slate-900 focus:border-slate-400 focus:outline-none"
+          />
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-[1.2rem] border border-slate-200 bg-white px-4 py-4 text-center">
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="text-center">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
               Costo de edicion
             </p>
-            <p className="mt-2 font-display text-2xl font-semibold text-slate-900">
+            <p className="mt-1 font-display text-2xl font-semibold text-slate-900">
               ${editCost.toLocaleString()}
             </p>
           </div>
-          <div className="rounded-[1.2rem] border border-red-200 bg-red-50 px-4 py-4 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-red-400">
+          <div className="text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
               Costo de regrabar
             </p>
-            <p className="mt-2 font-display text-2xl font-semibold text-red-600">
+            <p className="mt-1 font-display text-2xl font-semibold text-red-500">
               ${reshootCost.toLocaleString()}
             </p>
           </div>
-          <div className="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-500">
+          <div className="text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
               Tu ahorro
             </p>
-            <p className="mt-2 font-display text-2xl font-semibold text-emerald-600">
+            <p className="mt-1 font-display text-2xl font-semibold text-emerald-500">
               ${savingsFromBudget.toLocaleString()}
             </p>
           </div>
@@ -3079,17 +3089,6 @@ function SavingsROIStep({
           <span className={`ml-4 flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${complexityColors[savingsRoi?.complexity_level ?? "low"]}`}>
             {complexityLabels[savingsRoi?.complexity_level ?? "low"]}
           </span>
-        </div>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[1rem] border border-slate-200 bg-white px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tiempo ahorrado</p>
-            <p className="mt-1 font-display text-xl font-semibold text-slate-900">{savingsRoi?.time_saved_hours ?? 2}h</p>
-          </div>
-          <div className="rounded-[1rem] border border-slate-200 bg-white px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Ahorro porcentual</p>
-            <p className="mt-1 font-display text-xl font-semibold text-slate-900">{Math.round(((multiplier - 1) / multiplier) * 100)}%</p>
-          </div>
         </div>
       </section>
     </section>
