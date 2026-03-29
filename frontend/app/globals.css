@@ -1293,100 +1293,6 @@ textarea {
     0 24px 60px rgba(3, 18, 30, 0.22);
 }
 
-.app-upload-shell {
-  background:
-    radial-gradient(circle at top left, rgba(96, 165, 250, 0.12), transparent 24%),
-    radial-gradient(circle at 86% 18%, rgba(34, 211, 238, 0.1), transparent 20%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(241, 247, 255, 0.82));
-  backdrop-filter: blur(16px);
-}
-
-.app-upload-shell::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0)),
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.72), transparent 42%);
-  pointer-events: none;
-}
-
-.app-upload-surface {
-  position: relative;
-}
-
-.app-point-grid {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: auto;
-}
-
-.app-point-grid-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.app-point-grid-node {
-  transition: transform 180ms ease-out;
-}
-
-.app-point-grid-dot {
-  fill: rgba(37, 99, 235, 0.22);
-  transition:
-    r 150ms ease-out,
-    fill 150ms ease-out,
-    opacity 150ms ease-out;
-}
-
-.app-point-grid-dot-active {
-  fill: rgba(37, 99, 235, 0.56);
-}
-
-.app-point-grid-cluster {
-  fill: none;
-  transform-origin: center;
-  pointer-events: none;
-}
-
-.app-point-grid-cluster-inner {
-  stroke: rgba(56, 189, 248, 0.22);
-  stroke-width: 1.15;
-  animation: appPointClusterPulse 2.2s ease-out infinite;
-}
-
-.app-point-grid-cluster-outer {
-  stroke: rgba(37, 99, 235, 0.14);
-  stroke-width: 1.2;
-  stroke-dasharray: 5 7;
-  animation: appPointClusterPulseOuter 2.6s ease-out infinite;
-}
-
-.app-point-grid-glow {
-  position: absolute;
-  border-radius: 999px;
-  filter: blur(40px);
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.app-point-grid-glow-one {
-  left: -8%;
-  top: 6%;
-  width: 260px;
-  height: 260px;
-  background: rgba(56, 189, 248, 0.14);
-}
-
-.app-point-grid-glow-two {
-  right: -4%;
-  bottom: 2%;
-  width: 240px;
-  height: 240px;
-  background: rgba(59, 130, 246, 0.12);
-}
-
 .signal-sheen {
   position: relative;
   overflow: hidden;
@@ -1786,31 +1692,6 @@ textarea {
   }
 }
 
-@keyframes appPointClusterPulse {
-  0%,
-  100% {
-    opacity: 0.35;
-    transform: scale(0.92);
-  }
-
-  50% {
-    opacity: 0.9;
-    transform: scale(1.06);
-  }
-}
-
-@keyframes appPointClusterPulseOuter {
-  0%,
-  100% {
-    opacity: 0.2;
-    transform: scale(0.88);
-  }
-
-  50% {
-    opacity: 0.64;
-    transform: scale(1.08);
-  }
-}
 
 @media (max-width: 1024px) {
   .landing-hero-metrics {

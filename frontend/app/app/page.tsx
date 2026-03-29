@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -13,156 +13,6 @@ import {
 } from "@/lib/analysis";
 import { buildBrowserBackendUrl, getPublicBackendBaseUrl } from "@/lib/backend";
 import { supabase } from "@/lib/supabase";
-
-function InteractivePointField() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
-  const [pointer, setPointer] = useState<{ x: number; y: number; active: boolean }>({
-    x: 0,
-    y: 0,
-    active: false,
-  });
-
-  useEffect(() => {
-    const node = containerRef.current;
-    if (!node) {
-      return;
-    }
-
-    const updateSize = () => {
-      const rect = node.getBoundingClientRect();
-      setSize({ width: rect.width, height: rect.height });
-    };
-
-    updateSize();
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(node);
-    window.addEventListener("resize", updateSize);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", updateSize);
-    };
-  }, []);
-
-  const dots = useMemo(() => {
-    if (!size.width || !size.height) {
-      return [];
-    }
-
-    const spacing = size.width < 640 ? 18 : size.width < 1100 ? 22 : 26;
-    const margin = size.width < 640 ? 14 : 20;
-    const cols = Math.max(10, Math.floor((size.width - margin * 2) / spacing));
-    const rows = Math.max(14, Math.floor((size.height - margin * 2) / spacing));
-    const computedSpacingX = cols > 1 ? (size.width - margin * 2) / (cols - 1) : spacing;
-    const computedSpacingY = rows > 1 ? (size.height - margin * 2) / (rows - 1) : spacing;
-
-    return Array.from({ length: cols * rows }, (_, index) => {
-      const col = index % cols;
-      const row = Math.floor(index / cols);
-      return {
-        id: `${col}-${row}`,
-        x: margin + col * computedSpacingX,
-        y: margin + row * computedSpacingY,
-      };
-    });
-  }, [size]);
-
-  const radius = size.width < 640 ? 78 : 118;
-  const clusterRadius = radius * 0.62;
-
-  return (
-    <div
-      ref={containerRef}
-      className="app-point-grid"
-      onPointerMove={(event) => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        setPointer({
-          x: event.clientX - rect.left,
-          y: event.clientY - rect.top,
-          active: true,
-        });
-      }}
-      onPointerLeave={() => setPointer((current) => ({ ...current, active: false }))}
-      aria-hidden="true"
-    >
-      <div className="app-point-grid-glow app-point-grid-glow-one" />
-      <div className="app-point-grid-glow app-point-grid-glow-two" />
-      <svg className="app-point-grid-svg" viewBox={`0 0 ${Math.max(size.width, 1)} ${Math.max(size.height, 1)}`}>
-        {pointer.active ? (
-          <>
-            <circle
-              cx={pointer.x}
-              cy={pointer.y}
-              r={clusterRadius * 0.72}
-              className="app-point-grid-cluster app-point-grid-cluster-inner"
-            />
-            <circle
-              cx={pointer.x}
-              cy={pointer.y}
-              r={clusterRadius}
-              className="app-point-grid-cluster app-point-grid-cluster-outer"
-            />
-          </>
-        ) : null}
-        {dots.map((dot) => {
-          const baseCircle = (
-            <circle
-              cx={dot.x}
-              cy={dot.y}
-              r="1.3"
-              className="app-point-grid-dot"
-            />
-          );
-
-          if (!pointer.active) {
-            return (
-              <g key={dot.id} className="app-point-grid-node">
-                {baseCircle}
-              </g>
-            );
-          }
-
-          const dx = dot.x - pointer.x;
-          const dy = dot.y - pointer.y;
-          const distance = Math.hypot(dx, dy);
-          if (distance >= radius || distance === 0) {
-            return (
-              <g key={dot.id} className="app-point-grid-node">
-                {baseCircle}
-              </g>
-            );
-          }
-
-          const force = (1 - distance / radius) * 11;
-          const translateX = (dx / distance) * force;
-          const translateY = (dy / distance) * force;
-          const intensity = 1 - distance / radius;
-          const extraRadius = intensity * 1.5;
-          const scale = 1 + intensity * 0.5;
-
-          return (
-            <g
-              key={dot.id}
-              className="app-point-grid-node"
-              style={{
-                transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
-                transformOrigin: `${dot.x}px ${dot.y}px`,
-              }}
-            >
-              <circle
-                cx={dot.x}
-                cy={dot.y}
-                r={1.3 + extraRadius}
-                className="app-point-grid-dot app-point-grid-dot-active"
-              />
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
 
 function storeAnalysisResult(router: ReturnType<typeof useRouter>, data: AnalysisResponse) {
   try {
@@ -370,172 +220,169 @@ export default function AppMain() {
   };
 
   return (
-    <div className="app-upload-shell relative min-h-[calc(100vh-3rem)] overflow-hidden rounded-[2.25rem] border border-white/70 px-6 py-8 shadow-[0_30px_90px_rgba(15,23,42,0.08)] sm:px-8">
-      <InteractivePointField />
-      <div className="app-upload-surface relative z-10 grid h-full min-h-0 gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+    <div className="grid min-h-[calc(100vh-3rem)] gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
       <section className="space-y-6">
-            <span className="inline-flex rounded-full border border-cyan-200 bg-white/80 px-4 py-2 text-sm font-semibold text-cyan-950">
-              NextHit
-            </span>
-            <h1 className="font-display text-4xl font-bold tracking-tight md:text-5xl">
-              Predeci el rendimiento de tu video antes de publicar.
-            </h1>
-            <p className="max-w-xl text-lg text-slate-600">
-              Subi tu video y obtene un analisis multimodal completo con prediccion de retencion, segmentacion de audiencia y recomendaciones accionables.
-            </p>
-            <div className="grid gap-4">
-              {[
-                {
-                  icon: (
-                    <svg className="h-6 w-6 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <circle cx="12" cy="12" r="10" />
-                      <circle cx="12" cy="12" r="6" />
-                      <circle cx="12" cy="12" r="2" />
-                    </svg>
-                  ),
-                  text: "Simulacion de 100 personas con diferentes perfiles"
-                },
-                {
-                  icon: (
-                    <svg className="h-6 w-6 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  ),
-                  text: "Gemini analiza lo que se ve y lo que se dice en el video"
-                },
-                {
-                  icon: (
-                    <svg className="h-6 w-6 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  ),
-                  text: "Curva de retencion proyectada segundo a segundo"
-                },
-                {
-                  icon: (
-                    <svg className="h-6 w-6 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                  ),
-                  text: "Recomendaciones concretas para mejorar tu contenido"
-                },
-              ].map((item) => (
-                <div
-                  key={item.text}
-                  className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-sm"
-                >
-                  <span className="flex-shrink-0">{item.icon}</span>
-                  <p className="text-slate-700">{item.text}</p>
-                </div>
-              ))}
+        <span className="inline-flex rounded-full border border-cyan-200 bg-white/80 px-4 py-2 text-sm font-semibold text-cyan-950">
+          NextHit
+        </span>
+        <h1 className="font-display text-4xl font-bold tracking-tight md:text-5xl">
+          Predeci el rendimiento de tu video antes de publicar.
+        </h1>
+        <p className="max-w-xl text-lg text-slate-600">
+          Subi tu video y obtene un analisis multimodal completo con prediccion de retencion, segmentacion de audiencia y recomendaciones accionables.
+        </p>
+        <div className="grid gap-4">
+          {[
+            {
+              icon: (
+                <svg className="h-6 w-6 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="6" />
+                  <circle cx="12" cy="12" r="2" />
+                </svg>
+              ),
+              text: "Simulacion de 100 personas con diferentes perfiles",
+            },
+            {
+              icon: (
+                <svg className="h-6 w-6 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              ),
+              text: "Gemini analiza lo que se ve y lo que se dice en el video",
+            },
+            {
+              icon: (
+                <svg className="h-6 w-6 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              ),
+              text: "Curva de retencion proyectada segundo a segundo",
+            },
+            {
+              icon: (
+                <svg className="h-6 w-6 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              ),
+              text: "Recomendaciones concretas para mejorar tu contenido",
+            },
+          ].map((item) => (
+            <div
+              key={item.text}
+              className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-sm"
+            >
+              <span className="flex-shrink-0">{item.icon}</span>
+              <p className="text-slate-700">{item.text}</p>
             </div>
-          </section>
-
-          <section className="card-surface rounded-[2rem] border border-white/70 p-8 shadow-soft">
-            <h2 className="font-display text-3xl font-bold text-ink">Analiza tu video</h2>
-            <p className="mt-2 text-slate-500">
-              Subi tu video y recibiras un informe detallado con metricas de rendimiento y recomendaciones.
-            </p>
-
-            <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Archivo de video
-                </label>
-                <label
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragging(false);
-                    const file = e.dataTransfer.files?.[0];
-                    if (file && file.type.startsWith("video/")) {
-                      setArchivo(file);
-                    }
-                  }}
-                  className={`flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all ${
-                    isDragging
-                      ? "border-blue-500 bg-blue-50"
-                      : archivo
-                        ? "border-emerald-300 bg-emerald-50"
-                        : "border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100"
-                  }`}
-                >
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={(event) => setArchivo(event.target.files?.[0] || null)}
-                  />
-                  {archivo ? (
-                    <>
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                        <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <p className="mt-3 text-sm font-medium text-slate-900">{archivo.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {(archivo.size / (1024 * 1024)).toFixed(2)} MB
-                      </p>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setArchivo(null);
-                        }}
-                        className="mt-3 text-xs font-medium text-slate-500 hover:text-slate-700"
-                      >
-                        Cambiar archivo
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200">
-                        <svg className="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                      </div>
-                      <p className="mt-3 text-sm font-medium text-slate-700">
-                        Arrastra tu video aqui
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        o hace click para seleccionar
-                      </p>
-                    </>
-                  )}
-                </label>
-              </div>
-
-              <div className="rounded-[1.6rem] border border-slate-200/80 bg-white/80 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-slate-900">{statusText}</p>
-                  <span className="text-sm font-semibold text-slate-500">
-                    {progressPercent}%
-                  </span>
-                </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full bg-slate-950 transition-all duration-500"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <p className="mt-3 text-sm text-slate-500">{streamNote}</p>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-ink px-6 py-4 text-lg font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? "Analizando..." : "Analizar video"}
-              </button>
-            </form>
+          ))}
+        </div>
       </section>
-      </div>
+
+      <section className="card-surface rounded-[2rem] border border-white/70 p-8 shadow-soft">
+        <h2 className="font-display text-3xl font-bold text-ink">Analiza tu video</h2>
+        <p className="mt-2 text-slate-500">
+          Subi tu video y recibiras un informe detallado con metricas de rendimiento y recomendaciones.
+        </p>
+
+        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Archivo de video
+            </label>
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file && file.type.startsWith("video/")) {
+                  setArchivo(file);
+                }
+              }}
+              className={`flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all ${
+                isDragging
+                  ? "border-blue-500 bg-blue-50"
+                  : archivo
+                    ? "border-emerald-300 bg-emerald-50"
+                    : "border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100"
+              }`}
+            >
+              <input
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={(event) => setArchivo(event.target.files?.[0] || null)}
+              />
+              {archivo ? (
+                <>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+                    <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="mt-3 text-sm font-medium text-slate-900">{archivo.name}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {(archivo.size / (1024 * 1024)).toFixed(2)} MB
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setArchivo(null);
+                    }}
+                    className="mt-3 text-xs font-medium text-slate-500 hover:text-slate-700"
+                  >
+                    Cambiar archivo
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200">
+                    <svg className="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                  </div>
+                  <p className="mt-3 text-sm font-medium text-slate-700">
+                    Arrastra tu video aqui
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    o hace click para seleccionar
+                  </p>
+                </>
+              )}
+            </label>
+          </div>
+
+          <div className="rounded-[1.6rem] border border-slate-200/80 bg-white/80 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-900">{statusText}</p>
+              <span className="text-sm font-semibold text-slate-500">
+                {progressPercent}%
+              </span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-slate-950 transition-all duration-500"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <p className="mt-3 text-sm text-slate-500">{streamNote}</p>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex w-full items-center justify-center rounded-2xl bg-ink px-6 py-4 text-lg font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "Analizando..." : "Analizar video"}
+          </button>
+        </form>
+      </section>
     </div>
   );
 }
