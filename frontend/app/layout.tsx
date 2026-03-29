@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit, Plus_Jakarta_Sans } from "next/font/google";
 
-import CustomCursor from "@/components/CustomCursor";
-
 import "./globals.css";
 
 const displayFont = Outfit({
@@ -31,7 +29,6 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={`${displayFont.variable} ${bodyFont.variable} bg-mist font-sans text-ink antialiased`}>
-        <CustomCursor />
         {children}
       </body>
     </html>

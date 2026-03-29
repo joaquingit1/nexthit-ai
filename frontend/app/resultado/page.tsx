@@ -73,9 +73,9 @@ const ANALYSIS_STEPS = [
   },
   {
     id: "audience",
-    title: "Insights de Audiencia",
+    title: "Insights",
     eyebrow: "Paso 3",
-    description: "Distribucion de genero, edad, paises, hobbies y nichos con mejor respuesta esperada.",
+    description: "Distribucion de genero, edad, paises y nichos con mejor respuesta esperada.",
   },
   {
     id: "retention",
@@ -1643,38 +1643,22 @@ function ScoreSummaryStep({
                   className="transition-[stroke-dashoffset] duration-700 ease-out"
                 />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Puntaje
-                </p>
-                <p
-                  className="mt-2 font-display text-6xl font-semibold tracking-[-0.08em] md:text-7xl"
-                  style={{ color: scoreColor }}
-                >
-                  {displayScore}
-                </p>
-                <p className="mt-2 max-w-[9rem] text-[11px] font-medium leading-4 text-slate-500">
-                  {analysis.summary.overallLabel}
-                </p>
-              </div>
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {analysis.summary.pillars.map((pillar) => (
-              <div
-                key={pillar.label}
-                className="rounded-[1.4rem] border border-slate-200/80 bg-white/80 px-4 py-4"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  {pillar.label}
-                </p>
-                <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] text-slate-950">
-                  {pillar.score}
-                </p>
-                <p className="mt-2 min-h-[72px] text-sm leading-6 text-slate-600">{pillar.note}</p>
-              </div>
-            ))}
+          <div className="mt-6 flex flex-col items-center text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Puntaje
+            </p>
+            <p
+              className="mt-2 font-display text-6xl font-semibold tracking-[-0.08em] md:text-7xl"
+              style={{ color: scoreColor }}
+            >
+              {displayScore}
+            </p>
+            <p className="mt-2 text-sm font-medium text-slate-500">
+              {analysis.summary.overallLabel}
+            </p>
           </div>
         </article>
 
@@ -2698,8 +2682,8 @@ function AudienceInsightsStep({
   return (
     <section className="space-y-8">
       <StepIntro
-        title="Insights de audiencia"
-        description="Lectura tipo plataforma social sobre quienes mejor responden al video: genero, edad, paises, hobbies y nichos."
+        title="Insights"
+        description="Lectura sobre quienes mejor responden al video: genero, edad, paises y nichos."
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
@@ -2743,55 +2727,23 @@ function AudienceInsightsStep({
         </section>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <section className="result-panel rounded-[2.2rem] px-6 py-7">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Paises con mejor performance esperada</p>
-          <div className="mt-5">{renderBars(countryBreakdown.slice(0, 6))}</div>
-        </section>
+      <section className="result-panel rounded-[2.2rem] px-6 py-7">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Paises con mejor performance esperada</p>
+        <div className="mt-5">{renderBars(countryBreakdown.slice(0, 6))}</div>
+      </section>
 
+      {topNiches.length ? (
         <section className="result-panel rounded-[2.2rem] px-6 py-7">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Contextos destacados</p>
-          <div className="mt-5 grid gap-3">
-            {[
-              { title: "Primario", value: audience.primaryAudience },
-              { title: "Secundario", value: audience.secondaryAudience },
-            ].map((item) => (
-              <div key={item.title} className="rounded-2xl border border-slate-200/80 bg-white/85 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{item.title}</p>
-                <p className="mt-2 text-base font-semibold text-slate-900">{item.value}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Top nichos con mejor ajuste</p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            {topNiches.map((item) => (
+              <div key={item.label} className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
+                {item.label} · {item.percentage}%
               </div>
             ))}
           </div>
         </section>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        {topHobbies.length ? (
-          <section className="result-panel rounded-[2.2rem] px-6 py-7">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Top hobbies a targetear</p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              {topHobbies.map((item) => (
-                <div key={item.label} className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700">
-                  {item.label} Â· {item.percentage}%
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {topNiches.length ? (
-          <section className="result-panel rounded-[2.2rem] px-6 py-7">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Top nichos con mejor ajuste</p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              {topNiches.map((item) => (
-                <div key={item.label} className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
-                  {item.label} Â· {item.percentage}%
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
-      </div>
+      ) : null}
     </section>
   );
 }
