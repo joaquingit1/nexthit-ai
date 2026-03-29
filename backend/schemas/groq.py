@@ -383,14 +383,19 @@ def strategy_outputs_schema() -> dict[str, Any]:
 
 
 def script_generation_schema() -> dict[str, Any]:
-    script_section = {
+    beat = {
         "type": "object",
         "additionalProperties": False,
-        "required": ["text", "visualCue", "duration"],
+        "required": ["start", "end", "spokenLine", "visualCue", "purpose"],
         "properties": {
-            "text": {"type": "string"},
+            "start": {"type": "number"},
+            "end": {"type": "number"},
+            "spokenLine": {"type": "string"},
             "visualCue": {"type": "string"},
-            "duration": {"type": "string"},
+            "purpose": {
+                "type": "string",
+                "enum": ["hook", "desarrollo", "prueba", "cta", "cierre"],
+            },
         },
     }
     creative_script = {
@@ -400,33 +405,23 @@ def script_generation_schema() -> dict[str, Any]:
             "id",
             "name",
             "targetAudience",
-            "strategy",
-            "script",
-            "fullScript",
-            "expectedRetention",
+            "hookAngle",
             "whyItWorks",
             "addressedIssues",
+            "beats",
         ],
         "properties": {
             "id": {"type": "string"},
             "name": {"type": "string"},
             "targetAudience": {"type": "string"},
-            "strategy": {"type": "string"},
-            "script": {
-                "type": "object",
-                "additionalProperties": False,
-                "required": ["hook", "development", "proof", "cta"],
-                "properties": {
-                    "hook": script_section,
-                    "development": script_section,
-                    "proof": script_section,
-                    "cta": script_section,
-                },
-            },
-            "fullScript": {"type": "string"},
-            "expectedRetention": {"type": "string"},
+            "hookAngle": {"type": "string"},
             "whyItWorks": {"type": "string"},
             "addressedIssues": {"type": "array", "items": {"type": "string"}},
+            "beats": {
+                "type": "array",
+                "items": beat,
+                "minItems": 3,
+            },
         },
     }
     return {

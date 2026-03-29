@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from typing import Any
 
 import httpx
@@ -20,6 +21,12 @@ JSON_SCHEMA_BEST_EFFORT_MODELS = {
     "meta-llama/llama-4-scout-17b-16e-instruct",
     "meta-llama/llama-4-maverick-17b-128e-instruct",
 }
+
+
+def _safe_log(message: str) -> None:
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    safe_message = message.encode(encoding, errors="replace").decode(encoding, errors="replace")
+    print(safe_message)
 
 
 def get_json_text_from_groq(payload: dict[str, Any]) -> str:
@@ -93,7 +100,7 @@ async def call_groq_chat_json(
             json=request_payload,
         )
     if response.status_code >= 400:
-        print(
+        _safe_log(
             f"Groq JSON call failed for schema={schema_name} model={resolved_model} "
             f"status={response.status_code} body={response.text[:1200]}"
         )
@@ -125,7 +132,7 @@ async def call_groq_text_completion(
             json=request_payload,
         )
     if response.status_code >= 400:
-        print(
+        _safe_log(
             f"Groq text call failed for model={request_payload['model']} "
             f"status={response.status_code} body={response.text[:1200]}"
         )

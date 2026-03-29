@@ -8,6 +8,7 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -18,6 +19,8 @@ import {
   type AnalysisResponse,
   type AudienceDistributionItem,
   type ChangePlan,
+  type CreativeScript,
+  type CreativeScriptBeat,
   type MediaTargetingRecommendation,
   type PersonaResult,
   type PersonaSegment,
@@ -26,10 +29,10 @@ import {
   type TargetAudience,
   type TimelineInsightItem,
   type TranscriptSegment,
-  type VersionStrategy,
   type ViewerSimulation,
 } from "@/lib/analysis";
 import { buildBrowserBackendUrl } from "@/lib/backend";
+import RetentionMetricsPanel from "@/components/RetentionMetricsPanel";
 
 type ViewerMode = "all" | "average";
 
@@ -58,6 +61,48 @@ type SocialPost = {
   post: string;
 };
 
+const SCORE_BREAKDOWN_FIELDS = [
+  ["overall_score", "Puntaje general"],
+  ["hook_score", "Hook"],
+  ["clarity_score", "Claridad"],
+  ["pacing_score", "Ritmo"],
+  ["audio_score", "Audio"],
+  ["visual_score", "Visual"],
+  ["novelty_score", "Novedad"],
+  ["cta_score", "CTA"],
+  ["platform_fit_score", "Encaje de plataforma"],
+  ["viral_score", "Potencial viral"],
+  ["conversion_score", "Conversion"],
+  ["ad_readiness_score", "Ad readiness"],
+] as const;
+
+const SCORE_BREAKDOWN_EXPLANATIONS: Record<string, string> = {
+  "Puntaje general":
+    "Evaluación global basada en el desempeño creativo, la retención estimada de la audiencia y las señales clave del contenido.",
+  Hook:
+    "Mide qué tan efectiva es la apertura para captar atención inmediata, considerando creatividad, retención simulada y primeras señales del video.",
+  Claridad:
+    "Evalúa qué tan fácil es entender el mensaje, tomando en cuenta la ejecución creativa, la narrativa y la interpretación del espectador.",
+  Ritmo:
+    "Indica qué tan bien la edición mantiene el impulso y el interés del espectador después del inicio.",
+  Audio:
+    "Analiza la calidad y uso del sonido (voz, música, efectos) en relación con el impacto creativo y la retención.",
+  Visual:
+    "Evalúa la calidad visual, composición y dinamismo de las imágenes en función de su capacidad para sostener la atención.",
+  Novedad:
+    "Mide el nivel de originalidad del concepto y qué tan fresco o inesperado resulta para la audiencia.",
+  CTA:
+    "Evalúa la claridad y efectividad del llamado a la acción dentro del flujo del contenido.",
+  "Encaje de plataforma":
+    "Mide qué tan bien el contenido se adapta a formatos como TikTok, Instagram Reels y YouTube Shorts en estilo, ritmo y formato.",
+  "Potencial viral":
+    "Estima la probabilidad de generar alto alcance basada en señales creativas y retención proyectada.",
+  Conversion:
+    "Mide la capacidad del contenido para generar acciones del usuario (clics, follows, compras) a partir de su ejecución.",
+  "Ad readiness":
+    "Indica qué tan listo está el video para usarse en campañas pagas, considerando calidad creativa, claridad y performance esperado.",
+};
+
 const ANALYSIS_STEPS = [
   {
     id: "score",
@@ -66,22 +111,28 @@ const ANALYSIS_STEPS = [
     description: "Puntaje general del video con metricas clave de rendimiento y resumen ejecutivo.",
   },
   {
+    id: "metrics",
+    title: "Metricas",
+    eyebrow: "Paso 2",
+    description: "Curva de retencion completa, simulacion de audiencia y lectura segundo a segundo.",
+  },
+  {
     id: "raw-personas",
     title: "AI Personas",
-    eyebrow: "Paso 2",
+    eyebrow: "Paso 3",
     description: "Dataset completo de audiencia simulada: perfil demografico, momento de abandono y motivo.",
   },
   {
     id: "changes",
     title: "Acciones",
-    eyebrow: "Paso 3",
+    eyebrow: "Paso 4",
     description: "Lista de tareas concretas para mejorar el rendimiento del video.",
   },
   {
     id: "versions",
     title: "Variantes Creativas",
-    eyebrow: "Paso 4",
-    description: "Tres propuestas de iteracion del video optimizadas para diferentes objetivos.",
+    eyebrow: "Paso 5",
+    description: "Tres guiones nuevos A/B/C, reescritos para corregir el video actual.",
   },
 ] as const;
 
@@ -971,42 +1022,102 @@ function buildMediaTargetingFallback(
   ];
 }
 
-function buildVersionStrategiesFallback(
-  analysis: AnalysisResponse["analysis"],
-  plan: ChangePlan,
-): VersionStrategy[] {
-  const primary = analysis.targetAudience?.primaryAudience ?? analysis.graph.bestFitAudience;
-  const secondary = analysis.targetAudience?.secondaryAudience ?? "Audiencia secundaria";
-  const thirdAudience =
-    analysis.targetAudience?.hobbies?.[0]?.label ?? "Audiencias orientadas a storytelling";
-  const keyFix = plan.actions[0]?.fix ?? "Abrir con resultado inmediato.";
+function parseLegacyDurationRange(duration: string | undefined) {
+  const matches = (duration ?? "").match(/(\d+(?:\.\d+)?)s/g) ?? [];
+  const values = matches.map((value) => Number.parseFloat(value.replace("s", ""))).filter(Number.isFinite);
+  if (values.length >= 2) {
+    return { start: values[0] ?? 0, end: values[1] ?? values[0] ?? 0 };
+  }
+  return null;
+}
 
-  return [
-    {
-      id: "A",
-      name: "VersiÃ³n A",
-      targetAudience: primary,
-      direction: "Apertura de cortes rapidos para capturar atencion desde el primer frame.",
-      structuralChanges: ["Abrir con el resultado", keyFix, "Meter un quiebre de patron antes del segundo 3"],
-      whyItShouldResonate: "Esta version maximiza velocidad de comprension para quienes deciden quedarse o irse en muy pocos frames.",
-    },
-    {
-      id: "B",
-      name: "VersiÃ³n B",
-      targetAudience: secondary,
-      direction: "Proof-heavy edit para perfiles mas racionales o escepticos.",
-      structuralChanges: ["Mostrar evidencia temprano", "Reducir claims abstractos", "Mover la llamada a la accion junto al punto de prueba"],
-      whyItShouldResonate: "Esta direccion funciona mejor cuando la audiencia necesita prueba visible para seguir mirando.",
-    },
-    {
-      id: "C",
-      name: "VersiÃ³n C",
-      targetAudience: thirdAudience,
-      direction: "Aspiration-led edit con construccion narrativa mas emocional.",
-      structuralChanges: ["Reordenar el relato", "Sostener tension en mitad del video", "Cerrar con payoff memorable"],
-      whyItShouldResonate: "Busca capturar audiencias que retienen mas cuando el video construye contexto y deseo, no solo informacion.",
-    },
-  ];
+function normalizeCreativeScriptBeats(
+  script: CreativeScript,
+  durationSeconds: number,
+): CreativeScriptBeat[] {
+  const safeDuration = Math.max(durationSeconds, 1);
+  const rawBeats =
+    script.beats?.length
+      ? script.beats
+      : [
+          script.script?.hook
+            ? {
+                start: parseLegacyDurationRange(script.script.hook.duration)?.start ?? 0,
+                end: parseLegacyDurationRange(script.script.hook.duration)?.end ?? 3,
+                spokenLine: script.script.hook.text,
+                visualCue: script.script.hook.visualCue,
+                purpose: "hook",
+              }
+            : null,
+          script.script?.development
+            ? {
+                start: parseLegacyDurationRange(script.script.development.duration)?.start ?? 3,
+                end: parseLegacyDurationRange(script.script.development.duration)?.end ?? 8,
+                spokenLine: script.script.development.text,
+                visualCue: script.script.development.visualCue,
+                purpose: "desarrollo",
+              }
+            : null,
+          script.script?.proof
+            ? {
+                start: parseLegacyDurationRange(script.script.proof.duration)?.start ?? 8,
+                end: parseLegacyDurationRange(script.script.proof.duration)?.end ?? 12,
+                spokenLine: script.script.proof.text,
+                visualCue: script.script.proof.visualCue,
+                purpose: "prueba",
+              }
+            : null,
+          script.script?.cta
+            ? {
+                start: parseLegacyDurationRange(script.script.cta.duration)?.start ?? 12,
+                end: parseLegacyDurationRange(script.script.cta.duration)?.end ?? safeDuration,
+                spokenLine: script.script.cta.text,
+                visualCue: script.script.cta.visualCue,
+                purpose: "cta",
+              }
+            : null,
+        ].filter(Boolean) as CreativeScriptBeat[];
+
+  let previousEnd = 0;
+  const normalized = rawBeats
+    .map((beat) => {
+      const start = Math.max(previousEnd, Math.min(beat.start ?? previousEnd, safeDuration));
+      const end = Math.max(start + 0.3, Math.min(beat.end ?? start + 1, safeDuration));
+      previousEnd = end;
+      return {
+        start: Math.round(start * 10) / 10,
+        end: Math.round(end * 10) / 10,
+        spokenLine: beat.spokenLine?.trim() ?? "",
+        visualCue: beat.visualCue?.trim() ?? "",
+        purpose: beat.purpose,
+      } satisfies CreativeScriptBeat;
+    })
+    .filter((beat) => beat.spokenLine);
+
+  if (normalized.length && normalized[normalized.length - 1]) {
+    normalized[normalized.length - 1]!.end = Math.max(
+      normalized[normalized.length - 1]!.end,
+      Math.round(safeDuration * 10) / 10,
+    );
+  }
+
+  return normalized;
+}
+
+function normalizeCreativeScripts(
+  scripts: CreativeScript[] | undefined,
+  durationSeconds: number,
+): CreativeScript[] {
+  return (scripts ?? [])
+    .map((script, index) => ({
+      ...script,
+      id: script.id || String.fromCharCode(65 + index),
+      name: script.name || `Guion ${String.fromCharCode(65 + index)}`,
+      hookAngle: script.hookAngle || script.strategy || "Abrir con una promesa mas clara y mas fuerte.",
+      addressedIssues: script.addressedIssues ?? [],
+      beats: normalizeCreativeScriptBeats(script, durationSeconds),
+    }))
+    .filter((script) => script.beats.length > 0);
 }
 
 function buildSavingsRoiFallback(
@@ -1120,6 +1231,42 @@ La audiencia mas fuerte fue ${primaryAudience}, el problema principal estuvo en 
 Asi deberia sentirse el testing creativo antes de gastar un dolar.`,
     },
   ] satisfies SocialPost[];
+}
+
+function normalizeMetricName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function getScoreBreakdown(analysis: AnalysisResponse["analysis"]) {
+  const rawScores = analysis.scoreSummary ?? analysis.videoAnalysis?.scores ?? null;
+
+  if (!rawScores) {
+    return [];
+  }
+
+  const explanations = new Map(
+    (analysis.findings.metrics ?? []).map((metric) => [
+      normalizeMetricName(metric.name),
+      metric.explanation,
+    ]),
+  );
+
+  return SCORE_BREAKDOWN_FIELDS.map(([key, label]) => ({
+    key,
+    label,
+    score: rawScores[key],
+    explanation:
+      explanations.get(normalizeMetricName(label)) ??
+      explanations.get(normalizeMetricName(label.replace("Potencial ", ""))) ??
+      explanations.get(normalizeMetricName(label.replace("Encaje de ", ""))) ??
+      SCORE_BREAKDOWN_EXPLANATIONS[label] ??
+      "Sub-score derivado del analisis creativo, la retencion simulada y las senales del video.",
+  })).filter((item) => typeof item.score === "number");
 }
 
 function EmptyState() {
@@ -1479,6 +1626,7 @@ function AnalysisStepper({
 }) {
   const shortTitles: Record<string, string> = {
     "Puntaje y Resumen": "Puntaje",
+    Metricas: "Metricas",
     "100 Personas Sinteticas": "Personas",
     "Analisis por Segmento": "Segmentos",
     "Curva de Retencion": "Retencion",
@@ -1488,6 +1636,7 @@ function AnalysisStepper({
 
   const stepIcons: Record<string, React.ReactNode> = {
     score: <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />,
+    metrics: <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v18m0 0h18m-18 0l5.25-5.25 3.75 3.75L20.25 9" />,
     "raw-personas": <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />,
     audience: <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 6h9m-9 6h9m-9 6h5.25M5.25 3.75h13.5A1.5 1.5 0 0120.25 5.25v13.5a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5V5.25a1.5 1.5 0 011.5-1.5z" />,
     retention: <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />,
@@ -1560,7 +1709,9 @@ function ScoreSummaryStep({
 }) {
   const targetScore = analysis.summary.overallScore;
   const [displayScore, setDisplayScore] = useState(0);
+  const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const scoreColor = getScoreColor(targetScore);
+  const scoreBreakdown = useMemo(() => getScoreBreakdown(analysis), [analysis]);
   const displaySummary = hasPlaceholderSummary(analysis.summary.videoSummary)
     ? buildSummaryFromTranscript(analysis)
     : analysis.summary.videoSummary ?? analysis.summary.narrative;
@@ -1648,6 +1799,18 @@ function ScoreSummaryStep({
             <p className="text-lg font-semibold text-slate-700">
               {analysis.summary.overallLabel}
             </p>
+            {scoreBreakdown.length ? (
+              <button
+                type="button"
+                onClick={() => setIsBreakdownOpen(true)}
+                className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.75 3v18m0 0h18m-18 0l5.25-5.25 3.75 3.75L20.25 9" />
+                </svg>
+                Breakdown
+              </button>
+            ) : null}
           </div>
         </article>
 
@@ -1664,10 +1827,10 @@ function ScoreSummaryStep({
 
           <div className="mt-8 grid gap-4 md:grid-cols-2">
             {[
-              ["DuraciÃ³n del clip", analysis.clip.durationLabel],
+              ["Duración del clip", analysis.clip.durationLabel],
               ["Mejor encaje de plataforma", analysis.crossPost.platforms[0]?.platform ?? "Instagram Reels"],
               ["Audiencia principal", analysis.graph.bestFitAudience],
-              ["Abandono mÃ¡s comÃºn", analysis.graph.mostCommonDropOff],
+              ["Abandono más común", analysis.graph.mostCommonDropOff],
             ].map(([label, value]) => (
               <div key={label} className="rounded-[1.4rem] border border-slate-200/80 bg-white/80 px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
@@ -1679,6 +1842,79 @@ function ScoreSummaryStep({
           </div>
         </article>
       </section>
+
+      {isBreakdownOpen && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/20 px-4 backdrop-blur-sm"
+              onClick={() => setIsBreakdownOpen(false)}
+            >
+              <div
+                className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                      Breakdown del puntaje
+                    </p>
+                    <h3 className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] text-slate-950">
+                      Sub-scores del video
+                    </h3>
+                    <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
+                      Este desglose muestra como se compone el puntaje total sobre cada metrica creativa del video.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsBreakdownOpen(false)}
+                    className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="mt-6 grid gap-4 md:grid-cols-2">
+                  {scoreBreakdown.map((item) => {
+                    const colorClass =
+                      item.score >= 80
+                        ? "text-emerald-600"
+                        : item.score >= 60
+                          ? "text-amber-500"
+                          : "text-rose-500";
+
+                    return (
+                      <article
+                        key={item.key}
+                        className="rounded-[1.4rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                              {item.label}
+                            </p>
+                            <p className={`mt-2 font-display text-3xl font-semibold tracking-[-0.05em] ${colorClass}`}>
+                              {item.score}
+                            </p>
+                          </div>
+                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            / 100
+                          </span>
+                        </div>
+                        <p className="mt-4 text-sm leading-7 text-slate-600">
+                          {item.explanation}
+                        </p>
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }
@@ -2189,10 +2425,7 @@ function RawPersonasStep({
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
               Dataset de audiencia sintetica
             </p>
-            <h3 className="mt-3 font-display text-4xl font-semibold tracking-[-0.06em] text-slate-950">
-              {personas.length} personas simuladas
-            </h3>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-3 text-sm text-slate-500">
               Mostrando {activePersonas.length === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + PERSONAS_PER_PAGE, activePersonas.length)} de {activePersonas.length}
             </p>
           </div>
@@ -2301,7 +2534,7 @@ function RawPersonasStep({
                       <span className="text-slate-600">{persona.liked_moment ?? "Conecta con la promesa"}</span>
                     </div>
                     <div>
-                      <span className="text-rose-500">âˆ’</span>{" "}
+                      <span className="text-rose-500">-</span>{" "}
                       <span className="text-slate-600">{persona.disliked_moment ?? persona.why_they_left}</span>
                     </div>
                   </div>
@@ -3087,65 +3320,224 @@ function MediaTargetingStep({
   );
 }
 
-function VersionStrategiesStep({
-  versions,
+function formatBeatRange(start: number, end: number) {
+  return `${formatTimestampLabel(start)} - ${formatTimestampLabel(end)}`;
+}
+
+function CreativeScriptsStep({
+  scripts,
 }: {
-  versions: VersionStrategy[];
+  scripts: CreativeScript[];
 }) {
-  const versionColors = [
-    { bg: "bg-emerald-50", border: "border-emerald-200", accent: "bg-emerald-500", label: "text-emerald-600" },
-    { bg: "bg-blue-50", border: "border-blue-200", accent: "bg-blue-500", label: "text-blue-600" },
-    { bg: "bg-violet-50", border: "border-violet-200", accent: "bg-violet-500", label: "text-violet-600" },
+  const [selectedId, setSelectedId] = useState(scripts[0]?.id ?? "A");
+
+  useEffect(() => {
+    setSelectedId(scripts[0]?.id ?? "A");
+  }, [scripts]);
+
+  const activeScript = scripts.find((script) => script.id === selectedId) ?? scripts[0];
+
+  const scriptColors = [
+    {
+      border: "border-sky-200",
+      surface: "from-sky-50/90 via-white to-sky-100/70",
+      accent: "bg-sky-500",
+      text: "text-sky-700",
+      chip: "bg-sky-100 text-sky-700",
+    },
+    {
+      border: "border-emerald-200",
+      surface: "from-emerald-50/90 via-white to-emerald-100/70",
+      accent: "bg-emerald-500",
+      text: "text-emerald-700",
+      chip: "bg-emerald-100 text-emerald-700",
+    },
+    {
+      border: "border-violet-200",
+      surface: "from-violet-50/90 via-white to-violet-100/70",
+      accent: "bg-violet-500",
+      text: "text-violet-700",
+      chip: "bg-violet-100 text-violet-700",
+    },
   ];
+
+  if (!scripts.length) {
+    return (
+      <section className="space-y-8">
+        <StepIntro
+          title="Variantes creativas"
+          description="Tres guiones nuevos A/B/C escritos para corregir el video actual."
+        />
+
+        <section className="result-panel rounded-[2rem] px-6 py-8">
+          <div className="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center">
+            <p className="font-display text-2xl font-semibold tracking-[-0.04em] text-slate-950">
+              Todavia no hay guiones regenerados para este analisis
+            </p>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+              Esta seccion ahora usa `creativeScripts` reales del backend. Si este resultado viene de una corrida anterior,
+              hace falta volver a analizar el video para generar los tres guiones timestamped.
+            </p>
+          </div>
+        </section>
+      </section>
+    );
+  }
+
+  const activeIndex = Math.max(
+    0,
+    scripts.findIndex((script) => script.id === activeScript?.id),
+  );
+  const activeColors = scriptColors[activeIndex % scriptColors.length]!;
 
   return (
     <section className="space-y-8">
       <StepIntro
         title="Variantes creativas"
-        description="Tres versiones alternativas del video para testear."
+        description="Tres guiones nuevos A/B/C escritos para corregir el video actual."
       />
 
       <div className="grid gap-4 xl:grid-cols-3">
-        {versions.map((version, index) => {
-          const colors = versionColors[index % 3];
+        {scripts.map((script, index) => {
+          const colors = scriptColors[index % scriptColors.length]!;
+          const isActive = activeScript?.id === script.id;
+
           return (
-            <article key={version.id} className={`result-panel rounded-[1.8rem] border-2 ${colors.border} ${colors.bg} px-5 py-5`}>
-              <div className="flex items-center justify-between">
-                <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${colors.accent} text-sm font-bold text-white`}>
-                  {version.id}
-                </span>
-                <svg className={`h-5 w-5 ${colors.label}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                </svg>
-              </div>
-              <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
-                {version.name}
-              </h3>
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1">
-                <span className="text-xs font-semibold text-slate-600">{version.targetAudience}</span>
-              </div>
-              <p className="mt-3 text-sm leading-7 text-slate-600">{version.direction}</p>
-              <div className="mt-5">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Cambios estructurales</p>
-                <div className="mt-2 space-y-2">
-                  {version.structuralChanges.map((item) => (
-                    <div key={item} className="flex items-start gap-2 rounded-xl bg-white/60 px-3 py-2">
-                      <svg className={`mt-0.5 h-4 w-4 flex-shrink-0 ${colors.label}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
-                      </svg>
-                      <span className="text-sm text-slate-700">{item}</span>
-                    </div>
-                  ))}
+            <button
+              key={script.id}
+              type="button"
+              onClick={() => setSelectedId(script.id)}
+              className={`text-left transition ${
+                isActive ? "translate-y-[-2px]" : "opacity-90 hover:opacity-100"
+              }`}
+            >
+              <article
+                className={`result-panel rounded-[1.8rem] border bg-gradient-to-br ${colors.surface} px-5 py-5 ${
+                  isActive ? colors.border : "border-slate-200/80"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full ${colors.accent} text-sm font-bold text-white`}>
+                    {script.id}
+                  </span>
+                  <span className="rounded-full border border-white/70 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                    Variante
+                  </span>
                 </div>
-              </div>
-              <div className="mt-4 rounded-xl bg-white/80 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Por que funciona</p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">{version.whyItShouldResonate}</p>
-              </div>
-            </article>
+                <h3 className="mt-4 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
+                  {script.name}
+                </h3>
+                <p className="mt-2 text-sm leading-7 text-slate-600">{script.hookAngle}</p>
+                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1.5">
+                  <span className="text-xs font-semibold text-slate-700">{script.targetAudience}</span>
+                </div>
+              </article>
+            </button>
           );
         })}
       </div>
+
+      {activeScript ? (
+        <section
+          className={`result-panel rounded-[2.2rem] border bg-gradient-to-br ${activeColors.surface} ${activeColors.border} px-6 py-6`}
+        >
+          <div className="grid gap-6 xl:grid-cols-[0.34fr_0.66fr]">
+            <div className="space-y-4">
+              <div className="rounded-[1.6rem] border border-white/70 bg-white/85 px-5 py-5 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.25)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Audiencia objetivo
+                </p>
+                <p className="mt-3 font-display text-xl font-semibold tracking-[-0.04em] text-slate-950">
+                  {activeScript.targetAudience}
+                </p>
+              </div>
+
+              <div className="rounded-[1.6rem] border border-white/70 bg-white/85 px-5 py-5 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.25)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Angulo de apertura
+                </p>
+                <p className="mt-3 text-sm leading-7 text-slate-700">
+                  {activeScript.hookAngle}
+                </p>
+              </div>
+
+              <div className="rounded-[1.6rem] border border-white/70 bg-white/85 px-5 py-5 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.25)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Errores que corrige
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {activeScript.addressedIssues.length ? (
+                    activeScript.addressedIssues.map((issue) => (
+                      <span
+                        key={issue}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${activeColors.chip}`}
+                      >
+                        {issue}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-slate-500">Sin detalle adicional.</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-[1.6rem] border border-white/70 bg-slate-950 px-5 py-5 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.5)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Por que deberia funcionar
+                </p>
+                <p className="mt-3 text-sm leading-7 text-slate-100/90">
+                  {activeScript.whyItWorks}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-[1.8rem] border border-white/70 bg-white/88 p-5 shadow-[0_26px_60px_-38px_rgba(15,23,42,0.35)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                    Guion beat por beat
+                  </p>
+                  <p className="mt-2 font-display text-2xl font-semibold tracking-[-0.05em] text-slate-950">
+                    {activeScript.name}
+                  </p>
+                </div>
+                <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${activeColors.chip}`}>
+                  <span>{activeScript.beats.length} beats</span>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                {activeScript.beats.map((beat, index) => (
+                  <article
+                    key={`${activeScript.id}-${index}-${beat.start}`}
+                    className="grid gap-3 rounded-[1.3rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4 md:grid-cols-[118px_minmax(0,1fr)]"
+                  >
+                    <div>
+                      <p className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${activeColors.chip}`}>
+                        {formatBeatRange(beat.start, beat.end)}
+                      </p>
+                      {beat.purpose ? (
+                        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                          {beat.purpose}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div>
+                      <p className="text-base font-semibold leading-8 text-slate-950">
+                        “{beat.spokenLine}”
+                        {beat.visualCue ? (
+                          <span className="font-medium text-slate-500"> ({beat.visualCue})</span>
+                        ) : null}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
     </section>
   );
 }
@@ -3527,13 +3919,16 @@ function DashboardContent() {
     return analysis.analysis.mediaTargeting ?? buildMediaTargetingFallback(analysis.analysis, changePlan);
   }, [analysis, changePlan]);
 
-  const versionStrategies = useMemo(() => {
-    if (!analysis || !changePlan) {
-      return [] as VersionStrategy[];
+  const creativeScripts = useMemo(() => {
+    if (!analysis) {
+      return [] as CreativeScript[];
     }
 
-    return analysis.analysis.versionStrategies ?? buildVersionStrategiesFallback(analysis.analysis, changePlan);
-  }, [analysis, changePlan]);
+    return normalizeCreativeScripts(
+      analysis.analysis.creativeScripts,
+      analysis.analysis.graph.durationSeconds,
+    );
+  }, [analysis]);
 
   const savingsRoi = useMemo(() => {
     if (!analysis || !changePlan) {
@@ -3675,6 +4070,10 @@ function DashboardContent() {
             <section key={step.id} className="result-stage-enter space-y-8 rounded-[2.4rem] px-1 py-2">
               {step.id === "score" ? <ScoreSummaryStep analysis={analysis.analysis} /> : null}
 
+              {step.id === "metrics" ? (
+                <RetentionMetricsPanel analysis={analysis.analysis} />
+              ) : null}
+
               {step.id === "raw-personas" ? (
                 <RawPersonasStep personas={rawPersonas} />
               ) : null}
@@ -3682,7 +4081,7 @@ function DashboardContent() {
               {step.id === "changes" ? <ChangePlanStep plan={changePlan} /> : null}
 
               {step.id === "versions" ? (
-                <VersionStrategiesStep versions={versionStrategies} />
+                <CreativeScriptsStep scripts={creativeScripts} />
               ) : null}
 
               <StepFooter

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export const metadata: Metadata = {
-  title: "Analytics",
+  title: "Metrics",
 };
 
 export default function AnalyticsLayout({

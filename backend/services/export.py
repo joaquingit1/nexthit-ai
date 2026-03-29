@@ -122,34 +122,8 @@ def generate_pdf_from_analysis(analysis: dict[str, Any], job_id: str | None = No
             else:
                 pdf.body_text(_safe_ascii(f"* {weakness}"))
 
-    target = analysis.get("targetAudience", {})
-    if target:
-        pdf.add_page()
-        pdf.section_title("Insights de Audiencia")
-        if target.get("audienceSummary"):
-            pdf.body_text(_safe_ascii(target.get("audienceSummary", "")))
-        for subtitle, key in (
-            ("Genero", "genderBreakdown"),
-            ("Edad", "ageBreakdown"),
-            ("Paises", "countryBreakdown"),
-            ("Top hobbies", "topHobbies"),
-            ("Top nichos", "topNiches"),
-        ):
-            rows = target.get(key) or []
-            if not rows:
-                continue
-            pdf.section_subtitle(subtitle)
-            for row in rows[:5]:
-                pdf.body_text(
-                    _safe_ascii(
-                        f"{row.get('label', '-')}: {row.get('percentage', 0)}% | "
-                        f"Retencion media {row.get('averageRetention', 0)} | Soporte {row.get('support', 0)}"
-                    )
-                )
-
     recommendations = analysis.get("recommendations", [])
     if recommendations:
-        pdf.add_page()
         pdf.section_title("Recomendaciones")
         for index, recommendation in enumerate(recommendations, 1):
             if isinstance(recommendation, dict):
@@ -173,28 +147,5 @@ def generate_pdf_from_analysis(analysis: dict[str, Any], job_id: str | None = No
         if savings_roi.get("recommendation"):
             pdf.ln(3)
             pdf.body_text(_safe_ascii(savings_roi.get("recommendation", "")))
-
-    personas = analysis.get("personas", [])
-    if personas:
-        pdf.add_page()
-        pdf.section_title(_safe_ascii(f"Personas Simuladas ({len(personas)} total)"))
-        for persona in personas[:12]:
-            summary = " | ".join(
-                part
-                for part in [
-                    persona.get("gender"),
-                    persona.get("age_range"),
-                    persona.get("country"),
-                    persona.get("native_language"),
-                ]
-                if part
-            )
-            pdf.section_subtitle(_safe_ascii(persona.get("name", "Persona")))
-            pdf.body_text(_safe_ascii(summary))
-            pdf.body_text(
-                _safe_ascii(
-                    f"Abandono: {persona.get('dropoff_second', 0)}s | Retencion: {persona.get('retention_percent', 0)}% | Motivo: {persona.get('reason_label', '-')}"
-                )
-            )
 
     return bytes(pdf.output())

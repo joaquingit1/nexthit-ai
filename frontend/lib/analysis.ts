@@ -186,27 +186,47 @@ export type VersionStrategy = {
   whyItShouldResonate: string;
 };
 
-export type ScriptSection = {
-  text: string;
+export type CreativeScriptBeat = {
+  start: number;
+  end: number;
+  spokenLine: string;
   visualCue: string;
-  duration: string;
+  purpose?: string;
 };
 
 export type CreativeScript = {
   id: string;
   name: string;
   targetAudience: string;
-  strategy: string;
-  script: {
-    hook: ScriptSection;
-    development: ScriptSection;
-    proof: ScriptSection;
-    cta: ScriptSection;
-  };
-  fullScript: string;
-  expectedRetention: string;
+  hookAngle: string;
   whyItWorks: string;
   addressedIssues: string[];
+  beats: CreativeScriptBeat[];
+  strategy?: string;
+  script?: {
+    hook?: {
+      text: string;
+      visualCue: string;
+      duration: string;
+    };
+    development?: {
+      text: string;
+      visualCue: string;
+      duration: string;
+    };
+    proof?: {
+      text: string;
+      visualCue: string;
+      duration: string;
+    };
+    cta?: {
+      text: string;
+      visualCue: string;
+      duration: string;
+    };
+  };
+  fullScript?: string;
+  expectedRetention?: string;
 };
 
 export type SavingsROI = {

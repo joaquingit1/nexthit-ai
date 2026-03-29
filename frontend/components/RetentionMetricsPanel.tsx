@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   useEffect,
   useMemo,
@@ -8,31 +7,14 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 
-import { supabase } from "@/lib/supabase";
 import type {
   AnalysisPoint,
   AnalysisResponse,
-  AudienceDistributionItem,
-  TargetAudience,
   TranscriptSegment,
   ViewerSimulation,
 } from "@/lib/analysis";
 
 type ViewerMode = "all" | "average";
-
-type AnalysisRecord = {
-  job_id: string;
-  title?: string | null;
-  created_at: string;
-  payload?: AnalysisResponse;
-  result?: AnalysisResponse;
-  analysis?: AnalysisResponse["analysis"];
-};
-
-const ANALYTICS_TABS = [
-  { id: "retention", title: "Retencion" },
-  { id: "insights", title: "Insights" },
-] as const;
 
 const GRAPH_WIDTH = 860;
 const GRAPH_HEIGHT = 380;
@@ -230,25 +212,11 @@ function buildAverageLineFromViewers(viewers: ViewerSimulation[]) {
   });
 }
 
-function resolveAnalysis(row: AnalysisRecord): AnalysisResponse["analysis"] | null {
-  if (row.analysis) {
-    return row.analysis;
-  }
-
-  const source = row.payload ?? row.result;
-  if (source?.analysis) {
-    return source.analysis;
-  }
-
-  return null;
-}
-
-function resolveTitle(row: AnalysisRecord) {
-  const analysis = resolveAnalysis(row);
-  return row.title || analysis?.clip.generatedTitle || analysis?.clip.fileName || row.job_id.slice(0, 12);
-}
-
-function RetentionMetricsPanel({ analysis }: { analysis: AnalysisResponse["analysis"] }) {
+export default function RetentionMetricsPanel({
+  analysis,
+}: {
+  analysis: AnalysisResponse["analysis"];
+}) {
   const [viewerMode, setViewerMode] = useState<ViewerMode>("all");
   const [simulationElapsed, setSimulationElapsed] = useState(0);
   const [simulationRunId, setSimulationRunId] = useState(0);
@@ -340,7 +308,7 @@ function RetentionMetricsPanel({ analysis }: { analysis: AnalysisResponse["analy
     <section className="space-y-8">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="font-display text-3xl font-bold text-slate-900">Curva de retencion</h2>
+          <h2 className="font-display text-3xl font-bold text-slate-900">Metricas de retencion</h2>
           <p className="mt-2 max-w-2xl text-slate-600">
             Cada linea es una persona simulada. La curva brillante muestra el promedio de retencion en cada segundo.
           </p>
@@ -371,7 +339,7 @@ function RetentionMetricsPanel({ analysis }: { analysis: AnalysisResponse["analy
           >
             Repetir simulacion
           </button>
-          {!simulationComplete && (
+          {!simulationComplete ? (
             <div className="flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5">
               <svg className="h-3.5 w-3.5 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -381,7 +349,7 @@ function RetentionMetricsPanel({ analysis }: { analysis: AnalysisResponse["analy
                 {simulatedViewerCount}/{analysis.graph.audienceSize}
               </span>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -427,7 +395,7 @@ function RetentionMetricsPanel({ analysis }: { analysis: AnalysisResponse["analy
               onMouseLeave={() => setHoveredSecond(null)}
             >
               <defs>
-                <linearGradient id="retentionAverageMetrics" x1="0%" x2="100%" y1="0%" y2="0%">
+                <linearGradient id="retentionAverageShared" x1="0%" x2="100%" y1="0%" y2="0%">
                   <stop offset="0%" stopColor="#0f172a" />
                   <stop offset="100%" stopColor="#06b6d4" />
                 </linearGradient>
@@ -447,13 +415,13 @@ function RetentionMetricsPanel({ analysis }: { analysis: AnalysisResponse["analy
                       strokeDasharray="4 8"
                     />
                     <text
-                    x={GRAPH_PADDING.left - 18}
-                    y={point.y + 4}
-                    textAnchor="end"
-                    fontSize="11"
-                    fill="rgba(71,85,105,0.9)"
-                  >
-                    {tick}%
+                      x={GRAPH_PADDING.left - 18}
+                      y={point.y + 4}
+                      textAnchor="end"
+                      fontSize="11"
+                      fill="rgba(71,85,105,0.9)"
+                    >
+                      {tick}%
                     </text>
                   </g>
                 );
@@ -473,13 +441,13 @@ function RetentionMetricsPanel({ analysis }: { analysis: AnalysisResponse["analy
                       strokeDasharray="4 10"
                     />
                     <text
-                    x={point.x}
-                    y={GRAPH_HEIGHT - GRAPH_PADDING.bottom + 24}
-                    textAnchor="middle"
-                    fontSize="11"
-                    fill="rgba(71,85,105,0.9)"
-                  >
-                    {formatTimestampLabel(tick)}
+                      x={point.x}
+                      y={GRAPH_HEIGHT - GRAPH_PADDING.bottom + 24}
+                      textAnchor="middle"
+                      fontSize="11"
+                      fill="rgba(71,85,105,0.9)"
+                    >
+                      {formatTimestampLabel(tick)}
                     </text>
                   </g>
                 );
@@ -502,7 +470,7 @@ function RetentionMetricsPanel({ analysis }: { analysis: AnalysisResponse["analy
                 key={`average-${simulationRunId}`}
                 d={averagePath}
                 fill="none"
-                stroke="url(#retentionAverageMetrics)"
+                stroke="url(#retentionAverageShared)"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 className="result-draw-line"
@@ -653,191 +621,5 @@ function RetentionMetricsPanel({ analysis }: { analysis: AnalysisResponse["analy
         </p>
       </div>
     </section>
-  );
-}
-
-export default function MetricsPage() {
-  const [activeTab, setActiveTab] = useState<"insights" | "retention">("retention");
-  const [analyses, setAnalyses] = useState<AnalysisRecord[]>([]);
-  const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadAnalyses() {
-      if (!supabase) {
-        setLoading(false);
-        return;
-      }
-
-      const { data } = await supabase
-        .from("analysis_results")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      if (data?.length) {
-        const rows = data as AnalysisRecord[];
-        setAnalyses(rows);
-        setSelectedAnalysis(rows[0] ?? null);
-      }
-      setLoading(false);
-    }
-
-    void loadAnalyses();
-  }, []);
-
-  const analysis = useMemo(
-    () => (selectedAnalysis ? resolveAnalysis(selectedAnalysis) : null),
-    [selectedAnalysis],
-  );
-  const audience = analysis?.targetAudience;
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <p className="text-slate-500">Cargando metrics...</p>
-      </div>
-    );
-  }
-
-  if (!analyses.length) {
-    return (
-      <div>
-        <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-slate-900">Metrics</h1>
-          <p className="mt-1 text-slate-600">Curvas de retencion e insights de audiencia.</p>
-        </div>
-        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 py-16">
-          <h3 className="text-lg font-semibold text-slate-900">No hay analisis todavia</h3>
-          <p className="mt-1 text-slate-500">Analiza un video para ver las metricas.</p>
-          <Link href="/app" className="mt-6 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">
-            Analizar video
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-slate-900">Metrics</h1>
-          <p className="mt-1 text-slate-600">Curvas de retencion e insights de audiencia por analisis.</p>
-        </div>
-        <select
-          value={selectedAnalysis?.job_id ?? ""}
-          onChange={(e) => {
-            const found = analyses.find((a) => a.job_id === e.target.value);
-            if (found) setSelectedAnalysis(found);
-          }}
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700"
-        >
-          {analyses.map((record) => (
-            <option key={record.job_id} value={record.job_id}>
-              {resolveTitle(record)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="mb-8 flex w-fit rounded-full border border-slate-200/80 bg-white/90 p-1 shadow-sm backdrop-blur-xl">
-        {ANALYTICS_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`rounded-full px-6 py-2.5 text-sm font-semibold transition ${
-              activeTab === tab.id
-                ? "bg-slate-900 text-white"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            {tab.title}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "retention" && analysis ? <RetentionMetricsPanel analysis={analysis} /> : null}
-
-      {activeTab === "insights" && audience ? (
-        <div className="space-y-6">
-          <div className="grid gap-5 xl:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Distribucion por genero</p>
-              <div className="mt-4 space-y-3">
-                {(audience.genderBreakdown ?? []).map((item: AudienceDistributionItem) => (
-                  <div key={item.label} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">{item.label}</span>
-                      <span className="text-slate-500">{item.percentage}%</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-400"
-                        style={{ width: `${Math.max(item.percentage, 4)}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-slate-500">Retencion media {item.averageRetention ?? 0}%</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Edades con mejor respuesta</p>
-              <div className="mt-4 space-y-3">
-                {(audience.ageBreakdown ?? audience.ageRanges ?? []).slice(0, 7).map((item: AudienceDistributionItem) => (
-                  <div key={item.label} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">{item.label}</span>
-                      <span className="text-slate-500">{item.percentage}%</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-400"
-                        style={{ width: `${Math.max(item.percentage, 4)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-6">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Paises con mejor performance</p>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {(audience.countryBreakdown ?? audience.countries ?? []).slice(0, 6).map((item: AudienceDistributionItem) => (
-                <div key={item.label} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-700">{item.label}</span>
-                    <span className="text-slate-500">{item.percentage}%</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-slate-100">
-                    <div
-                      className="h-full rounded-full bg-slate-900"
-                      style={{ width: `${Math.max(item.percentage, 4)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === "insights" && !audience ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-          <p className="text-slate-500">Este analisis no tiene datos de audiencia disponibles.</p>
-        </div>
-      ) : null}
-
-      {activeTab === "retention" && !analysis ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-          <p className="text-slate-500">Este analisis no tiene datos de retencion disponibles.</p>
-        </div>
-      ) : null}
-    </div>
   );
 }
