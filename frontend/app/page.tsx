@@ -490,6 +490,18 @@ export default function LandingPage() {
       return;
     }
 
+    let resetFrame = 0;
+
+    const keepHeroPinned = () => {
+      if (window.innerWidth < 768) {
+        return;
+      }
+
+      if (heroGraphProgressRef.current < 0.999 && shell.scrollTop > 0) {
+        shell.scrollTop = 0;
+      }
+    };
+
     const handleWheel = (event: WheelEvent) => {
       if (window.innerWidth < 768) {
         return;
@@ -516,13 +528,14 @@ export default function LandingPage() {
       }
 
       const currentScroll = shell.scrollTop;
+      const heroHeight = heroSectionRef.current?.offsetHeight ?? window.innerHeight;
       const currentIndex = sections.reduce((bestIndex, section, index) => {
         const distance = Math.abs(section.offsetTop - currentScroll);
         const bestDistance = Math.abs(sections[bestIndex]!.offsetTop - currentScroll);
         return distance < bestDistance ? index : bestIndex;
       }, 0);
 
-      const heroIsPinned = currentIndex === 0 && currentScroll < 16;
+      const heroIsPinned = currentIndex === 0 && currentScroll < heroHeight * 0.8;
       const currentGraphProgress = heroGraphProgressRef.current;
       if (
         heroIsPinned &&
@@ -530,6 +543,9 @@ export default function LandingPage() {
           (event.deltaY < 0 && currentGraphProgress > 0.001))
       ) {
         event.preventDefault();
+        if (currentScroll !== 0) {
+          shell.scrollTop = 0;
+        }
         setHeroGraphProgress((current) =>
           clamp(current + event.deltaY / 900, 0, 1),
         );
@@ -556,8 +572,26 @@ export default function LandingPage() {
       }, 720);
     };
 
+    const handleScroll = () => {
+      if (resetFrame) {
+        return;
+      }
+
+      resetFrame = window.requestAnimationFrame(() => {
+        resetFrame = 0;
+        keepHeroPinned();
+      });
+    };
+
     shell.addEventListener("wheel", handleWheel, { passive: false });
-    return () => shell.removeEventListener("wheel", handleWheel);
+    shell.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      shell.removeEventListener("wheel", handleWheel);
+      shell.removeEventListener("scroll", handleScroll);
+      if (resetFrame) {
+        window.cancelAnimationFrame(resetFrame);
+      }
+    };
   }, []);
 
   useEffect(() => {

@@ -159,6 +159,10 @@ textarea {
   position: relative;
 }
 
+.landing-process-panel {
+  isolation: isolate;
+}
+
 .landing-hero-surface {
   background:
     radial-gradient(circle at 16% 20%, rgba(37, 99, 235, 0.16), transparent 24%),
@@ -360,6 +364,8 @@ textarea {
   max-width: 760px;
   margin: 0 auto 3rem;
   text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
 .landing-section-kicker {
@@ -389,15 +395,18 @@ textarea {
 }
 
 .landing-process-panel .landing-section-kicker {
-  color: #1d4ed8;
+  color: #1e40af;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .landing-process-panel .landing-section-title {
   color: #020617;
+  text-shadow: 0 14px 38px rgba(255, 255, 255, 0.72);
 }
 
 .landing-process-panel .landing-section-copy {
-  color: #1e293b;
+  color: #0f172a;
+  opacity: 1;
 }
 
 .landing-process-panel::before,
@@ -408,8 +417,8 @@ textarea {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 14%, rgba(191, 219, 254, 0.32), transparent 22%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.56));
+    radial-gradient(circle at 18% 14%, rgba(191, 219, 254, 0.22), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.78));
 }
 
 .landing-process-grid {
