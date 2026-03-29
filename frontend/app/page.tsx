@@ -573,6 +573,9 @@ export default function LandingPage() {
           (event.deltaY < 0 && currentGraphProgress > 0.001))
       ) {
         event.preventDefault();
+        if (currentScroll !== 0) {
+          shell.scrollTop = 0;
+        }
         setHeroGraphProgress((current) => {
           const next = clamp(current + event.deltaY / 900, 0, 1);
           return next >= 0.995 ? 1 : next;
