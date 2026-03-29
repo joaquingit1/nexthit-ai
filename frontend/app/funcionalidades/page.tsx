@@ -3,8 +3,61 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+const FOOTER_ASCII_FRAMES = [
+  String.raw`
+                     ·      ·
+              ·           o        ·
+         ·        ·   o---+---o
+                o---+---o |     \
+          ·    /    |     \|      o
+              o     o------o---o--+---o
+               \   / \      \  |  /   /
+                o-+---o------o-+-o---o
+                  |      ·      |
+                o-+---o      o--+---o
+               /  |   / \      / |   \
+              o---+--o   o----o--+----o
+                   \             /
+                    o-----o-----o
+  `,
+  String.raw`
+                     ·      ·            ·
+              ·           o        ·   o---o
+         ·        ·   o---+---o       /  |  \
+                o---+---o |     \    o---+---o
+          ·    /    |     \|      o--+---o   |
+              o     o------o---o--+--o   \   o
+               \   / \      \  |  /   /   o--+
+                o-+---o------o-+-o---o   /  /
+                  |      ·      |     \ o--o
+                o-+---o      o--+---o  \  |
+               /  |   / \      / |   \  o-+
+              o---+--o   o----o--+----o  \|
+               \  | / \  |   / \ |   / \  o
+                o-+-o--o-+--o--+-o--o--o-+
+                   \      |      /     \ |
+                    o-----o-----o---o---o
+  `,
+];
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function LandingFooterAscii() {
+  return (
+    <div className="landing-footer-ascii" aria-hidden="true">
+      {FOOTER_ASCII_FRAMES.map((frame, index) => (
+        <pre
+          key={index}
+          className="landing-footer-ascii-frame"
+          style={{ animationDelay: `${index * 1.6}s` }}
+        >
+          {frame}
+        </pre>
+      ))}
+    </div>
+  );
 }
 
 function useSectionInView<T extends HTMLElement>(threshold = 0.4) {
@@ -796,41 +849,140 @@ function AudienceGridVisual({ active }: { active: boolean }) {
 }
 
 function InsightsListVisual({ active }: { active: boolean }) {
-  const insights = [
-    { type: "warning", icon: "⚡", title: "Hook debil", desc: "Primeros 3 segundos no enganchan", color: "#f59e0b" },
-    { type: "danger", icon: "📉", title: "Punto de abandono", desc: "40% abandona en segundo 12", color: "#ef4444" },
-    { type: "success", icon: "✨", title: "Oportunidad", desc: "Agregar CTA en segundo 8", color: "#10b981" },
-    { type: "info", icon: "🎯", title: "Audiencia ideal", desc: "Millennials retienen 60% mas", color: "#3b82f6" },
+  const actions = [
+    { id: 1, time: "0:02", label: "Mejorar hook", impact: "+25%", color: "#f59e0b", x: 8 },
+    { id: 2, time: "0:08", label: "Agregar CTA", impact: "+18%", color: "#10b981", x: 30 },
+    { id: 3, time: "0:12", label: "Cortar escena", impact: "+12%", color: "#ef4444", x: 45 },
+    { id: 4, time: "0:18", label: "Reforzar valor", impact: "+15%", color: "#3b82f6", x: 68 },
+    { id: 5, time: "0:25", label: "CTA final", impact: "+20%", color: "#8b5cf6", x: 92 },
   ];
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-6">
-      <div className="space-y-3">
-        {insights.map((insight, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-3 rounded-xl bg-white/5 p-3 backdrop-blur transition-all duration-500"
-            style={{
-              opacity: active ? 1 : 0,
-              transform: active ? "translateX(0)" : "translateX(-30px)",
-              transitionDelay: `${i * 150}ms`,
-              borderLeft: `3px solid ${insight.color}`,
-            }}
-          >
-            <span className="text-xl">{insight.icon}</span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-white">{insight.title}</p>
-              <p className="text-xs text-white/60">{insight.desc}</p>
+    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 p-6">
+      <div className="absolute inset-0 bg-black/20" />
+
+      {/* Video timeline mockup */}
+      <div className="relative flex h-full flex-col">
+        {/* Mini video preview */}
+        <div className="relative mx-auto mb-4 h-24 w-44 overflow-hidden rounded-lg bg-black/40 backdrop-blur">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur transition-all duration-500"
+              style={{
+                transform: active ? "scale(1)" : "scale(0)",
+                opacity: active ? 1 : 0,
+              }}
+            >
+              <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
             </div>
-            <svg className="h-5 w-5 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
           </div>
-        ))}
+          {/* Scanning line */}
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-white/80"
+            style={{
+              left: active ? "85%" : "0%",
+              transition: "left 3s ease-out",
+              boxShadow: "0 0 10px rgba(255,255,255,0.8)",
+            }}
+          />
+        </div>
+
+        {/* Timeline bar */}
+        <div className="relative mx-4 flex-1">
+          {/* Background track */}
+          <div className="absolute left-0 right-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-black/30">
+            {/* Progress fill */}
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-white/60 to-white/20"
+              style={{
+                width: active ? "100%" : "0%",
+                transition: "width 2.5s ease-out",
+              }}
+            />
+          </div>
+
+          {/* Action points */}
+          {actions.map((action, i) => (
+            <div
+              key={action.id}
+              className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${action.x}%` }}
+            >
+              {/* Pulse ring */}
+              <div
+                className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                style={{
+                  backgroundColor: action.color,
+                  opacity: active ? 0.3 : 0,
+                  transform: active ? "scale(1.5)" : "scale(0)",
+                  transition: `all 0.5s ease-out ${0.3 + i * 0.15}s`,
+                  animation: active ? "pulse 2s ease-in-out infinite" : "none",
+                  animationDelay: `${i * 0.2}s`,
+                }}
+              />
+              {/* Main dot */}
+              <div
+                className="relative h-5 w-5 rounded-full border-2 border-white"
+                style={{
+                  backgroundColor: action.color,
+                  transform: active ? "scale(1)" : "scale(0)",
+                  opacity: active ? 1 : 0,
+                  transition: `all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.2 + i * 0.15}s`,
+                  boxShadow: `0 0 15px ${action.color}`,
+                }}
+              />
+              {/* Label card */}
+              <div
+                className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-black/60 px-2 py-1 backdrop-blur-sm"
+                style={{
+                  top: i % 2 === 0 ? "-45px" : "30px",
+                  opacity: active ? 1 : 0,
+                  transform: active
+                    ? "translateX(-50%) translateY(0)"
+                    : `translateX(-50%) translateY(${i % 2 === 0 ? "10px" : "-10px"})`,
+                  transition: `all 0.4s ease-out ${0.4 + i * 0.15}s`,
+                }}
+              >
+                <p className="text-[10px] font-bold text-white">{action.label}</p>
+                <p className="text-center text-[9px] font-semibold" style={{ color: action.color }}>
+                  {action.impact} retencion
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom stats */}
+        <div className="mt-4 flex justify-center gap-6">
+          {[
+            { label: "Acciones", value: "5", color: "#fff" },
+            { label: "Impacto total", value: "+90%", color: "#10b981" },
+            { label: "Prioridad", value: "Alta", color: "#f59e0b" },
+          ].map((stat, i) => (
+            <div
+              key={stat.label}
+              className="rounded-full bg-black/30 px-3 py-1 text-center backdrop-blur-sm transition-all duration-500"
+              style={{
+                opacity: active ? 1 : 0,
+                transform: active ? "translateY(0)" : "translateY(15px)",
+                transitionDelay: `${0.8 + i * 0.1}s`,
+              }}
+            >
+              <p className="text-lg font-bold" style={{ color: stat.color }}>{stat.value}</p>
+              <p className="text-[9px] text-white/70">{stat.label}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Decorative gradient */}
-      <div className="absolute -right-20 -bottom-20 h-40 w-40 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-3xl" />
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.3; }
+          50% { transform: translate(-50%, -50%) scale(2); opacity: 0.1; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -871,39 +1023,6 @@ const mainFeatures = [
       "Cambios especificos por segundo",
       "Impacto estimado por accion",
     ],
-  },
-];
-
-const additionalFeatures = [
-  {
-    icon: "📊",
-    title: "Segmentacion por arquetipos",
-    description: "Agrupa tu audiencia en 12 perfiles distintos y entiende cual conecta mejor.",
-  },
-  {
-    icon: "⏱️",
-    title: "Momentos clave",
-    description: "Mapa temporal con los puntos criticos: donde enganchas, donde perdes.",
-  },
-  {
-    icon: "🔄",
-    title: "Variantes creativas",
-    description: "3 versiones alternativas optimizadas para diferentes audiencias.",
-  },
-  {
-    icon: "🎯",
-    title: "Estrategia de medios",
-    description: "Configuracion de targeting para Meta Ads basada en tus mejores segmentos.",
-  },
-  {
-    icon: "💰",
-    title: "Calculo de ahorro",
-    description: "Estima cuanto ahorrarias al optimizar antes de invertir en pauta.",
-  },
-  {
-    icon: "📄",
-    title: "Exportar PDF y CSV",
-    description: "Descarga tu analisis para presentaciones o integraciones.",
   },
 ];
 
@@ -1175,77 +1294,40 @@ export default function FeaturesPage() {
         );
       })}
 
-      {/* Additional Features */}
-      <section className="border-t border-slate-200 px-6 py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-16 text-center">
-            <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-slate-950 md:text-4xl">
-              Y mucho mas
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-slate-600">
-              Cada herramienta disenada para maximizar tu rendimiento.
-            </p>
-          </div>
+      {/* Footer */}
+      <footer className="landing-footer is-visible">
+        <div className="landing-footer-shell">
+          <div className="landing-footer-top">
+            <div className="landing-footer-brand">
+              <Link href="/" className="landing-footer-logo">
+                <img src="/logo.svg" alt="NextHit" className="h-9 w-auto" />
+                <span>NextHit</span>
+              </Link>
+              <p className="landing-footer-copy">
+                Inteligencia creativa predictiva para videos short-form.
+              </p>
+              <p className="landing-footer-meta">© 2026 NextHit. Todos los derechos reservados.</p>
+            </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {additionalFeatures.map((feature) => (
-              <article
-                key={feature.title}
-                className="group rounded-2xl border border-slate-200 bg-white p-6 transition-all hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/50"
-              >
-                <span className="text-3xl">{feature.icon}</span>
-                <h3 className="mt-4 font-display text-lg font-semibold text-slate-900">
-                  {feature.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  {feature.description}
-                </p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Platforms */}
-      <section className="border-t border-slate-200 bg-slate-50 px-6 py-16">
-        <div className="mx-auto max-w-5xl text-center">
-          <p className="text-sm font-medium uppercase tracking-wider text-slate-500">
-            Optimizado para las plataformas que usas
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
-            {[
-              { name: "TikTok", icon: "📱" },
-              { name: "Instagram Reels", icon: "📸" },
-              { name: "YouTube Shorts", icon: "▶️" },
-              { name: "LinkedIn", icon: "💼" },
-              { name: "Meta Ads", icon: "📢" },
-            ].map((platform) => (
-              <div key={platform.name} className="flex items-center gap-2 text-slate-600">
-                <span className="text-2xl">{platform.icon}</span>
-                <span className="font-semibold">{platform.name}</span>
+            <div className="landing-footer-links">
+              <div className="landing-footer-column">
+                <span className="landing-footer-heading">Producto</span>
+                <Link href="/funcionalidades">Funcionalidades</Link>
+                <Link href="/casos-de-uso">Casos de uso</Link>
+                <Link href="/precios">Precios</Link>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* CTA */}
-      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-6 py-24">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-white md:text-4xl">
-            Empieza a predecir el rendimiento de tus videos
-          </h2>
-          <p className="mt-4 text-lg text-slate-300">
-            Primer analisis gratis. Sin tarjeta de credito.
-          </p>
-          <Link
-            href="/app"
-            className="mt-8 inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-lg font-semibold text-slate-900 shadow-2xl transition hover:bg-slate-100"
-          >
-            Analizar video gratis
-          </Link>
+              <div className="landing-footer-column">
+                <span className="landing-footer-heading">Recursos</span>
+                <Link href="/">Landing</Link>
+                <Link href="/app">Analizar video</Link>
+              </div>
+            </div>
+          </div>
+
+          <LandingFooterAscii />
         </div>
-      </section>
+      </footer>
     </main>
   );
 }
