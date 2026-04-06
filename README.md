@@ -7,6 +7,10 @@ NextHit simulates 100 AI-powered synthetic viewers against a raw marketing video
 🌐 [Live Product](https://nexthit.site) · 📦 [Repository](https://github.com/joaquingit1/nexthit-ai) · 
 🏆 Finalist @ HackITBA 2026 (Top 9 teams out of 48) · ⏱ Built in 36 hours
 
+# Demo:
+
+https://github.com/user-attachments/assets/cb80e92d-51f9-4ede-9ecf-afed453c9a79
+
 ---
 
 ## Problem
