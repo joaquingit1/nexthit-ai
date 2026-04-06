@@ -1,142 +1,183 @@
-# NextHit
+# NextHit AI
 
-Plataforma de analisis predictivo para videos cortos de marketing. Sube un video, lo transcribe, lo enriquece con analisis multimodal, simula 100 personas sinteticas y convierte todo eso en retencion, segmentacion y estrategia.
+**Predict short-form video performance before you spend a dollar on distribution.**
 
-## Principios de UI
+NextHit simulates 100 AI-powered synthetic viewers against a raw marketing video and produces a pre-launch creative report: projected retention curve, segment-level drop-off diagnostics, creative scoring, and prioritized recommendations for what to change before the campaign goes live.
 
-- **Minimalismo**: Solo mostramos informacion esencial y accionable
-- **Claridad**: Cada dato en pantalla tiene un proposito claro
-- **Sin ruido**: Evitamos tags, badges y elementos decorativos innecesarios
-- **Foco en insights**: Priorizamos el "que hacer" sobre el "que paso"
+🌐 [Live Product](https://nexthit.site) · 📦 [Repository](https://github.com/joaquingit1/nexthit-ai) · 
+🏆 Finalist @ HackITBA 2026 (Top 9 teams out of 48) · ⏱ Built in 36 hours
 
-## Estado actual
+---
 
-- [x] Upload directo del navegador a Supabase Storage
-- [x] Jobs persistidos y progreso en vivo por SSE
-- [x] Transcripcion con timestamps via Groq Whisper
-- [x] Analisis multimodal del video con Gemini
-- [x] Timeline enriquecido por segmento con voz, visuales y texto en pantalla
-- [x] Simulacion de 100 personas en 5 lotes de 20
-- [x] Curva de retencion proyectada y diagnostico por segmento
-- [x] Recomendaciones creativas, targeting y variantes A/B/C
-- [x] Dashboard de resultados en `/resultado`
-- [x] Nuevas pantallas de marketing y dashboard UI del branch `dev`
-- [x] Prompts cargables desde Supabase con fallback a defaults
-- [ ] Exportacion real de PDF / CSV
-- [ ] Hardening final del admin de prompts
-- [ ] Monitoreo y analytics de uso en produccion
+## Problem
 
-## Flujo del producto
+Creative workflows in paid acquisition are reactive. Teams produce content, buy traffic, wait for retention data, then iterate. Budget is spent before validation. Insights arrive after the damage is done.
 
-1. El usuario sube un video desde `/app`
-2. El frontend pide ticket de subida y sube directo a Supabase
-3. El backend descarga el video, calcula duracion y transcribe audio
-4. Gemini analiza el video y enriquece el transcript con contexto visual
-5. Se calcula el score creativo con peso principal en video
-6. Se simulan 100 personas sinteticas en 5 batches
-7. Se agregan segmentos, motivos de abandono y audiencias ganadoras
-8. Se sintetizan cambios, media targeting, variantes y crossposting
-9. El frontend redirige a `/resultado` con el payload final
+NextHit introduces a **pre-launch simulation layer** — creative performance is modeled, stress-tested, and iterated before distribution.
 
-## Resultado `/resultado`
+## How It Works
 
-Pantalla de resultados con enfoque minimalista:
+```
+Upload video → Transcribe → Multimodal enrichment → Simulate audience → Aggregate → Synthesize report
+```
 
-1. **Puntaje y resumen** - Score general y resumen ejecutivo
-2. **Personas sinteticas** - Perfil compacto (ocupacion, ingresos, estatus) + motivo de abandono
-3. **Drop-off por segmento** - Diagnostico por audiencia
-4. **Grafico de retencion** - Curva proyectada interactiva
-5. **Momentos clave** - Solo los puntos de decision importantes
-6. **Que cambiar** - Acciones concretas priorizadas
-7. **Targeting** - Recomendaciones de medios
-8. **Versiones A/B/C** - Variantes sugeridas
-9. **Posts** - Contenido listo para publicar
+**1. Multimodal Video Understanding**
+The system extracts audio, transcribes it with timestamps (Groq Whisper), runs frame-level visual analysis and on-screen text detection (Gemini), and temporally aligns all modalities into a unified content timeline.
 
-Cada seccion muestra solo lo necesario para tomar decisiones.
+**2. Synthetic Audience Simulation**
+100 LLM-based viewer agents — each with structured personas (demographics, attention patterns, content affinity) — evaluate the video sequentially. Each agent decides independently whether to continue watching, when to drop off, and articulates a semantic reason for disengagement. Simulation runs in 5 batches of 20 to balance throughput, token limits, and persona diversity.
+
+**3. Aggregation & Synthesis**
+Drop-off decisions are aggregated into a projected retention curve with segment-level diagnostics. The system then synthesizes creative recommendations, hook variants, A/B/C alternatives, targeting strategy, and ready-to-publish content ideas.
+
+## System Architecture
+
+```
+Browser ──► Supabase Storage (direct upload)
+               │
+Frontend       │   Next.js 14 + Tailwind
+  /app         │   Upload orchestration, SSE progress subscription
+  /resultado   │   Results dashboard
+               │
+Backend        ▼   FastAPI (modular pipeline)
+  ┌─────────────────────────────────────────┐
+  │  Job orchestration                      │
+  │  ├─ Duration extraction                 │
+  │  ├─ Timestamped transcription (Whisper) │
+  │  ├─ Multimodal enrichment (Gemini)      │
+  │  ├─ Creative scoring                    │
+  │  ├─ Audience simulation (5 × 20)        │
+  │  ├─ Aggregation (retention + segments)  │
+  │  └─ Synthesis (recommendations + variants)
+  └─────────────────────────────────────────┘
+               │
+Supabase       ▼   Storage, job persistence, prompt config, migrations
+```
+
+### Key Engineering Decisions
+
+**Direct-to-storage uploads.** Videos upload from the browser straight to Supabase Storage, bypassing the app server entirely. This eliminates backend bottlenecks for large media and lets the API focus on compute.
+
+**Persistent jobs with SSE streaming.** Each analysis is a long-running job. Progress is persisted to the database and streamed to the client via Server-Sent Events — real-time feedback without polling.
+
+**Prompt-configurable behavior.** All system prompts are loaded from Supabase with fallback defaults. Prompt iteration does not require code changes or redeployment.
+
+**Batched simulation.** Running 100 agents in 5 batches of 20 is a deliberate tradeoff: it fits within model context limits, keeps latency manageable, and preserves diversity across runs.
+
+**Multimodal alignment.** The system does not reason over transcript alone. It enriches content with visual context and on-screen text, then reasons over the combined timeline — critical for short-form video where visuals often carry the message.
+
+## Output
+
+The `/resultado` dashboard is designed around a single principle: **only surface what drives a decision.**
+
+| Section | Purpose |
+|---|---|
+| Score + executive summary | Immediate quality signal |
+| Synthetic personas | See who drops off and why |
+| Segment drop-off diagnostics | Identify which audience segments fail |
+| Projected retention curve | Visualize predicted engagement over time |
+| Key moments | Attention peaks and failure points |
+| What to change | Prioritized creative actions |
+| Targeting recommendations | Audience strategy guidance |
+| A/B/C variants | Alternative creative directions |
+| Ready-to-publish posts | Actionable content ideas |
 
 ## Stack
 
-- Frontend: Next.js 14 + Tailwind CSS
-- Backend: FastAPI modular
-- Storage/DB: Supabase
-- Audio: Groq Whisper
-- Video multimodal: Gemini
-- Deploy: Vercel
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14, Tailwind CSS |
+| Backend | FastAPI (modular) |
+| Storage / DB | Supabase |
+| Audio transcription | Groq Whisper |
+| Multimodal analysis | Gemini |
+| Deployment | Vercel |
 
-## Estructura
+## Cost Profile
 
-```text
+| Component | Cost per video |
+|---|---|
+| Transcription (Whisper) | ~$0.01–0.02 |
+| Multimodal analysis (Gemini) | ~$0.03–0.08 |
+| Simulation + synthesis | ~$0.05 |
+| **Total** | **~$0.10** |
+
+## Repository Structure
+
+```
 frontend/
-  app/
-  components/
-  lib/
+  app/              # Pages and routing
+  components/       # UI components
+  lib/              # Client utilities
 
 backend/
-  api/
-  constants/
-  models/
-  pipeline/
-  repository/
-  routes/
-  schemas/
-  services/
-  system_prompts.py
+  api/              # API layer
+  models/           # Data models
+  pipeline/         # Processing pipeline stages
+  repository/       # Data access
+  routes/           # HTTP routes
+  schemas/          # Request/response schemas
+  services/         # Business logic
+  system_prompts.py # Prompt management
 
 supabase/
-  migrations/
-  seed.sql
+  migrations/       # DB schema evolution
+  seed.sql          # Initial data
 ```
 
-## Variables importantes
-
-### Backend
-
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_BUCKET`
-- `GROQ_API_KEY`
-- `GROQ_TEXT_MODEL`
-- `GEMINI_API_KEY`
-- `GEMINI_VIDEO_MODEL`
-- `GEMINI_TIMEOUT_SECONDS`
-- `PUBLIC_BACKEND_URL`
-- `ALLOW_MULTIMODAL_FALLBACK`
-
-### Frontend
-
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_BACKEND_URL`
-- `BACKEND_URL`
-
-## Supabase
-
-Migraciones actuales:
-
-- `202603280001_init_analysis.sql`
-- `202603280002_multimodal_gemini.sql`
-- `202603280003_system_prompts.sql`
-
-Comandos:
+## Local Setup
 
 ```bash
+git clone https://github.com/joaquingit1/nexthit-ai.git
+cd nexthit-ai
+```
+
+Configure environment variables for frontend and backend (see below), then:
+
+```bash
+# Database
 npx supabase@latest login
-npx supabase@latest link --project-ref TU_PROJECT_REF
+npx supabase@latest link --project-ref YOUR_REF
 npx supabase@latest db push
+
+# Frontend
+cd frontend && npm install && npm run dev
+
+# Backend
+cd backend
+# Install Python dependencies, then run the FastAPI server
 ```
 
-## Deploy
+### Environment Variables
 
-```bash
-cd frontend
-npx vercel --prod
+**Backend:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_BUCKET`, `GROQ_API_KEY`, `GROQ_TEXT_MODEL`, `GEMINI_API_KEY`, `GEMINI_VIDEO_MODEL`, `GEMINI_TIMEOUT_SECONDS`, `PUBLIC_BACKEND_URL`, `ALLOW_MULTIMODAL_FALLBACK`
 
-cd ../backend
-npx vercel --prod
-```
+**Frontend:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_BACKEND_URL`, `BACKEND_URL`
 
-## Produccion
+## Early Validation
 
-- Frontend: https://nexthit.site
-- Backend: https://backend-five-gamma-99.vercel.app
-- Repo: https://github.com/joaquingit1/axiom-lens
+Exploratory tests with real short-form videos from influencer mentors during the hackathon showed predicted drop-off points typically within ~5 seconds of observed retention drops, with strong alignment on weak hooks, pacing issues, and unclear messaging. Two influencers indicated willingness to pay after using the product.
+
+**Caveats:** Very small sample, not statistically rigorous. Results are directional, not proof of predictive accuracy.
+
+## Limitations
+
+- Synthetic viewers are useful proxies, not ground truth
+- Output quality depends on model capability and prompt design
+- Multimodal alignment degrades with poor audio or rapid-cut visuals
+- Predictions are directional, not deterministic
+- Niche content can trigger persona mismatch; low-quality transcription propagates errors downstream
+
+## Roadmap
+
+- Ground-truth evaluation against real campaign retention data
+- Quantitative metrics (correlation, MAE on retention curves)
+- Production-grade PDF/CSV export
+- Prompt versioning and auditability
+- Failure-mode detection and confidence reporting
+- Cost and latency optimization
+- Integration with ad platforms (Meta, Google Ads)
+
+## Team
+
+Built during HackITBA 2026 by **Joaquin Castellano**, **Tobias Simoni**, **Santiago Ohoka Jorge**, and **Bruno Ergang**.
