@@ -4,7 +4,8 @@
 
 NextHit simulates 100 AI-powered synthetic viewers against a raw marketing video and produces a pre-launch creative report: projected retention curve, segment-level drop-off diagnostics, creative scoring, and prioritized recommendations for what to change before the campaign goes live.
 
-🌐 [Live Product](https://nexthit.site) · 📦 [Repository](https://github.com/joaquingit1/nexthit-ai) · 
+🌐 [Live Product](https://nexthit.site) · 
+📦 [Repository](https://github.com/joaquingit1/nexthit-ai) · 
 🏆 Finalist @ HackITBA 2026 (Top 9 teams out of 48) · ⏱ Built in 36 hours
 
 # Demo:
